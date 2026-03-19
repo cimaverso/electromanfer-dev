@@ -1,0 +1,151 @@
+.cot-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.cot-table {
+  width: 100%;
+  min-width: 700px;
+}
+
+.cot-table__num {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  width: 32px;
+}
+
+.cot-table__cod {
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.cot-table__nom {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  max-width: 260px;
+}
+
+.cot-table__tipo {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.cot-table__precio {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+  white-space: nowrap;
+}
+
+.cot-table__subtotal {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* ─── Qty ─── */
+.cot-table__qty {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.cot-table__qty-btn {
+  width: 28px;
+  height: 28px;
+  background-color: var(--color-surface-2);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  transition: var(--transition-fast);
+}
+
+.cot-table__qty-btn:hover:not(:disabled) {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.cot-table__qty-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.cot-table__qty-input {
+  width: 44px;
+  height: 28px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  border-left: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  padding: 0;
+  box-shadow: none;
+}
+
+.cot-table__qty-input:focus {
+  box-shadow: none;
+  border-color: var(--color-border);
+}
+
+/* ─── Quitar ─── */
+.cot-table__remove {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-xs);
+  transition: var(--transition-fast);
+  padding: 0;
+}
+
+.cot-table__remove svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cot-table__remove:hover {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* ─── Botón ir a productos ─── */
+.cot-table__go-btn {
+  padding: var(--space-2) var(--space-5);
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.cot-table__go-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}

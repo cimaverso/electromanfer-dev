@@ -1,0 +1,95 @@
+.cot-resumen {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6));
+}
+
+.cot-resumen__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* ─── Totales ─── */
+.cot-resumen__totales {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cot-resumen__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+.cot-resumen__row-label {
+  color: var(--color-text-muted);
+}
+
+.cot-resumen__row-value {
+  color: var(--color-text-soft);
+  font-weight: var(--font-weight-medium);
+}
+
+.cot-resumen__row--total {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-base);
+}
+
+.cot-resumen__row--total .cot-resumen__row-label {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cot-resumen__row--total .cot-resumen__row-value {
+  color: var(--color-accent);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.cot-resumen__disclaimer {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+/* ─── Validaciones ─── */
+.cot-resumen__validaciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-warning-soft);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+}
+
+.cot-resumen__validacion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+}
+
+.cot-resumen__validacion-icon {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* ─── Botón full width ─── */
+.cot-resumen .pbtn {
+  width: 100%;
+}

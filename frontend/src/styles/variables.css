@@ -1,0 +1,105 @@
+:root {
+  /* ─── Colores principales ─── */
+  --color-primary: #8CA653;
+  --color-primary-hover: #7a9448;
+  --color-primary-active: #6b8340;
+  --color-primary-soft: rgba(140, 166, 83, 0.12);
+
+  --color-secondary: #BCBF5E;
+  --color-secondary-hover: #a8ab50;
+
+  --color-accent: #F2CD5C;
+  --color-accent-hover: #e0bc4a;
+
+  /* ─── Fondos dark ─── */
+  --color-bg: #0F1115;
+  --color-bg-soft: #151922;
+  --color-surface: #1B2130;
+  --color-surface-2: #252D3D;
+  --color-surface-3: #2E374A;
+
+  /* ─── Textos ─── */
+  --color-text: #F5F7FA;
+  --color-text-soft: #A9B2C3;
+  --color-text-muted: #7E8799;
+
+  /* ─── Bordes ─── */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* ─── Estados semánticos ─── */
+  --color-success: #6BAA4E;
+  --color-success-soft: rgba(107, 170, 78, 0.12);
+  --color-danger: #D9534F;
+  --color-danger-soft: rgba(217, 83, 79, 0.12);
+  --color-warning: #D9A441;
+  --color-warning-soft: rgba(217, 164, 65, 0.12);
+  --color-info: #5B8DEF;
+  --color-info-soft: rgba(91, 141, 239, 0.12);
+
+  /* ─── Blanco y negro ─── */
+  --color-white: #FFFFFF;
+  --color-dark: #0D0D0D;
+
+  /* ─── Layout sidebar ─── */
+  --sidebar-width-open: 260px;
+  --sidebar-width-closed: 84px;
+  --header-height: 72px;
+
+  /* ─── Radios ─── */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* ─── Sombras ─── */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.36);
+  --shadow-primary: 0 4px 20px rgba(140, 166, 83, 0.25);
+
+  /* ─── Transiciones ─── */
+  --transition-base: all 0.25s ease;
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.4s ease;
+
+  /* ─── Tipografía ─── */
+  --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 1.875rem;
+  --font-size-3xl: 2.25rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ─── Espaciados ─── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ─── Z-index ─── */
+  --z-sidebar: 100;
+  --z-header: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+  --z-tooltip: 500;
+}

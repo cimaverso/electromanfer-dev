@@ -1,0 +1,283 @@
+/* ─── Base sidebar ─── */
+.sidebar {
+  width: var(--sidebar-width-open);
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-sidebar);
+  transition: width var(--transition-slow);
+  overflow: hidden;
+}
+
+.sidebar--collapsed {
+  width: var(--sidebar-width-closed);
+}
+
+/* ─── Logo ─── */
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  min-height: var(--header-height);
+  overflow: hidden;
+}
+
+.sidebar__logo-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  border-radius: var(--radius-sm);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* fallback para el fondo */
+  box-shadow: var(--shadow-primary);
+}
+
+.sidebar__logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar__logo-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+.sidebar__logo-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Nav ─── */
+.sidebar__nav {
+  flex: 1;
+  padding: var(--space-4) var(--space-3);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar__nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sidebar__nav-item {
+  position: relative;
+}
+
+/* ─── Nav link ─── */
+.sidebar__nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-soft);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar__nav-link:hover {
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.sidebar__nav-link--active {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.sidebar__nav-link--active:hover {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* ─── Icono nav ─── */
+.sidebar__nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar__nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ─── Label nav ─── */
+.sidebar__nav-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ─── Tooltip (visible solo colapsado) ─── */
+.sidebar__tooltip {
+  position: absolute;
+  left: calc(var(--sidebar-width-closed) + var(--space-2));
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: var(--color-surface-3);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: var(--z-tooltip);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+}
+
+.sidebar--collapsed .sidebar__nav-link:hover .sidebar__tooltip,
+.sidebar--collapsed .sidebar__user:hover .sidebar__tooltip,
+.sidebar--collapsed .sidebar__logout:hover .sidebar__tooltip {
+  opacity: 1;
+}
+
+/* ─── Footer sidebar ─── */
+.sidebar__footer {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ─── Usuario ─── */
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  cursor: default;
+}
+
+.sidebar__user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+
+.sidebar__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.sidebar__user-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__user-role {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+/* ─── Logout ─── */
+.sidebar__logout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  width: 100%;
+  text-align: left;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar__logout:hover {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* ─── Botón toggle colapsar ─── */
+.sidebar__toggle {
+  position: absolute;
+  top: calc(var(--header-height) / 2 - 14px);
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-base);
+  z-index: calc(var(--z-sidebar) + 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar__toggle:hover {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.sidebar__toggle-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition-slow);
+}
+
+.sidebar__toggle-icon--rotated {
+  transform: rotate(180deg);
+}

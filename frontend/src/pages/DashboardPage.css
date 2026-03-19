@@ -1,0 +1,293 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 1200px;
+}
+
+/* ─── Saludo ─── */
+.dashboard__welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.dashboard__welcome-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+}
+
+.dashboard__welcome-sub {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ─── Métricas ─── */
+.dashboard__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+/* ─── Tarjeta métrica ─── */
+.dash-metric {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  transition: var(--transition-base);
+}
+
+.dash-metric:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.dash-metric--accent {
+  border-color: var(--color-primary);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 0%,
+    var(--color-primary-soft) 100%
+  );
+}
+
+.dash-metric__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.dash-metric__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.dash-metric--accent .dash-metric__icon {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.dash-metric__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.dash-metric__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-weight-medium);
+}
+
+.dash-metric__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.dash-metric__sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Sección tabla ─── */
+.dashboard__section {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.dashboard__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard__section-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.dashboard__section-link {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  padding: 0;
+  transition: var(--transition-fast);
+}
+
+.dashboard__section-link:hover {
+  color: var(--color-primary-hover);
+}
+
+/* ─── Tabla ─── */
+.dashboard__table-wrapper {
+  overflow-x: auto;
+}
+
+.dashboard__table {
+  width: 100%;
+}
+
+.dashboard__consecutivo {
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dashboard__monto {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.dashboard__action-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-xs);
+  transition: var(--transition-fast);
+  padding: 0;
+}
+
+.dashboard__action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dashboard__action-btn:hover {
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+/* ─── Error banner ─── */
+.dashboard__error {
+  padding: var(--space-3) var(--space-6);
+  background-color: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ─── Accesos rápidos ─── */
+.dashboard__shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.dashboard__shortcut {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.dashboard__shortcut:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-2);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard__shortcut-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dashboard__shortcut-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.dashboard__shortcut-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dashboard__shortcut-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.dashboard__shortcut-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.dashboard__shortcut-arrow {
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+  .dashboard__metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard__shortcuts {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard__welcome {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

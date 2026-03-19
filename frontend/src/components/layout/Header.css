@@ -1,0 +1,99 @@
+.header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: var(--header-height);
+  background-color: var(--color-bg-soft);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-8);
+  z-index: var(--z-header);
+  transition: left var(--transition-slow);
+  backdrop-filter: blur(8px);
+}
+
+/* ─── Lado izquierdo ─── */
+.header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.header__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.header__subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1;
+}
+
+/* ─── Lado derecho ─── */
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.header__date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+/* ─── Chip usuario ─── */
+.header__user-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.header__user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+
+.header__user-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+  white-space: nowrap;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .header__date {
+    display: none;
+  }
+
+  .header {
+    left: 0 !important;
+    padding: 0 var(--space-4);
+  }
+}

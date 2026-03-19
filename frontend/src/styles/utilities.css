@@ -1,0 +1,81 @@
+/* ─── Display ─── */
+.u-flex { display: flex; }
+.u-flex-col { display: flex; flex-direction: column; }
+.u-flex-center { display: flex; align-items: center; justify-content: center; }
+.u-flex-between { display: flex; align-items: center; justify-content: space-between; }
+.u-flex-gap-2 { gap: var(--space-2); }
+.u-flex-gap-3 { gap: var(--space-3); }
+.u-flex-gap-4 { gap: var(--space-4); }
+
+/* ─── Texto ─── */
+.u-text-muted { color: var(--color-text-muted); }
+.u-text-soft { color: var(--color-text-soft); }
+.u-text-primary { color: var(--color-primary); }
+.u-text-danger { color: var(--color-danger); }
+.u-text-success { color: var(--color-success); }
+.u-text-sm { font-size: var(--font-size-sm); }
+.u-text-xs { font-size: var(--font-size-xs); }
+.u-font-medium { font-weight: var(--font-weight-medium); }
+.u-font-semibold { font-weight: var(--font-weight-semibold); }
+.u-font-bold { font-weight: var(--font-weight-bold); }
+.u-text-center { text-align: center; }
+.u-text-right { text-align: right; }
+.u-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Spacing ─── */
+.u-mt-2 { margin-top: var(--space-2); }
+.u-mt-4 { margin-top: var(--space-4); }
+.u-mt-6 { margin-top: var(--space-6); }
+.u-mb-2 { margin-bottom: var(--space-2); }
+.u-mb-4 { margin-bottom: var(--space-4); }
+.u-mb-6 { margin-bottom: var(--space-6); }
+
+/* ─── Estados badge ─── */
+.u-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.u-badge--success {
+  background-color: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.u-badge--danger {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.u-badge--warning {
+  background-color: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.u-badge--info {
+  background-color: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+/* ─── Visibilidad ─── */
+.u-hidden { display: none; }
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

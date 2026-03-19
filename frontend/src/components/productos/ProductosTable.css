@@ -1,0 +1,93 @@
+.productos-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.productos-table {
+  width: 100%;
+  min-width: 800px;
+}
+
+.productos-table__row--agregado td {
+  background-color: var(--color-primary-soft);
+}
+
+.productos-table__cod {
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.productos-table__nombre {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  max-width: 280px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.productos-table__saldo {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.productos-table__saldo--ok {
+  color: var(--color-success);
+}
+
+.productos-table__saldo--agotado {
+  color: var(--color-danger);
+}
+
+.productos-table__precio {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+/* ─── Recursos ─── */
+.productos-table__recursos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.productos-table__recurso-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-decoration: none;
+  padding: 0;
+}
+
+.productos-table__recurso-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.productos-table__recurso-btn:hover {
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.productos-table__recurso-btn--disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}

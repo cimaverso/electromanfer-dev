@@ -1,0 +1,100 @@
+.cot-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.cot-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.cot-form__section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cot-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.cot-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cot-form__field--full {
+  grid-column: 1 / -1;
+}
+
+.cot-form__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+}
+
+.cot-form__required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.cot-form__input {
+  height: 42px;
+  padding: 0 var(--space-4);
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  transition: var(--transition-fast);
+  width: 100%;
+}
+
+.cot-form__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  background-color: var(--color-surface-3);
+}
+
+.cot-form__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.cot-form__textarea {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  resize: vertical;
+  transition: var(--transition-fast);
+  width: 100%;
+  min-height: 80px;
+}
+
+.cot-form__textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  background-color: var(--color-surface-3);
+}
+
+.cot-form__textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 640px) {
+  .cot-form__grid {
+    grid-template-columns: 1fr;
+  }
+}

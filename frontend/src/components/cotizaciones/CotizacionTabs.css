@@ -1,0 +1,54 @@
+.cot-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  padding: 0 var(--space-6);
+  overflow-x: auto;
+}
+
+.cot-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+
+.cot-tabs__tab:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-2);
+}
+
+.cot-tabs__tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.cot-tabs__tab--active:hover {
+  background-color: transparent;
+}
+
+.cot-tabs__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  border-radius: 99px;
+}

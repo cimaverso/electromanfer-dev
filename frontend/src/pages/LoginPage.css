@@ -1,0 +1,352 @@
+/* ─── Contenedor raíz ─── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg);
+}
+
+/* ─── Fondo decorativo ─── */
+.login-page__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-page__bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+}
+
+.login-page__bg-orb--1 {
+  width: 600px;
+  height: 600px;
+  background: var(--color-primary);
+  top: -200px;
+  left: -200px;
+}
+
+.login-page__bg-orb--2 {
+  width: 400px;
+  height: 400px;
+  background: var(--color-accent);
+  bottom: -150px;
+  right: -100px;
+}
+
+/* ─── Layout dos columnas ─── */
+.login-page__container {
+  display: flex;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Panel izquierdo branding ─── */
+.login-page__brand {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface) 0%,
+    var(--color-bg-soft) 100%
+  );
+  border-right: 1px solid var(--color-border);
+}
+
+.login-page__brand-content {
+  max-width: 400px;
+}
+
+.login-page__logo-wrapper {
+  margin-bottom: var(--space-6);
+}
+
+.login-page__logo-icon {
+  font-size: 3rem;
+  line-height: 1;
+  display: inline-block;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-page__brand-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+
+.login-page__brand-subtitle {
+  font-size: var(--font-size-md);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0;
+}
+
+.login-page__brand-divider {
+  width: 48px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: 99px;
+  margin: var(--space-6) 0;
+}
+
+.login-page__brand-desc {
+  font-size: var(--font-size-base);
+  color: var(--color-text-soft);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-8);
+}
+
+.login-page__brand-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.login-page__feature {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+}
+
+.login-page__feature-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* ─── Panel derecho formulario ─── */
+.login-page__form-panel {
+  width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  background-color: var(--color-bg);
+}
+
+.login-page__form-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* ─── Header del formulario ─── */
+.login-page__form-header {
+  margin-bottom: var(--space-8);
+}
+
+.login-page__form-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.login-page__form-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ─── Formulario ─── */
+.login-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ─── Error global ─── */
+.login-page__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-danger-soft);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  animation: login-shake 0.3s ease;
+}
+
+.login-page__error-icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-base);
+}
+
+@keyframes login-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+/* ─── Campo ─── */
+.login-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.login-page__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+}
+
+/* ─── Input wrapper ─── */
+.login-page__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-page__input-icon {
+  position: absolute;
+  left: var(--space-4);
+  font-size: var(--font-size-sm);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+.login-page__input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) * 2 + 1rem);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  transition: var(--transition-fast);
+  height: 48px;
+}
+
+.login-page__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  background-color: var(--color-surface-2);
+}
+
+.login-page__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-page__input--password {
+  padding-right: calc(var(--space-4) * 2 + 1rem);
+}
+
+/* ─── Toggle contraseña ─── */
+.login-page__toggle-password {
+  position: absolute;
+  right: var(--space-4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  opacity: 0.5;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: var(--transition-fast);
+}
+
+.login-page__toggle-password:hover {
+  opacity: 1;
+}
+
+/* ─── Botón submit ─── */
+.login-page__submit {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: var(--color-white);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-base);
+  margin-top: var(--space-2);
+  box-shadow: var(--shadow-primary);
+  letter-spacing: 0.02em;
+}
+
+.login-page__submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(140, 166, 83, 0.35);
+}
+
+.login-page__submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-page__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Loading dentro del botón ─── */
+.login-page__submit-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.login-page__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--color-white);
+  border-radius: 50%;
+  animation: login-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes login-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Footer ─── */
+.login-page__footer {
+  margin-top: var(--space-8);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Responsive: en móvil oculta panel branding ─── */
+@media (max-width: 768px) {
+  .login-page__brand {
+    display: none;
+  }
+
+  .login-page__form-panel {
+    width: 100%;
+    padding: var(--space-6);
+  }
+}

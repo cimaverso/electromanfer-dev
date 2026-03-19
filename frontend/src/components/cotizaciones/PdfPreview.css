@@ -1,0 +1,194 @@
+.pdf-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.pdf-preview--empty {
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  text-align: center;
+}
+
+.pdf-preview__empty-icon {
+  font-size: 3rem;
+  opacity: 0.4;
+  margin-bottom: var(--space-3);
+}
+
+.pdf-preview__empty-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+/* ─── Header resultado ─── */
+.pdf-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.pdf-preview__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pdf-preview__consecutivo {
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.pdf-preview__totales {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.pdf-preview__total-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.pdf-preview__total-item strong {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pdf-preview__total-item--total strong {
+  font-size: var(--font-size-md);
+  color: var(--color-accent);
+}
+
+/* ─── Acciones ─── */
+.pdf-preview__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pdf-preview__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.pdf-preview__action-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.pdf-preview__action-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pdf-preview__action-btn--primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: var(--color-white);
+  border-color: transparent;
+  box-shadow: var(--shadow-primary);
+}
+
+.pdf-preview__action-btn--primary:hover {
+  color: var(--color-white);
+  filter: brightness(1.1);
+  border-color: transparent;
+}
+
+.pdf-preview__action-btn--whatsapp {
+  color: #25D366;
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+.pdf-preview__action-btn--whatsapp:hover {
+  background-color: rgba(37, 211, 102, 0.08);
+  border-color: #25D366;
+  color: #25D366;
+}
+
+/* ─── Forms inline ─── */
+.pdf-preview__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  animation: fade-in 0.15s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pdf-preview__form-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+}
+
+.pdf-preview__form-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.pdf-preview__form-input {
+  flex: 1;
+  height: 38px;
+  padding: 0 var(--space-3);
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.pdf-preview__form-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+/* ─── Iframe ─── */
+.pdf-preview__frame-wrapper {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-2);
+}
+
+.pdf-preview__frame {
+  width: 100%;
+  height: 600px;
+  border: none;
+  display: block;
+}
