@@ -110,5 +110,5 @@ class ProductoCatalogo(Base):
     # Relación opcional: El producto puede aparecer en muchos ítems de cotizaciones
     items_cotizados: Mapped[list["CotizacionItem"]] = relationship(
         "CotizacionItem", 
-        back_populates="producto_maestro"
+        back_populates="producto"
     )

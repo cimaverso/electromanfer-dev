@@ -15,6 +15,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class UsuarioService:
 
     @staticmethod
+    def buscar_por_id(db: Session, usu_id: int) -> Optional[Usuario]:
+        stmt = select(Usuario).where(Usuario.usu_id == usu_id)
+        resultado = db.execute(stmt)
+        return resultado.scalar_one_or_none()
+
+    @staticmethod
     def buscar_por_email(db: Session, usu_email: str) -> Optional[Usuario]:
         stmt = select(Usuario).where(Usuario.usu_email == usu_email)
         resultado = db.execute(stmt)
@@ -32,7 +38,7 @@ class UsuarioService:
             usu_nombre = usu_data.usu_nombre,
             usu_email = usu_data.usu_email,
             usu_password = hashed_password,
-            usu_role =  RoleEnum.ASESOR# ADMIN
+            usu_role = getattr(usu_data, "usu_role", None) or RoleEnum.ASESOR
         )
 
         db.add(nuevo_admin)

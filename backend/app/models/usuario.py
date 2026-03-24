@@ -36,7 +36,7 @@ class Usuario(Base):
 
     usu_role: Mapped[str] = mapped_column(
         String(50),
-        default=RoleEnum.ASESOR
+        default=RoleEnum.ADMINISTRADOR
     )
 
     usu_activo: Mapped[bool] = mapped_column(

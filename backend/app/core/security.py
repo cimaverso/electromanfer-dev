@@ -28,6 +28,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 def get_current_user_data(token: str = Depends(oauth2_scheme)) -> TokenData:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        nombre: str = payload.get("user_name")
         email: str = payload.get("sub")
         user_id: int = payload.get("user_id")
         role: id = payload.get("role")
@@ -35,12 +36,12 @@ def get_current_user_data(token: str = Depends(oauth2_scheme)) -> TokenData:
         if email is None or user_id is None:
             return None
         
-        return TokenData(email=email, user_id=user_id, role=role)
+        return TokenData(name=nombre,email=email, user_id=user_id, role=role)
     except JWTError:
         return None
     
-# Actualizar roles => ADMINISTRADOR y ASESOR    
+
 def require_admin(token_data: TokenData = Depends(get_current_user_data)):
-    if token_data.role != "ASESOR":
+    if token_data.role != "ADMINISTRADOR":
         return None
     return token_data

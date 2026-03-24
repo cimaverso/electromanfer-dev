@@ -2,15 +2,28 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.schemas.auth import Token, LoginRequest
+from app.schemas.auth import Token, LoginRequest, TokenData
+from app.schemas.usuario import UsuarioAuthMe
 from app.services.auth import auth_service
+from app.core.security import get_current_user_data
 
 router = APIRouter(
-    prefix="/login",
-    tags=["Login"]
+    prefix="/auth",
+    tags=["Auth"]
 )
 
-@router.post("/", response_model=Token)
+@router.get("/me", response_model=UsuarioAuthMe)
+def get_me(current_user: TokenData = Depends(get_current_user_data), db: Session = Depends(get_db)):
+    user = auth_service.auth_me(current_user.user_id, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado"
+        )
+    
+    return user
+
+@router.post("/login", response_model=Token)
 async def login(
     request: Request, 
     db: Session = Depends(get_db)

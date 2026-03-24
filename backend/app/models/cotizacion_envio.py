@@ -1,8 +1,11 @@
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, DateTime, BigInteger, Text, ForeignKey
 from app.db.base import Base
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.cotizacion import Cotizacion
 
 class CotizacionEnvio(Base):
     __tablename__ = "cotizacion_envios"
@@ -64,4 +67,9 @@ class CotizacionEnvio(Base):
         DateTime, 
         nullable=False, 
         default=lambda: datetime.now(timezone.utc)
+    )
+
+    cotizacion: Mapped["Cotizacion"] = relationship(
+        "Cotizacion",
+        back_populates="envios"
     )

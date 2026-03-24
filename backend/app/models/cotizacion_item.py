@@ -1,9 +1,13 @@
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, DateTime, BigInteger, Numeric, Text, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from app.db.base import Base
 from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.cotizacion import Cotizacion
+    from app.models.producto_catalogo import ProductoCatalogo
 
 class CotizacionItem(Base):
     __tablename__ = "cotizacion_items"
@@ -116,4 +120,14 @@ class CotizacionItem(Base):
         BigInteger, 
         ForeignKey("productos_catalogo.id"), 
         nullable=True
+    )
+
+    producto: Mapped[Optional["ProductoCatalogo"]] = relationship(
+    "ProductoCatalogo",
+    back_populates="items_cotizados"
+    )
+
+    cotizacion: Mapped["Cotizacion"] = relationship(
+    "Cotizacion",
+    back_populates="items"
     )

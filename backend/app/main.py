@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import app.models.usuario
+import app.models
 
 
 from app.routes import usuario, auth
