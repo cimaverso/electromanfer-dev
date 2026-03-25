@@ -14,8 +14,12 @@ class auth_service:
         return user
 
     @staticmethod
-    def autheticate_user(email: str, password: str, db: Session):
-        user = UsuarioService.buscar_por_email(db, email)
+    def autheticate_user(email_or_username: str, password: str, db: Session):
+        if "@" in email_or_username:
+            user = UsuarioService.buscar_por_email(db, email_or_username)
+        else:
+            user = UsuarioService.buscar_por_nombre(db, email_or_username)
+
         if not user or not verify_password(password, user.usu_password): 
             return None
         

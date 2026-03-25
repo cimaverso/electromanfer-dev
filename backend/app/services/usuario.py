@@ -25,10 +25,17 @@ class UsuarioService:
         stmt = select(Usuario).where(Usuario.usu_email == usu_email)
         resultado = db.execute(stmt)
         return resultado.scalar_one_or_none()
+    
+    @staticmethod
+    def buscar_por_nombre(db: Session, usu_nombre: str) -> Optional[Usuario]:
+        stmt = select(Usuario).where(Usuario.usu_nombre == usu_nombre)
+        resultado = db.execute(stmt)
+        return resultado.scalar_one_or_none()
 
     @staticmethod
     def crear_usuario_admin(db: Session, usu_data: UsuarioCreate) -> Usuario:
-        usu_encontrado = UsuarioService.buscar_por_email(db, usu_data.usu_email)
+        email_clean = usu_data.usu_email.strip().lower()
+        usu_encontrado = UsuarioService.buscar_por_email(db, email_clean)
         if usu_encontrado:
             return None
         
@@ -36,7 +43,7 @@ class UsuarioService:
 
         nuevo_admin = Usuario(
             usu_nombre = usu_data.usu_nombre,
-            usu_email = usu_data.usu_email,
+            usu_email = email_clean,
             usu_password = hashed_password,
             usu_role = getattr(usu_data, "usu_role", None) or RoleEnum.ASESOR
         )
