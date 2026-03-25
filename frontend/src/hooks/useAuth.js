@@ -1,6 +1,6 @@
 import { useContext, useState } from 'react'
 import { AuthContext } from '../context/AuthContext'
-import { loginRequest } from '../api/authApi'
+import { loginRequest } from '../api/authApi' // Importación que ya tenías
 
 export function useAuth() {
   const context = useContext(AuthContext)
@@ -15,24 +15,25 @@ export function useAuth() {
     setIsSubmitting(true)
     setAuthError(null)
 
-    // ── MOCK TEMPORAL — eliminar cuando FastAPI esté listo ──
-    await new Promise((r) => setTimeout(r, 800))
-
-    if (email === 'admin@electromanfer.com' && password === 'admin123') {
-      context.login('mock-token-temporal', {
-        id: 1,
-        nombre: 'Alejandro González',
-        email: 'admin@electromanfer.com',
-        rol: 'administrador',
-      })
+    try {
+      // ── CONEXIÓN REAL CON EL BACKEND ──
+      const data = await loginRequest(email, password)
+      
+      // data contiene: { access_token, token_type, user } según tu JSDoc
+      context.login(data.access_token, data.user)
+      
       setIsSubmitting(false)
       return { success: true }
-    }
 
-    setAuthError('Credenciales incorrectas. Verifica e intenta de nuevo.')
-    setIsSubmitting(false)
-    return { success: false }
-    // ── FIN MOCK ──
+    } catch (error) {
+      // Manejo de errores basado en la respuesta de Axios
+      const message = error.response?.data?.detail 
+                      || 'Error de conexión. Inténtalo más tarde.'
+      
+      setAuthError(message)
+      setIsSubmitting(false)
+      return { success: false }
+    }
   }
 
   const handleLogout = () => {

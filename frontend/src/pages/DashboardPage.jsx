@@ -109,7 +109,7 @@ export default function DashboardPage() {
       <div className="dashboard__welcome">
         <div>
           <h2 className="dashboard__welcome-title">
-            {greeting()}, {user?.nombre?.split(' ')[0] || 'Asesor'} 👋
+            {greeting()}, {user?.usu_nombre?.split(' ')[0] || 'Asesor'} 👋
           </h2>
           <p className="dashboard__welcome-sub">
             Aquí tienes el resumen de actividad de ELECTROMANFER
