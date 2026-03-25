@@ -2,7 +2,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Text, DateTime, BigInteger
 from app.db.base import Base
 from datetime import datetime, timezone
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from app.enums import TipoCliente
 
 if TYPE_CHECKING:

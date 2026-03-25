@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     SECRET_KEY: str
+    EXTERNAL_API_PRODUCTOS: str
+    EXTERNAL_API_KEY: str
 
 
 settings = Settings()
