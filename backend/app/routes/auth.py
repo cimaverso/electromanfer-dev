@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, Request
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.schemas.auth import Token, LoginRequest, TokenData
+from app.schemas.auth import Token, TokenData
 from app.schemas.usuarios import UsuariosAuthMe
 from app.services.auth import auth_service
 from app.core.security import get_current_user_data
@@ -33,7 +32,7 @@ async def login(
         body = await request.json()
         email = body.get("email")
         password = body.get("password")
-    except:
+    except Exception:
         form_data = await request.form()
         email = form_data.get("username") 
         password = form_data.get("password")
