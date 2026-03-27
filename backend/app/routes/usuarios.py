@@ -4,8 +4,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.schemas.usuario import UsuarioCreate, UsuarioRead
-from app.services.usuario import UsuarioService
+from app.schemas.usuarios import UsuariosCreate, UsuariosRead
+from app.services.usuarios import UsuariosService
 
 from app.schemas.auth import TokenData
 from app.core.security import require_admin
@@ -19,9 +19,9 @@ router = APIRouter(
 def hello(db: Session = Depends(get_db), admin: TokenData = Depends(require_admin)):
     return "Hello world"
 
-@router.post("/", response_model=UsuarioRead)
-def registrar_admin(admin_data: UsuarioCreate, db: Session = Depends(get_db)):
-    usuario = UsuarioService.crear_usuario_admin(db, admin_data)
+@router.post("/", response_model=UsuariosRead)
+def registrar_admin(admin_data: UsuariosCreate, db: Session = Depends(get_db)):
+    usuario = UsuariosService.crear_usuario_admin(db, admin_data)
     if not usuario:
         raise HTTPException(
             status_code=400,

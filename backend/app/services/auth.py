@@ -1,13 +1,13 @@
 from app.core.security import verify_password, create_access_token
-from app.services.usuario import UsuarioService
+from app.services.usuarios import UsuariosService
 from sqlalchemy.orm import Session
-from app.core.security import get_current_user_data
+
 
 class auth_service:
 
     @staticmethod
     def auth_me(user_id: int, db: Session):
-        user = UsuarioService.buscar_por_id(db, user_id)
+        user = UsuariosService.buscar_por_id(db, user_id)
         if not user:
             return None
         
@@ -16,9 +16,9 @@ class auth_service:
     @staticmethod
     def autheticate_user(email_or_username: str, password: str, db: Session):
         if "@" in email_or_username:
-            user = UsuarioService.buscar_por_email(db, email_or_username)
+            user = UsuariosService.buscar_por_email(db, email_or_username)
         else:
-            user = UsuarioService.buscar_por_nombre(db, email_or_username)
+            user = UsuariosService.buscar_por_nombre(db, email_or_username)
 
         if not user or not verify_password(password, user.usu_password): 
             return None

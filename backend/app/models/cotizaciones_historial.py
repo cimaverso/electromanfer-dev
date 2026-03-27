@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 from typing import Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.cotizacion import Cotizacion
+    from backend.app.models.cotizaciones import Cotizaciones
 
-class CotizacionHistorial(Base):
-    __tablename__ = "cotizacion_historial"
+class CotizacionesHistorial(Base):
+    __tablename__ = "cotizaciones_historial"
 
     id: Mapped[int] = mapped_column(
         BigInteger, 
@@ -61,7 +61,7 @@ class CotizacionHistorial(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    cotizacion: Mapped["Cotizacion"] = relationship(
-    "Cotizacion",
-    back_populates="historial"
+    cotizaciones: Mapped["Cotizaciones"] = relationship(
+    "Cotizaciones",
+    back_populates="cotizaciones_historial"
 )

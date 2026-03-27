@@ -2,19 +2,18 @@
 # app/schemas/usuario.py
 
 from pydantic import BaseModel, Field
-from datetime import datetime
 
-class UsuarioBase(BaseModel):
+class UsuariosBase(BaseModel):
     usu_email: str
 
-class UsuarioRead(UsuarioBase):
+class UsuariosRead(UsuariosBase):
     usu_nombre: str
     usu_role: str
 
-class UsuarioAuthMe(UsuarioRead):
+class UsuariosAuthMe(UsuariosRead):
     usu_id: int
 
-class UsuarioCreate(UsuarioBase):
+class UsuariosCreate(UsuariosBase):
     usu_nombre: str = Field(..., max_length=120)
     usu_password: str = Field(..., max_length=72)
     usu_role: str = Field(..., max_length=15)

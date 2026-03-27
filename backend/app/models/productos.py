@@ -1,16 +1,15 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, DateTime, BigInteger, Numeric, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import String, DateTime, BigInteger, Numeric, Boolean
 from app.db.base import Base
 from datetime import datetime, timezone
-from typing import Optional, Any, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.producto_multimedia import ProductoMultimedia
-    from app.models.cotizacion_item import CotizacionItem
+    from backend.app.models.productos_multimedia import ProductosMultimedia
+    from backend.app.models.cotizaciones_item import CotizacionesItem
 
-class ProductoCatalogo(Base):
-    __tablename__ = "productos_catalogo"
+class Productos(Base):
+    __tablename__ = "productos"
 
     id: Mapped[int] = mapped_column(
         BigInteger, 
@@ -50,35 +49,9 @@ class ProductoCatalogo(Base):
         nullable=True
     )
 
-    fuente_externa: Mapped[str] = mapped_column(
-        String(100), 
-        default="siasoft"
-    )
-
-    # Campo para almacenar el JSON crudo de la fuente externa
-    payload_externo: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONB, 
-        nullable=True
-    )
-
-    imagen_url: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
-    
-    ficha_tecnica_url: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
-    
-    ficha_tecnica_nombre: Mapped[Optional[str]] = mapped_column(
-        String(255), 
-        nullable=True
-    )
-
     activo: Mapped[bool] = mapped_column(
-        Boolean, 
-        nullable=False, 
+        Boolean,
+        nullable=False,
         default=True
     )
 
@@ -101,14 +74,14 @@ class ProductoCatalogo(Base):
     )
 
     # Relación: Un producto tiene muchas imágenes/manuales
-    multimedia: Mapped[list["ProductoMultimedia"]] = relationship(
-        "ProductoMultimedia", 
-        back_populates="producto",
+    productos_multimedia: Mapped[list["ProductosMultimedia"]] = relationship(
+        "ProductosMultimedia", 
+        back_populates="productos",
         cascade="all, delete-orphan"
     )
 
     # Relación opcional: El producto puede aparecer en muchos ítems de cotizaciones
-    items_cotizados: Mapped[list["CotizacionItem"]] = relationship(
-        "CotizacionItem", 
-        back_populates="producto"
+    cotizaciones_items: Mapped[list["CotizacionesItem"]] = relationship(
+        "CotizacionesItem", 
+        back_populates="productos"
     )

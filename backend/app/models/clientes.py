@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 from app.enums import TipoCliente
 
 if TYPE_CHECKING:
-    from app.models.cotizacion import Cotizacion
+    from backend.app.models.cotizaciones import Cotizaciones
 
-class Cliente(Base):
+class Clientes(Base):
     __tablename__ = "clientes"
 
     id: Mapped[int] = mapped_column(
@@ -76,7 +76,7 @@ class Cliente(Base):
     )
 
     # Relación: Un cliente puede tener múltiples cotizaciones
-    cotizaciones: Mapped[list["Cotizacion"]] = relationship(
-        "Cotizacion", 
-        back_populates="cliente"
+    cotizaciones: Mapped[list["Cotizaciones"]] = relationship(
+        "Cotizaciones", 
+        back_populates="clientes"
     )

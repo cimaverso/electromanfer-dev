@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.schemas.auth import Token, LoginRequest, TokenData
-from app.schemas.usuario import UsuarioAuthMe
+from app.schemas.usuarios import UsuariosAuthMe
 from app.services.auth import auth_service
 from app.core.security import get_current_user_data
 
@@ -12,7 +12,7 @@ router = APIRouter(
     tags=["Auth"]
 )
 
-@router.get("/me", response_model=UsuarioAuthMe)
+@router.get("/me", response_model=UsuariosAuthMe)
 def get_me(current_user: TokenData = Depends(get_current_user_data), db: Session = Depends(get_db)):
     user = auth_service.auth_me(current_user.user_id, db)
     if not user:

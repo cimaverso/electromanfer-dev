@@ -5,13 +5,13 @@ from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.usuario import Usuario
-    from app.models.cliente import Cliente
-    from app.models.cotizacion_item import CotizacionItem
-    from app.models.cotizacion_historial import CotizacionHistorial
-    from app.models.cotizacion_envio import CotizacionEnvio
+    from backend.app.models.usuarios import Usuarios
+    from backend.app.models.clientes import Clientes
+    from backend.app.models.cotizaciones_item import CotizacionesItem
+    from backend.app.models.cotizaciones_historial import CotizacionesHistorial
+    from backend.app.models.cotizaciones_envio import CotizacionesEnvio
 
-class Cotizacion(Base):
+class Cotizaciones(Base):
     __tablename__ = "cotizaciones"
 
     id: Mapped[int] = mapped_column(
@@ -143,22 +143,22 @@ class Cotizacion(Base):
     )
 
     # Relaciones hacia arriba (Padres)
-    usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="cotizaciones")
-    cliente: Mapped[Optional["Cliente"]] = relationship("Cliente", back_populates="cotizaciones")
+    usuarios: Mapped["Usuarios"] = relationship("Usuarios", back_populates="cotizaciones")
+    clientes: Mapped[Optional["Clientes"]] = relationship("Clientes", back_populates="cotizaciones")
 
     # Relaciones hacia abajo (Hijos)
-    items: Mapped[list["CotizacionItem"]] = relationship(
-        "CotizacionItem", 
-        back_populates="cotizacion",
+    cotizaciones_items: Mapped[list["CotizacionesItem"]] = relationship(
+        "CotizacionesItem", 
+        back_populates="cotizaciones",
         cascade="all, delete-orphan"
     )
-    historial: Mapped[list["CotizacionHistorial"]] = relationship(
-        "CotizacionHistorial", 
-        back_populates="cotizacion",
+    cotizaciones_historial: Mapped[list["CotizacionesHistorial"]] = relationship(
+        "CotizacionesHistorial", 
+        back_populates="cotizaciones",
         cascade="all, delete-orphan"
     )
-    envios: Mapped[list["CotizacionEnvio"]] = relationship(
-        "CotizacionEnvio", 
-        back_populates="cotizacion",
+    cotizaciones_envios: Mapped[list["CotizacionesEnvio"]] = relationship(
+        "CotizacionesEnvio", 
+        back_populates="cotizaciones",
         cascade="all, delete-orphan"
     )

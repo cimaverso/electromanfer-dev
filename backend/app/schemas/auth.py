@@ -1,13 +1,13 @@
 # app/schemas/auth.py
 
 from pydantic import BaseModel
-from app.schemas.usuario import UsuarioRead
+from app.schemas.usuarios import UsuariosRead
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str
-    user: UsuarioRead
+    user: UsuariosRead
 
 class LoginRequest(BaseModel):
     email: str

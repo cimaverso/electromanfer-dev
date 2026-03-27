@@ -2,15 +2,15 @@
 
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime
+from sqlalchemy import Integer, String, Boolean, DateTime
 from app.db.base import Base
 from app.enums import RoleEnum
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
-    from app.models.cotizacion import Cotizacion
+    from backend.app.models.cotizaciones import Cotizaciones
 
-class Usuario(Base):
+class Usuarios(Base):
 
     __tablename__ = "usuarios"
     
@@ -58,7 +58,7 @@ class Usuario(Base):
     )
 
     # Relación: Un usuario puede crear muchas cotizaciones
-    cotizaciones: Mapped[list["Cotizacion"]] = relationship(
-        "Cotizacion", 
-        back_populates="usuario"
+    cotizaciones: Mapped[list["Cotizaciones"]] = relationship(
+        "Cotizaciones", 
+        back_populates="usuarios"
     )

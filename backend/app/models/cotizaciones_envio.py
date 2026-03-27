@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.cotizacion import Cotizacion
+    from backend.app.models.cotizaciones import Cotizaciones
 
-class CotizacionEnvio(Base):
-    __tablename__ = "cotizacion_envios"
+class CotizacionesEnvio(Base):
+    __tablename__ = "cotizaciones_envios"
 
     id: Mapped[int] = mapped_column(
         BigInteger, 
@@ -69,7 +69,7 @@ class CotizacionEnvio(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    cotizacion: Mapped["Cotizacion"] = relationship(
-        "Cotizacion",
-        back_populates="envios"
+    cotizaciones: Mapped["Cotizaciones"] = relationship(
+        "Cotizaciones",
+        back_populates="cotizaciones_envios"
     )

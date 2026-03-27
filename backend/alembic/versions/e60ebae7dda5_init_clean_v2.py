@@ -1,8 +1,8 @@
-"""crear_estructura_cotizaciones_y_catalogos
+"""init clean v2
 
-Revision ID: 2940d3dee5ca
-Revises: 6430ef3b19f5
-Create Date: 2026-03-23 14:14:11.213902
+Revision ID: e60ebae7dda5
+Revises: 
+Create Date: 2026-03-26 19:36:09.216648
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '2940d3dee5ca'
-down_revision: Union[str, Sequence[str], None] = '6430ef3b19f5'
+revision: str = 'e60ebae7dda5'
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -36,24 +36,7 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('configuracion_empresa',
-    sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.Column('nombre_empresa', sa.String(length=180), nullable=False),
-    sa.Column('nit', sa.String(length=50), nullable=True),
-    sa.Column('direccion', sa.Text(), nullable=True),
-    sa.Column('telefono', sa.String(length=50), nullable=True),
-    sa.Column('email', sa.String(length=180), nullable=True),
-    sa.Column('sitio_web', sa.String(length=180), nullable=True),
-    sa.Column('logo_url', sa.Text(), nullable=True),
-    sa.Column('logo_blanco_url', sa.Text(), nullable=True),
-    sa.Column('pie_pdf', sa.Text(), nullable=True),
-    sa.Column('terminos_pdf', sa.Text(), nullable=True),
-    sa.Column('porcentaje_iva_defecto', sa.Numeric(precision=6, scale=2), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('productos_catalogo',
+    op.create_table('productos',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('cod_ref', sa.String(length=80), nullable=False),
     sa.Column('nom_ref', sa.String(length=255), nullable=False),
@@ -61,17 +44,23 @@ def upgrade() -> None:
     sa.Column('nom_tip', sa.String(length=150), nullable=True),
     sa.Column('saldo', sa.Numeric(precision=14, scale=2), nullable=True),
     sa.Column('valor_web', sa.Numeric(precision=14, scale=2), nullable=True),
-    sa.Column('fuente_externa', sa.String(length=100), nullable=False),
-    sa.Column('payload_externo', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('imagen_url', sa.Text(), nullable=True),
-    sa.Column('ficha_tecnica_url', sa.Text(), nullable=True),
-    sa.Column('ficha_tecnica_nombre', sa.String(length=255), nullable=True),
     sa.Column('activo', sa.Boolean(), nullable=False),
     sa.Column('sincronizado_at', sa.DateTime(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('cod_ref')
+    )
+    op.create_table('usuarios',
+    sa.Column('usu_id', sa.Integer(), nullable=False),
+    sa.Column('usu_nombre', sa.String(length=120), nullable=False),
+    sa.Column('usu_email', sa.String(length=180), nullable=False),
+    sa.Column('usu_password', sa.String(length=255), nullable=False),
+    sa.Column('usu_role', sa.String(length=50), nullable=False),
+    sa.Column('usu_activo', sa.Boolean(), nullable=False),
+    sa.Column('usu_created_at', sa.DateTime(), nullable=False),
+    sa.Column('usu_updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('usu_id')
     )
     op.create_table('cotizaciones',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -107,15 +96,14 @@ def upgrade() -> None:
     sa.Column('tipo', sa.String(length=30), nullable=False),
     sa.Column('titulo', sa.String(length=255), nullable=True),
     sa.Column('url', sa.Text(), nullable=False),
-    sa.Column('mime_type', sa.String(length=120), nullable=True),
     sa.Column('orden', sa.Integer(), nullable=False),
     sa.Column('principal', sa.Boolean(), nullable=False),
     sa.Column('activo', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['producto_id'], ['productos_catalogo.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['producto_id'], ['productos.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('cotizacion_envios',
+    op.create_table('cotizaciones_envios',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('cotizacion_id', sa.BigInteger(), nullable=False),
     sa.Column('tipo_envio', sa.String(length=30), nullable=False),
@@ -129,7 +117,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['cotizacion_id'], ['cotizaciones.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('cotizacion_historial',
+    op.create_table('cotizaciones_historial',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('cotizacion_id', sa.BigInteger(), nullable=False),
     sa.Column('usuario_id', sa.BigInteger(), nullable=True),
@@ -142,7 +130,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.usu_id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('cotizacion_items',
+    op.create_table('cotizaciones_items',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('cotizacion_id', sa.BigInteger(), nullable=False),
     sa.Column('cod_ref', sa.String(length=80), nullable=False),
@@ -165,7 +153,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('producto_id', sa.BigInteger(), nullable=True),
     sa.ForeignKeyConstraint(['cotizacion_id'], ['cotizaciones.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['producto_id'], ['productos_catalogo.id'], ),
+    sa.ForeignKeyConstraint(['producto_id'], ['productos.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
@@ -174,12 +162,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('cotizacion_items')
-    op.drop_table('cotizacion_historial')
-    op.drop_table('cotizacion_envios')
+    op.drop_table('cotizaciones_items')
+    op.drop_table('cotizaciones_historial')
+    op.drop_table('cotizaciones_envios')
     op.drop_table('productos_multimedia')
     op.drop_table('cotizaciones')
-    op.drop_table('productos_catalogo')
-    op.drop_table('configuracion_empresa')
+    op.drop_table('usuarios')
+    op.drop_table('productos')
     op.drop_table('clientes')
     # ### end Alembic commands ###

@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from app.models.producto_catalogo import ProductoCatalogo
+    from backend.app.models.productos import Productos
 
-class ProductoMultimedia(Base):
+class ProductosMultimedia(Base):
     __tablename__ = "productos_multimedia"
 
     id: Mapped[int] = mapped_column(
@@ -19,7 +19,7 @@ class ProductoMultimedia(Base):
     # Relación con el Catálogo de Productos
     producto_id: Mapped[int] = mapped_column(
         BigInteger, 
-        ForeignKey("productos_catalogo.id", ondelete="CASCADE"),
+        ForeignKey("productos.id", ondelete="CASCADE"),
         nullable=False
     )
     
@@ -38,11 +38,7 @@ class ProductoMultimedia(Base):
         nullable=False
     )
     
-    mime_type: Mapped[Optional[str]] = mapped_column(
-        String(120), 
-        nullable=True
-    )
-    
+
     orden: Mapped[int] = mapped_column(
         Integer, 
         default=0
@@ -67,7 +63,7 @@ class ProductoMultimedia(Base):
     )
 
     # Relación inversa (Back-reference)
-    producto: Mapped["ProductoCatalogo"] = relationship(
-        "ProductoCatalogo", 
-        back_populates="multimedia"
+    productos: Mapped["Productos"] = relationship(
+        "Productos", 
+        back_populates="productos_multimedia"
     )

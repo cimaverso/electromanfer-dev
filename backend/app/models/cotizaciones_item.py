@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 from typing import Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.cotizacion import Cotizacion
-    from app.models.producto_catalogo import ProductoCatalogo
+    from backend.app.models.cotizaciones import Cotizaciones
+    from backend.app.models.productos import Productos
 
-class CotizacionItem(Base):
-    __tablename__ = "cotizacion_items"
+class CotizacionesItem(Base):
+    __tablename__ = "cotizaciones_items"
 
     id: Mapped[int] = mapped_column(
         BigInteger, 
@@ -118,16 +118,16 @@ class CotizacionItem(Base):
     # Referencia opcional al producto original (puede ser NULL si el producto se borra del catálogo)
     producto_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, 
-        ForeignKey("productos_catalogo.id"), 
+        ForeignKey("productos.id"), 
         nullable=True
     )
 
-    producto: Mapped[Optional["ProductoCatalogo"]] = relationship(
-    "ProductoCatalogo",
-    back_populates="items_cotizados"
+    productos: Mapped[Optional["Productos"]] = relationship(
+    "Productos",
+    back_populates="cotizaciones_items"
     )
 
-    cotizacion: Mapped["Cotizacion"] = relationship(
-    "Cotizacion",
-    back_populates="items"
+    cotizaciones: Mapped["Cotizaciones"] = relationship(
+    "Cotizaciones",
+    back_populates="cotizaciones_items"
     )
