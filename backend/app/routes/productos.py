@@ -1,19 +1,17 @@
-from fastapi import APIRouter
+# app/routes/productos.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.core.db import get_db
 from app.services.productos import ProductosService
 
-router = APIRouter()
-
-router = APIRouter(
-    prefix="/productos",
-    tags=["Prodcutos"]
-)
+router = APIRouter(prefix="/productos", tags=["Productos"])
 
 
 @router.get("/")
-async def buscar_productos(q: str = ""):
-    return await ProductosService.buscar_productos(q)
+def buscar_productos(q: str = "", db: Session = Depends(get_db)):
+    return ProductosService.buscar_productos(db, q)
 
 
 @router.get("/{cod_ref}")
-async def detalle_producto(cod_ref: str):
-    return await ProductosService.obtener_producto_detalle(cod_ref)
+def detalle_producto(cod_ref: str, db: Session = Depends(get_db)):
+    return ProductosService.buscar_por_cod_ref(db, cod_ref)

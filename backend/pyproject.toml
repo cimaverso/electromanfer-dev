@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.18.4",
+    "apscheduler==3.10.4",
     "bcrypt==4.0.1",
     "fastapi>=0.135.2",
     "httpx>=0.28.1",
@@ -16,5 +17,6 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.22",
+    "requests>=2.33.0",
     "uvicorn>=0.42.0",
 ]

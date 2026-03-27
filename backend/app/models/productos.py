@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, DateTime, BigInteger, Numeric, Boolean
+from sqlalchemy import String, DateTime, BigInteger, Numeric
 from app.db.base import Base
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
@@ -49,12 +49,7 @@ class Productos(Base):
         nullable=True
     )
 
-    activo: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=True
-    )
-
+   
     sincronizado_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, 
         nullable=True

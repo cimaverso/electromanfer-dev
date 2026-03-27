@@ -1,53 +1,106 @@
-# app/services/productos_service.py
-
-from typing import List, Dict, Optional
 import httpx
+import logging
+from datetime import datetime, timezone
+from typing import Optional
+from sqlalchemy.orm import Session
+from sqlalchemy import select, or_
+from app.models.productos import Productos
 from app.core.config import settings
+from app.core.db import SessionLocal
+
+logger = logging.getLogger(__name__)
 
 
 class ProductosService:
 
     @staticmethod
-    async def obtener_productos_externos() -> List[Dict]:
+    def buscar_productos(db: Session, q: str = "") -> list[Productos]:
+        stmt = select(Productos)
+
+        if q:
+            termino = f"%{q.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    Productos.nom_ref.ilike(termino),
+                    Productos.cod_ref.ilike(termino),
+                    Productos.nom_tip.ilike(termino),
+                )
+            )
+
+        resultado = db.execute(stmt.limit(50))
+        return resultado.scalars().all()
+
+    @staticmethod
+    def buscar_por_cod_ref(db: Session, cod_ref: str) -> Optional[Productos]:
+        stmt = select(Productos).where(Productos.cod_ref == cod_ref)
+        resultado = db.execute(stmt)
+        return resultado.scalar_one_or_none()
+
+    # ── Sincronización ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _fetch_externos() -> list[dict]:
+        """Llama a la API externa de forma síncrona."""
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
+            with httpx.Client(timeout=30) as client:
+                response = client.get(
                     settings.EXTERNAL_API_PRODUCTOS,
-                    headers={
-                        "x-api-key": settings.EXTERNAL_API_KEY
-                    },
-                    timeout=10
+                    headers={"x-api-key": settings.EXTERNAL_API_KEY},
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
-            print("Error consumiendo API externa:", e)
+            logger.error(f"Error al consumir API externa: {e}")
             return []
 
     @staticmethod
-    async def buscar_productos(query: str) -> List[Dict]:
-        data = await ProductosService.obtener_productos_externos()
+    def sincronizar() -> None:
+        """Upsert de productos desde la API externa. Lo llama el scheduler."""
+        logger.info("Iniciando sincronización de productos...")
+        externos = ProductosService._fetch_externos()
 
-        q = query.lower().strip()
-        resultados = []
+        if not externos:
+            logger.warning("Sin datos de la API externa, se omite la sincronización.")
+            return
 
-        for p in data:
-            if (
-                q in p["nom_ref"].lower()
-                or q in p["cod_ref"].lower()
-                or q in p["nom_tip"].lower()
-            ):
-                resultados.append(p)
+        db: Session = SessionLocal()
+        try:
+            insertados = actualizados = 0
+            ahora = datetime.now(timezone.utc)
 
-        return resultados[:50]
+            for item in externos:
+                cod = item.get("cod_ref", "").strip()
+                if not cod:
+                    continue
 
-    @staticmethod
-    async def obtener_producto_detalle(cod_ref: str) -> Optional[Dict]:
-        data = await ProductosService.obtener_productos_externos()
+                stmt = select(Productos).where(Productos.cod_ref == cod)
+                producto = db.execute(stmt).scalar_one_or_none()
 
-        producto = next(
-            (p for p in data if p["cod_ref"].lower() == cod_ref.lower()),
-            None
-        )
+                if producto is None:
+                    db.add(Productos(
+                        cod_ref         = cod,
+                        nom_ref         = item.get("nom_ref", ""),
+                        cod_tip         = item.get("cod_tip"),
+                        nom_tip         = item.get("nom_tip"),
+                        saldo           = item.get("saldo"),
+                        valor_web       = item.get("valor_web"),
+                        sincronizado_at = ahora,
+                    ))
+                    insertados += 1
+                else:
+                    producto.nom_ref         = item.get("nom_ref", producto.nom_ref)
+                    producto.cod_tip         = item.get("cod_tip", producto.cod_tip)
+                    producto.nom_tip         = item.get("nom_tip", producto.nom_tip)
+                    producto.saldo           = item.get("saldo", producto.saldo)
+                    producto.valor_web       = item.get("valor_web", producto.valor_web)
+                    producto.sincronizado_at = ahora
+                    actualizados += 1
 
-        return producto
+            db.commit()
+            logger.info(f"Sincronización completa — insertados: {insertados}, actualizados: {actualizados}")
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error durante la sincronización: {e}")
+        finally:
+            db.close()
