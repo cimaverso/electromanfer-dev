@@ -6,7 +6,7 @@ from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from backend.app.models.productos_multimedia import ProductosMultimedia
-    from backend.app.models.cotizaciones_item import CotizacionesItem
+    
 
 class Productos(Base):
     __tablename__ = "productos"
@@ -75,8 +75,4 @@ class Productos(Base):
         cascade="all, delete-orphan"
     )
 
-    # Relación opcional: El producto puede aparecer en muchos ítems de cotizaciones
-    cotizaciones_items: Mapped[list["CotizacionesItem"]] = relationship(
-        "CotizacionesItem", 
-        back_populates="productos"
-    )
+ 
