@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from backend.app.models.usuarios import Usuarios
     from backend.app.models.clientes import Clientes
     from backend.app.models.cotizaciones_item import CotizacionesItem
-    from backend.app.models.cotizaciones_historial import CotizacionesHistorial
     from backend.app.models.cotizaciones_envio import CotizacionesEnvio
 
 class Cotizaciones(Base):
@@ -42,29 +41,9 @@ class Cotizaciones(Base):
     estado: Mapped[str] = mapped_column(
         String(30), 
         nullable=False, 
-        default='generada'
+        default='GENERADA'
     )
     
-    canal_envio: Mapped[Optional[str]] = mapped_column(
-        String(30), 
-        nullable=True
-    )
-
-    notas: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
-    
-    observaciones_pdf: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
-    
-    condiciones_comerciales: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
-
     # Valores Financieros con precisión de 14,2
     subtotal: Mapped[float] = mapped_column(
         Numeric(14, 2), 
@@ -72,19 +51,13 @@ class Cotizaciones(Base):
         default=0.00
     )
     
-    descuento_total: Mapped[float] = mapped_column(
+    descuento: Mapped[float] = mapped_column(
         Numeric(14, 2), 
         nullable=False, 
         default=0.00
     )
     
-    base_gravable: Mapped[float] = mapped_column(
-        Numeric(14, 2), 
-        nullable=False, 
-        default=0.00
-    )
-    
-    iva_total: Mapped[float] = mapped_column(
+    iva: Mapped[float] = mapped_column(
         Numeric(14, 2), 
         nullable=False, 
         default=0.00
@@ -96,32 +69,9 @@ class Cotizaciones(Base):
         default=0.00
     )
 
-    moneda: Mapped[str] = mapped_column(
-        String(10), 
-        nullable=False, 
-        default='COP'
-    )
-    
-    porcentaje_iva: Mapped[float] = mapped_column(
-        Numeric(6, 2), 
-        nullable=False, 
-        default=19.00
-    )
-
     pdf_url: Mapped[Optional[str]] = mapped_column(
         Text, 
         nullable=True
-    )
-    
-    pdf_nombre: Mapped[Optional[str]] = mapped_column(
-        String(255), 
-        nullable=True
-    )
-
-    fecha_generacion: Mapped[datetime] = mapped_column(
-        DateTime, 
-        nullable=False, 
-        default=lambda: datetime.now(timezone.utc)
     )
     
     fecha_envio: Mapped[Optional[datetime]] = mapped_column(
@@ -152,11 +102,7 @@ class Cotizaciones(Base):
         back_populates="cotizaciones",
         cascade="all, delete-orphan"
     )
-    cotizaciones_historial: Mapped[list["CotizacionesHistorial"]] = relationship(
-        "CotizacionesHistorial", 
-        back_populates="cotizaciones",
-        cascade="all, delete-orphan"
-    )
+
     cotizaciones_envios: Mapped[list["CotizacionesEnvio"]] = relationship(
         "CotizacionesEnvio", 
         back_populates="cotizaciones",

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, DateTime, BigInteger, Text, ForeignKey
+from sqlalchemy import String, DateTime, BigInteger, ForeignKey
 from app.db.base import Base
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
@@ -30,18 +30,8 @@ class CotizacionesEnvio(Base):
     )
     
     # Correo electrónico o número de teléfono
-    destino: Mapped[Optional[str]] = mapped_column(
+    destinatario: Mapped[Optional[str]] = mapped_column(
         String(255), 
-        nullable=True
-    )
-    
-    asunto: Mapped[Optional[str]] = mapped_column(
-        String(255), 
-        nullable=True
-    )
-    
-    mensaje: Mapped[Optional[str]] = mapped_column(
-        Text, 
         nullable=True
     )
     
@@ -54,12 +44,6 @@ class CotizacionesEnvio(Base):
     
     enviado_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, 
-        nullable=True
-    )
-    
-    # Respuesta del servidor de correo o API de WhatsApp (logs de error o IDs de mensaje)
-    respuesta: Mapped[Optional[str]] = mapped_column(
-        Text, 
         nullable=True
     )
     

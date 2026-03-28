@@ -7,8 +7,7 @@ from typing import Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from backend.app.models.cotizaciones import Cotizaciones
-    from backend.app.models.productos import Productos
-
+    
 class CotizacionesItem(Base):
     __tablename__ = "cotizaciones_items"
 
@@ -38,11 +37,7 @@ class CotizacionesItem(Base):
         default=1.00
     )
     
-    unidad_medida: Mapped[Optional[str]] = mapped_column(
-        String(30), 
-        nullable=True
-    )
-
+   
     # Valores de la línea con precisión decimal
     precio_unitario: Mapped[float] = mapped_column(
         Numeric(14, 2), 
@@ -74,16 +69,6 @@ class CotizacionesItem(Base):
         default=0.00
     )
 
-    # Valores de referencia al momento de cotizar
-    saldo_referencia: Mapped[Optional[float]] = mapped_column(
-        Numeric(14, 2), 
-        nullable=True
-    )
-    
-    valor_web_referencia: Mapped[Optional[float]] = mapped_column(
-        Numeric(14, 2), 
-        nullable=True
-    )
 
     # Multimedia persistida
     imagen_url_snapshot: Mapped[Optional[str]] = mapped_column(
@@ -114,19 +99,7 @@ class CotizacionesItem(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    
-    # Referencia opcional al producto original (puede ser NULL si el producto se borra del catálogo)
-    producto_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, 
-        ForeignKey("productos.id"), 
-        nullable=True
-    )
-
-    productos: Mapped[Optional["Productos"]] = relationship(
-    "Productos",
-    back_populates="cotizaciones_items"
-    )
-
+   
     cotizaciones: Mapped["Cotizaciones"] = relationship(
     "Cotizaciones",
     back_populates="cotizaciones_items"
