@@ -71,14 +71,15 @@ export default function CotizacionesPage() {
     }
 
     const payload = {
-      usuario_id: user?.id || 1,
       cliente: clienteDraft,
-      notas,
-      observaciones_pdf: observacionesPdf,
-      condiciones_comerciales: condicionesComerciales,
       items: selectedProducts.map((p) => ({
-        cod_ref: p.cod_ref,
-        cantidad: p.cantidad,
+        cod_ref:            p.cod_ref,
+        nom_ref:            p.nom_ref,
+        cod_tip:            p.cod_tip,
+        nom_tip:            p.nom_tip,
+        cantidad:           p.cantidad,
+        precio_unitario:    p.valor_web,
+        descuento_unitario: 0,
       })),
     }
 
