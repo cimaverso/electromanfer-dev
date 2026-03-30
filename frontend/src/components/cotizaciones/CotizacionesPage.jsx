@@ -14,8 +14,8 @@ import Toast from '../components/common/Toast'
 import './CotizacionesPage.css'
 
 const TABS = [
-  { id: 'productos', label: 'Productos seleccionados' },
-  { id: 'preview',  label: 'Vista previa / PDF' },
+  { id: 'productos',  label: 'Productos seleccionados' },
+  { id: 'preview',   label: 'Vista previa / PDF' },
   { id: 'historial', label: 'Historial' },
 ]
 
@@ -29,7 +29,6 @@ export default function CotizacionesPage() {
     clienteDraft,
     notas,
     observacionesPdf,
-    condicionesComerciales,
     clearDraft,
   } = useCotizacionDraft()
 
@@ -46,24 +45,14 @@ export default function CotizacionesPage() {
     limpiarCotizacionActual,
   } = useCotizaciones()
 
-  // Tab activo — si viene con productos va a tab productos, sino va a historial
   const [tabActivo, setTabActivo] = useState(
     selectedProducts.length > 0 ? 'productos' : 'historial'
   )
 
-  // Al montar, carga historial en background
   useEffect(() => {
     cargarHistorial()
   }, [cargarHistorial])
 
-  // Si se genera una cotización exitosa, pasa a la pestaña de preview
-  useEffect(() => {
-    if (cotizacionActual) {
-      setTabActivo('preview')
-    }
-  }, [cotizacionActual])
-
-  // ─── Generar cotización ────────────────────────────────────────────────────
   const handleGenerar = async () => {
     if (!clienteDraft?.nombre_razon_social?.trim()) {
       showToast('Completa la razón social del cliente', 'warning')
@@ -79,10 +68,11 @@ export default function CotizacionesPage() {
       cliente: clienteDraft,
       notas,
       observaciones_pdf: observacionesPdf,
-      condiciones_comerciales: condicionesComerciales,
       items: selectedProducts.map((p) => ({
-        cod_ref: p.cod_ref,
-        cantidad: p.cantidad,
+        cod_ref:   p.cod_ref,
+        nom_ref:   p.nom_ref,
+        cantidad:  p.cantidad,
+        valor_web: p.valor_web,
       })),
     }
 
@@ -90,14 +80,18 @@ export default function CotizacionesPage() {
 
     if (result.success) {
       showToast(`Cotización ${result.data.consecutivo} generada exitosamente`, 'success')
-      clearDraft()
-      cargarHistorial()
+      // Primero cambia el tab — cotizacionActual ya está seteado en el hook
+      setTabActivo('preview')
+      // Limpia el draft DESPUÉS del cambio de tab para evitar re-renders conflictivos
+      setTimeout(() => {
+        clearDraft()
+        cargarHistorial()
+      }, 50)
     } else {
       showToast(result.error || 'Error al generar la cotización', 'error')
     }
   }
 
-  // ─── Enviar email ─────────────────────────────────────────────────────────
   const handleEmail = async (id, payload) => {
     const result = await handleEnviarEmail(id, payload)
     if (result.success) {
@@ -108,7 +102,6 @@ export default function CotizacionesPage() {
     }
   }
 
-  // ─── Enviar WhatsApp ──────────────────────────────────────────────────────
   const handleWhatsapp = async (id, payload) => {
     const result = await handleEnviarWhatsapp(id, payload)
     if (result.success && result.url) {
@@ -120,14 +113,10 @@ export default function CotizacionesPage() {
     }
   }
 
-  // ─── Ver detalle del historial ────────────────────────────────────────────
-  const handleVerDetalle = async (id) => {
-    // Por ahora navega al tab preview con la info que ya tenemos
-    // Cuando backend esté listo, se puede hacer getCotizacion(id)
+  const handleVerDetalle = (id) => {
     setTabActivo('preview')
   }
 
-  // ─── Cambio de tab ────────────────────────────────────────────────────────
   const handleTabChange = (id) => {
     setTabActivo(id)
     if (id === 'historial') {
@@ -171,7 +160,9 @@ export default function CotizacionesPage() {
 
             <div className="cotizaciones-page__card">
               <div className="cotizaciones-page__card-header">
-                <h3 className="cotizaciones-page__card-title">Datos del cliente</h3>
+                <h3 className="cotizaciones-page__card-title">
+                  Datos del cliente
+                </h3>
               </div>
               <div className="cotizaciones-page__card-body">
                 <CotizacionForm />
@@ -236,9 +227,7 @@ export default function CotizacionesPage() {
               onFiltrar={cargarHistorial}
               onVerDetalle={handleVerDetalle}
               onDescargar={(cot) => cot.pdf_url && window.open(cot.pdf_url, '_blank')}
-              onReenviar={(cot) => {
-                handleVerDetalle(cot.id)
-              }}
+              onReenviar={(cot) => handleVerDetalle(cot.id)}
             />
           </div>
         </div>

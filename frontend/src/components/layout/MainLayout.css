@@ -2,6 +2,7 @@
   display: flex;
   min-height: 100vh;
   background-color: var(--color-bg);
+  box-sizing: border-box;
 }
 
 /* ─── Área de contenido ─── */
@@ -11,7 +12,10 @@
   transition: margin-left var(--transition-slow);
   display: flex;
   flex-direction: column;
+  /* FIX: evita que el content desborde cuando hay tablas anchas */
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .main-layout__content--collapsed {
@@ -24,9 +28,18 @@
   padding: var(--space-8);
   flex: 1;
   min-height: calc(100vh - var(--header-height));
+  box-sizing: border-box;
+  /* FIX: el contenido interno no desborda horizontalmente */
+  overflow-x: hidden;
 }
 
 /* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .main-layout__main {
+    padding: var(--space-6);
+  }
+}
+
 @media (max-width: 768px) {
   .main-layout__content {
     margin-left: 0;

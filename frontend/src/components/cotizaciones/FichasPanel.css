@@ -1,0 +1,201 @@
+.fichas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.fichas-panel__desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── Lista de productos ── */
+.fichas-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Item por producto ── */
+.fichas-panel__item {
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fichas-panel__item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fichas-panel__cod {
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--color-primary-soft);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+
+.fichas-panel__nom {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Punto animado de carga */
+.fichas-panel__loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  animation: fichas-pulse 1s ease infinite;
+  flex-shrink: 0;
+}
+
+@keyframes fichas-pulse {
+  0%, 100% { opacity: 1; transform: scale(1) }
+  50%       { opacity: 0.4; transform: scale(0.7) }
+}
+
+/* Sin fichas */
+.fichas-panel__no-fichas {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Lista de PDFs ── */
+.fichas-panel__pdfs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fichas-panel__pdf-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-surface-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.fichas-panel__pdf-item:hover {
+  border-color: var(--color-danger);
+}
+
+.fichas-panel__pdf-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
+
+.fichas-panel__pdf-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.fichas-panel__pdf-nombre {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fichas-panel__pdf-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.fichas-panel__pdf-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.fichas-panel__pdf-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.fichas-panel__pdf-btn:hover {
+  background-color: var(--color-surface-3);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.fichas-panel__pdf-btn--download:hover {
+  background-color: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ── Empty state ── */
+.fichas-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.fichas-panel__empty-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.3;
+}
+
+.fichas-panel__empty-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.fichas-panel__empty p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.fichas-panel__empty-hint {
+  font-size: var(--font-size-xs) !important;
+  color: var(--color-text-muted);
+}

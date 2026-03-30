@@ -11,7 +11,8 @@
   left: 0;
   z-index: var(--z-sidebar);
   transition: width var(--transition-slow);
-  overflow: hidden;
+  /* FIX: overflow visible para que el toggle no se corte */
+  overflow: visible;
 }
 
 .sidebar--collapsed {
@@ -26,24 +27,23 @@
   padding: var(--space-6) var(--space-5);
   border-bottom: 1px solid var(--color-border);
   min-height: var(--header-height);
+  /* clip interno para que el logo no desborde */
   overflow: hidden;
 }
 
-.sidebar__logo-icon {
-  font-size: 1.6rem;
-  flex-shrink: 0;
-  width: 36px;
+/* ─── Logo imagen ─── */
+.sidebar__logo-img {
   height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  border-radius: var(--radius-sm);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  /* fallback para el fondo */
-  box-shadow: var(--shadow-primary);
+  width: auto;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.sidebar__logo-img--collapsed {
+  height: 32px;
+  width: 32px;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
 }
 
 .sidebar__logo-text {
@@ -173,6 +173,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* clip interno */
+  overflow: hidden;
 }
 
 /* ─── Usuario ─── */
@@ -231,6 +233,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-sm);
   background: none;
+  border: none;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -240,6 +243,7 @@
   white-space: nowrap;
   overflow: hidden;
   position: relative;
+  cursor: pointer;
 }
 
 .sidebar__logout:hover {
@@ -247,10 +251,11 @@
   color: var(--color-danger);
 }
 
-/* ─── Botón toggle colapsar ─── */
+/* ─── Botón toggle colapsar — FIX: visible y correctamente posicionado ─── */
 .sidebar__toggle {
   position: absolute;
   top: calc(var(--header-height) / 2 - 14px);
+  /* Empuja el botón hacia afuera del sidebar sin ser cortado */
   right: -14px;
   width: 28px;
   height: 28px;
@@ -262,22 +267,44 @@
   justify-content: center;
   cursor: pointer;
   transition: var(--transition-base);
-  z-index: calc(var(--z-sidebar) + 1);
+  /* z-index sobre el contenido principal */
+  z-index: calc(var(--z-sidebar) + 10);
   box-shadow: var(--shadow-sm);
+  /* Evitar que hereden clip del padre */
+  flex-shrink: 0;
 }
 
 .sidebar__toggle:hover {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-white);
+  box-shadow: var(--shadow-primary);
 }
 
 .sidebar__toggle-icon {
   width: 14px;
   height: 14px;
   transition: transform var(--transition-slow);
+  display: block;
 }
 
 .sidebar__toggle-icon--rotated {
   transform: rotate(180deg);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .sidebar {
+    /* En móvil el sidebar se oculta fuera de pantalla */
+    transform: translateX(-100%);
+    width: var(--sidebar-width-open) !important;
+  }
+
+  .sidebar--mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar__toggle {
+    display: none;
+  }
 }

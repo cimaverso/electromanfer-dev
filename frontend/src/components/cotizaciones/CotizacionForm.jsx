@@ -9,8 +9,6 @@ export default function CotizacionForm() {
     setNotas,
     observacionesPdf,
     setObservacionesPdf,
-    condicionesComerciales,
-    setCondicionesComerciales,
   } = useCotizacionDraft()
 
   const cliente = clienteDraft || {}
@@ -128,17 +126,6 @@ export default function CotizacionForm() {
             rows={3}
             value={observacionesPdf}
             onChange={(e) => setObservacionesPdf(e.target.value)}
-          />
-        </div>
-
-        <div className="cot-form__field">
-          <label className="cot-form__label">Condiciones comerciales</label>
-          <textarea
-            className="cot-form__textarea"
-            placeholder="Ej: Forma de pago 50% anticipo, 50% contra entrega"
-            rows={3}
-            value={condicionesComerciales}
-            onChange={(e) => setCondicionesComerciales(e.target.value)}
           />
         </div>
       </div>

@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  // Si ya tiene sesión activa, redirige directo al dashboard
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard', { replace: true })
@@ -20,11 +19,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
     if (!email.trim() || !password.trim()) return
-
     const result = await handleLogin(email.trim(), password)
-
     if (result.success) {
       navigate('/dashboard', { replace: true })
     }
@@ -42,7 +38,6 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Fondo con gradiente y partículas decorativas */}
       <div className="login-page__bg">
         <div className="login-page__bg-orb login-page__bg-orb--1" />
         <div className="login-page__bg-orb login-page__bg-orb--2" />
@@ -52,10 +47,28 @@ export default function LoginPage() {
         {/* Panel izquierdo — branding */}
         <div className="login-page__brand">
           <div className="login-page__brand-content">
+
+            {/* Logo imagen — letras negras, fondo claro del panel */}
             <div className="login-page__logo-wrapper">
-              <div className="login-page__logo-icon">⚡</div>
+              <img
+                src="/logo_completo.png"
+                alt="Electromanfer"
+                className="login-page__logo-img"
+                onError={(e) => {
+                  // Fallback si la imagen no carga
+                  e.currentTarget.style.display = 'none'
+                  document.getElementById('login-logo-fallback').style.display = 'block'
+                }}
+              />
+              <span
+                id="login-logo-fallback"
+                className="login-page__logo-fallback"
+                style={{ display: 'none' }}
+              >
+                ⚡
+              </span>
             </div>
-            <h1 className="login-page__brand-title">ELECTROMANFER</h1>
+
             <p className="login-page__brand-subtitle">La Tienda Ambiental</p>
             <div className="login-page__brand-divider" />
             <p className="login-page__brand-desc">
@@ -89,7 +102,6 @@ export default function LoginPage() {
             </div>
 
             <form className="login-page__form" onSubmit={handleSubmit} noValidate>
-              {/* Error global */}
               {authError && (
                 <div className="login-page__error" role="alert">
                   <span className="login-page__error-icon">⚠</span>
@@ -97,7 +109,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Campo email */}
               <div className="login-page__field">
                 <label className="login-page__label" htmlFor="login-email">
                   Correo electrónico
@@ -119,7 +130,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Campo contraseña */}
               <div className="login-page__field">
                 <label className="login-page__label" htmlFor="login-password">
                   Contraseña
@@ -149,7 +159,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="login-page__submit"

@@ -28,7 +28,6 @@ export default function ProductosPage() {
   const { selectedProducts } = useCotizacionDraft()
   const { toast, showToast, hideToast } = useToast()
 
-  // Muestra toast cuando se agrega un producto
   const prevCount = useRef(selectedProducts.length)
   useEffect(() => {
     const curr = selectedProducts.length
@@ -101,10 +100,14 @@ export default function ProductosPage() {
                 {resultados.length} resultado{resultados.length !== 1 ? 's' : ''} para "{query}"
               </span>
             </div>
-            <ProductosTable
-              productos={resultados}
-              onVerDetalle={verDetalle}
-            />
+
+            {/* ── Contenedor con scroll — máx 20 filas visibles, resto a scroll ── */}
+            <div className="productos-page__table-scroll">
+              <ProductosTable
+                productos={resultados}
+                onVerDetalle={verDetalle}
+              />
+            </div>
           </>
         )}
 

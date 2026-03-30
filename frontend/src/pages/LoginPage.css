@@ -66,27 +66,30 @@
   max-width: 400px;
 }
 
+/* ─── Logo imagen ─── */
 .login-page__logo-wrapper {
   margin-bottom: var(--space-6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.login-page__logo-icon {
+.login-page__logo-img {
+  height: 56px;
+  width: auto;
+  max-width: 280px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Fallback emoji si la imagen no carga */
+.login-page__logo-fallback {
   font-size: 3rem;
   line-height: 1;
-  display: inline-block;
   background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-.login-page__brand-title {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-  line-height: 1;
-  margin-bottom: var(--space-2);
 }
 
 .login-page__brand-subtitle {
@@ -241,9 +244,11 @@
   font-size: var(--font-size-base);
   transition: var(--transition-fast);
   height: 48px;
+  box-sizing: border-box;
 }
 
 .login-page__input:focus {
+  outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-soft);
   background-color: var(--color-surface-2);
@@ -339,7 +344,7 @@
   color: var(--color-text-muted);
 }
 
-/* ─── Responsive: en móvil oculta panel branding ─── */
+/* ─── Responsive ─── */
 @media (max-width: 768px) {
   .login-page__brand {
     display: none;

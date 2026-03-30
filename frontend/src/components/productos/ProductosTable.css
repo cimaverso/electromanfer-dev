@@ -67,13 +67,16 @@
   align-items: center;
   justify-content: center;
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--color-text-muted);
   border-radius: var(--radius-xs);
   cursor: pointer;
   transition: var(--transition-fast);
   text-decoration: none;
   padding: 0;
+  position: relative;
+  /* opaco por defecto — sin recursos */
+  opacity: 0.3;
 }
 
 .productos-table__recurso-btn svg {
@@ -84,10 +87,39 @@
 .productos-table__recurso-btn:hover {
   background-color: var(--color-surface-2);
   color: var(--color-text);
+  opacity: 1;
+  border-color: var(--color-border);
 }
 
-.productos-table__recurso-btn--disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
+/* ── Ícono activo: tiene recursos ── */
+.productos-table__recurso-btn--active {
+  opacity: 1;
+  color: var(--color-primary);
+  border-color: var(--color-primary-soft);
+  background-color: var(--color-primary-soft);
+}
+
+.productos-table__recurso-btn--active:hover {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}
+
+/* Badge contador sobre el ícono */
+.productos-table__recurso-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+  line-height: 1;
 }

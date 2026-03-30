@@ -6,7 +6,7 @@ const IVA = 0.19
 
 const initialState = {
   selectedProducts: [],    // [{ ...producto, cantidad: number }]
-  clienteDraft: null,      // objeto con datos del cliente
+  clienteDraft: null,
   notas: '',
   observacionesPdf: '',
   condicionesComerciales: '',
@@ -20,7 +20,6 @@ function draftReducer(state, action) {
         (p) => p.cod_ref === action.payload.cod_ref
       )
       if (existe) {
-        // Si ya existe, incrementa cantidad en 1
         return {
           ...state,
           selectedProducts: state.selectedProducts.map((p) =>
@@ -48,11 +47,12 @@ function draftReducer(state, action) {
       }
 
     case 'UPDATE_QUANTITY': {
-      const cantidad = Math.max(1, Number(action.payload.cantidad))
+      // FIX: payload usa codRef (camelCase) — consistente con el dispatch
+      const cantidad = Math.max(1, parseInt(action.payload.cantidad, 10) || 1)
       return {
         ...state,
         selectedProducts: state.selectedProducts.map((p) =>
-          p.cod_ref === action.payload.cod_ref
+          p.cod_ref === action.payload.codRef
             ? { ...p, cantidad }
             : p
         ),
@@ -114,7 +114,6 @@ export function CotizacionDraftProvider({ children }) {
     dispatch({ type: 'CLEAR_DRAFT' })
   }, [])
 
-  // ─── Cálculos preliminares (nivel 1 — solo para previsualización) ───────────
   const getSubtotal = useCallback(() => {
     return state.selectedProducts.reduce(
       (acc, p) => acc + (p.valor_web || 0) * p.cantidad,

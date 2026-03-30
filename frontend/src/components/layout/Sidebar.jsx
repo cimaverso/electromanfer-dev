@@ -42,6 +42,9 @@ const NAV_ITEMS = [
   },
 ]
 
+// Evento custom para sincronizar estado sin polling
+const SIDEBAR_EVENT = 'sidebar:toggle'
+
 export default function Sidebar() {
   const navigate = useNavigate()
   const { user, handleLogout } = useAuth()
@@ -54,11 +57,15 @@ export default function Sidebar() {
     }
   })
 
-  useEffect(() => {
-    localStorage.setItem('sidebar_collapsed', String(collapsed))
-  }, [collapsed])
-
-  const toggleCollapsed = () => setCollapsed((v) => !v)
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem('sidebar_collapsed', String(next))
+      // Dispara evento custom para que MainLayout reaccione instantáneamente
+      window.dispatchEvent(new CustomEvent(SIDEBAR_EVENT, { detail: { collapsed: next } }))
+      return next
+    })
+  }
 
   const onLogout = () => {
     handleLogout()
@@ -67,11 +74,36 @@ export default function Sidebar() {
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+
       {/* ── Logo ── */}
       <div className="sidebar__logo">
-        <div className="sidebar__logo-icon">⚡</div>
+        {collapsed ? (
+          /* Colapsado: solo el ícono/inicial del logo */
+          <img
+            src="/logo_electromanfer.svg"
+            alt="Electromanfer"
+            className="sidebar__logo-img sidebar__logo-img--collapsed"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+              e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.display = 'flex')
+            }}
+          />
+        ) : (
+          /* Expandido: logo completo con letras */
+          <img
+            src="/logo_completo.png"
+            alt="Electromanfer"
+            className="sidebar__logo-img"
+            onError={(e) => {
+              // Fallback: texto si la imagen no carga
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        )}
+
+        {/* Fallback texto (si ambas imágenes fallan) */}
         {!collapsed && (
-          <div className="sidebar__logo-text">
+          <div className="sidebar__logo-text" style={{ display: 'none' }}>
             <span className="sidebar__logo-name">ELECTROMANFER</span>
             <span className="sidebar__logo-sub">Panel Admin</span>
           </div>
@@ -88,7 +120,6 @@ export default function Sidebar() {
                 className={({ isActive }) =>
                   `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`
                 }
-                title={collapsed ? item.label : undefined}
               >
                 <span className="sidebar__nav-icon">{item.icon}</span>
                 {!collapsed && (
@@ -105,7 +136,7 @@ export default function Sidebar() {
 
       {/* ── Footer: usuario + logout ── */}
       <div className="sidebar__footer">
-        <div className="sidebar__user" title={collapsed ? user?.nombre : undefined}>
+        <div className="sidebar__user" title={collapsed ? (user?.nombre || 'Usuario') : undefined}>
           <div className="sidebar__user-avatar">
             {user?.nombre?.charAt(0)?.toUpperCase() || 'U'}
           </div>
