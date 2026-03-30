@@ -66,7 +66,6 @@ export default function CotizacionesPage() {
     }
 
     const payload = {
-      usuario_id: user?.id || 1,
       cliente: clienteDraft,
       notas,
       observaciones_pdf: observacionesPdf,
