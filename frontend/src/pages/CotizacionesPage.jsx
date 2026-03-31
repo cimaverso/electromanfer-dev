@@ -15,9 +15,9 @@ import Toast from '../components/common/Toast'
 import './CotizacionesPage.css'
 
 const TABS_BASE = [
-  { id: 'productos',  label: 'Productos seleccionados' },
-  { id: 'preview',   label: 'Vista previa / PDF' },
-  { id: 'fichas',    label: 'Fichas técnicas' },
+  { id: 'productos', label: 'Productos seleccionados' },
+  { id: 'preview', label: 'Vista previa / PDF' },
+  { id: 'fichas', label: 'Fichas técnicas' },
   { id: 'historial', label: 'Historial' },
 ]
 
@@ -45,6 +45,7 @@ export default function CotizacionesPage() {
     handleEnviarEmail,
     handleEnviarWhatsapp,
     limpiarCotizacionActual,
+    verCotizacion,
   } = useCotizaciones()
 
   const [tabActivo, setTabActivo] = useState(
@@ -70,9 +71,9 @@ export default function CotizacionesPage() {
       notas,
       observaciones_pdf: observacionesPdf,
       items: selectedProducts.map((p) => ({
-        cod_ref:   p.cod_ref,
-        nom_ref:   p.nom_ref,
-        cantidad:  p.cantidad,
+        cod_ref: p.cod_ref,
+        nom_ref: p.nom_ref,
+        cantidad: p.cantidad,
         valor_web: p.valor_web,
       })),
     }
@@ -124,7 +125,7 @@ export default function CotizacionesPage() {
   }))
 
   // Productos de la cotización actual para fichas
-  const itemsCotizacion = cotizacionActual?.items || selectedProducts
+  const itemsCotizacion = cotizacionActual?.cotizaciones_items || selectedProducts
 
   return (
     <div className="cotizaciones-page">
@@ -228,7 +229,10 @@ export default function CotizacionesPage() {
               historial={historial}
               loading={loadingHistorial}
               onFiltrar={cargarHistorial}
-              onVerDetalle={() => setTabActivo('preview')}
+              onVerDetalle={async (id) => {
+                await verCotizacion(id)
+                setTabActivo('preview')
+              }}
               onDescargar={(cot) => cot.pdf_url && window.open(cot.pdf_url, '_blank')}
               onReenviar={() => setTabActivo('preview')}
             />

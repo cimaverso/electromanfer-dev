@@ -136,18 +136,18 @@ export default function Sidebar() {
 
       {/* ── Footer: usuario + logout ── */}
       <div className="sidebar__footer">
-        <div className="sidebar__user" title={collapsed ? (user?.nombre || 'Usuario') : undefined}>
+        <div className="sidebar__user" title={collapsed ? (user?.usuario || 'Usuario') : undefined}>
           <div className="sidebar__user-avatar">
-            {user?.nombre?.charAt(0)?.toUpperCase() || 'U'}
+            {user?.usuario?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           {!collapsed && (
             <div className="sidebar__user-info">
-              <span className="sidebar__user-name">{user?.nombre || 'Usuario'}</span>
+              <span className="sidebar__user-name">{user?.usuario || 'Usuario'}</span>
               <span className="sidebar__user-role">{user?.rol || 'Asesor'}</span>
             </div>
           )}
           {collapsed && (
-            <span className="sidebar__tooltip">{user?.nombre || 'Usuario'}</span>
+            <span className="sidebar__tooltip">{user?.usuario || 'Usuario'}</span>
           )}
         </div>
 

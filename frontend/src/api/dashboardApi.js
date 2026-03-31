@@ -26,7 +26,7 @@ export async function getMetricas() {
   const cotizaciones_recientes = cotizaciones.slice(0, 5).map((c) => ({
     id:          c.id,
     consecutivo: c.consecutivo,
-    cliente:     c.cliente?.nombre_razon_social || 'Sin cliente',
+    cliente:     c.clientes?.nombre_razon_social || 'Sin cliente',
     total:       c.total,
     estado:      c.estado,
     fecha:       c.created_at?.split('T')[0],

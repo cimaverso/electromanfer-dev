@@ -6,21 +6,6 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 import PrimaryButton from '../components/common/PrimaryButton'
 import './DashboardPage.css'
 
-// ─── Mock temporal mientras backend no tenga el endpoint ─────────────────────
-const MOCK_METRICAS = {
-  cotizaciones_hoy: 4,
-  cotizaciones_mes: 87,
-  cotizaciones_pendientes: 12,
-  monto_total_mes: 14850000,
-  variacion_mes: 8.4,
-  cotizaciones_recientes: [
-    { id: 1, consecutivo: 'COT-2026-000087', cliente: 'Constructora Los Andes S.A.', total: 2395000, estado: 'enviada_email', fecha: '2026-03-18' },
-    { id: 2, consecutivo: 'COT-2026-000086', cliente: 'Industria del Norte S.A.S.', total: 870000, estado: 'generada', fecha: '2026-03-18' },
-    { id: 3, consecutivo: 'COT-2026-000085', cliente: 'Ferretería Central Ltda.', total: 1240000, estado: 'enviada_whatsapp', fecha: '2026-03-17' },
-    { id: 4, consecutivo: 'COT-2026-000084', cliente: 'Eléctricos del Valle', total: 560000, estado: 'generada', fecha: '2026-03-17' },
-    { id: 5, consecutivo: 'COT-2026-000083', cliente: 'Grupo Constructor Medellín', total: 3180000, estado: 'anulada', fecha: '2026-03-16' },
-  ],
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatCOP(value) {
@@ -33,11 +18,11 @@ function formatCOP(value) {
 }
 
 const ESTADO_CONFIG = {
-  generada:          { label: 'Generada',      className: 'u-badge u-badge--info' },
-  enviada_email:     { label: 'Email enviado', className: 'u-badge u-badge--success' },
-  enviada_whatsapp:  { label: 'WhatsApp',      className: 'u-badge u-badge--success' },
-  enviada_ambos:     { label: 'Enviada',       className: 'u-badge u-badge--success' },
-  anulada:           { label: 'Anulada',       className: 'u-badge u-badge--danger' },
+  generada: { label: 'Generada', className: 'u-badge u-badge--info' },
+  enviada_email: { label: 'Email enviado', className: 'u-badge u-badge--success' },
+  enviada_whatsapp: { label: 'WhatsApp', className: 'u-badge u-badge--success' },
+  enviada_ambos: { label: 'Enviada', className: 'u-badge u-badge--success' },
+  anulada: { label: 'Anulada', className: 'u-badge u-badge--danger' },
 }
 
 function EstadoBadge({ estado }) {
@@ -78,10 +63,18 @@ export default function DashboardPage() {
         const data = await getMetricas()
         if (!cancelled) setMetricas(data)
       } catch {
-        // Si el backend no está listo, usa mock y no muestra error
         if (!cancelled) {
-          setMetricas(MOCK_METRICAS)
+          setError('No se pudo cargar la información')
+          setMetricas({
+            cotizaciones_hoy: 0,
+            cotizaciones_mes: 0,
+            cotizaciones_pendientes: 0,
+            monto_total_mes: 0,
+            variacion_mes: 0,
+            cotizaciones_recientes: [],
+          })
         }
+
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -109,7 +102,11 @@ export default function DashboardPage() {
       <div className="dashboard__welcome">
         <div>
           <h2 className="dashboard__welcome-title">
-            {greeting()}, {user?.usu_nombre?.split(' ')[0] || 'Asesor'} 👋
+            {greeting()},{' '}
+            {(() => {
+              const nombre = user?.nombre_completo?.split(' ')[0] || 'Asesor'
+              return nombre.charAt(0).toUpperCase() + nombre.slice(1).toLowerCase()
+            })()} 👋
           </h2>
           <p className="dashboard__welcome-sub">
             Aquí tienes el resumen de actividad de ELECTROMANFER

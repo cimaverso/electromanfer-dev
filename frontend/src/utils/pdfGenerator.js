@@ -79,7 +79,7 @@ export async function generarPdfCotizacion(
   const H_PIE        = 28
   const Y_PIE        = PAGE_H - H_PIE
 
-  const items = cotizacion.items || []
+  const items = cotizacion.cotizaciones_items || []
 
   // Carga encabezado y pie (imágenes de producto pendientes a backend)
   const [encabezadoB64, pieB64] = await Promise.all([
@@ -176,7 +176,7 @@ export async function generarPdfCotizacion(
   let y = H_ENCABEZADO + H_FRANJA + 6
 
   // ── Bloque cliente ────────────────────────────────────────────────────────
-  const cliente = cotizacion.cliente || {}
+  const cliente = cotizacion.clientes || {}
 
   doc.setFillColor(245, 247, 250)
   doc.roundedRect(MARGEN, y, ANCHO, 34, 2, 2, 'F')
@@ -293,7 +293,7 @@ export async function generarPdfCotizacion(
   doc.setTextColor(...GRIS)
   doc.text('IVA(19%)', TOTAL_X + 3, y + 5.5)
   doc.setTextColor(...OSCURO)
-  doc.text(formatCOP(cotizacion.iva_total), TOTAL_X + TOTAL_W - 3, y + 5.5, { align: 'right' })
+  doc.text(formatCOP(cotizacion.iva), TOTAL_X + TOTAL_W - 3, y + 5.5, { align: 'right' })
   y += 8
 
   // Total

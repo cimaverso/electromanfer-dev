@@ -13,11 +13,11 @@ function formatCOP(value) {
 }
 
 const ESTADO_CONFIG = {
-  generada:         { label: 'Generada',      cls: 'u-badge u-badge--info' },
-  enviada_email:    { label: 'Email enviado', cls: 'u-badge u-badge--success' },
-  enviada_whatsapp: { label: 'WhatsApp',      cls: 'u-badge u-badge--success' },
-  enviada_ambos:    { label: 'Enviada',       cls: 'u-badge u-badge--success' },
-  anulada:          { label: 'Anulada',       cls: 'u-badge u-badge--danger' },
+  generada: { label: 'Generada', cls: 'u-badge u-badge--info' },
+  enviada_email: { label: 'Email enviado', cls: 'u-badge u-badge--success' },
+  enviada_whatsapp: { label: 'WhatsApp', cls: 'u-badge u-badge--success' },
+  enviada_ambos: { label: 'Enviada', cls: 'u-badge u-badge--success' },
+  anulada: { label: 'Anulada', cls: 'u-badge u-badge--danger' },
 }
 
 function EstadoBadge({ estado }) {
@@ -64,7 +64,7 @@ export default function HistorialTable({
     }
     setFiltros(vacios)
     // Aseguramos que el componente padre entienda que se limpiaron todos los filtros
-    onFiltrar({}) 
+    onFiltrar({})
   }
 
   return (
@@ -178,7 +178,7 @@ export default function HistorialTable({
                   {/* Celda 2 */}
                   <td>
                     <span className="hist-table__cliente">
-                      {cot.cliente?.nombre_razon_social || cot.cliente || '—'}
+                      {cot.clientes?.nombre_razon_social || '—'}
                     </span>
                   </td>
                   {/* Celda 3 */}
@@ -193,12 +193,12 @@ export default function HistorialTable({
                   </td>
                   {/* Celda 5: Fecha correctamente contenida */}
                   <td className="u-text-muted">
-                    {cot.fecha_generacion
-                      ? new Date(cot.fecha_generacion).toLocaleDateString('es-CO', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
+                    {cot.created_at
+                      ? new Date(cot.created_at).toLocaleDateString('es-CO', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
                       : '—'}
                   </td>
                   {/* Celda 6 */}

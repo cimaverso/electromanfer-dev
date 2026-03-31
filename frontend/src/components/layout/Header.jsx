@@ -46,9 +46,9 @@ export default function Header({ collapsed }) {
 
         <div className="header__user-chip">
           <div className="header__user-avatar">
-            {user?.nombre?.charAt(0)?.toUpperCase() || 'U'}
+            {user?.usuario?.charAt(0)?.toUpperCase() || 'U'}
           </div>
-          <span className="header__user-name">{user?.nombre || 'Usuario'}</span>
+          <span className="header__user-name">{user?.usuario || 'Usuario'}</span>
         </div>
       </div>
     </header>
