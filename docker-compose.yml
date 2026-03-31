@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: electromanfer_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER_ELECTROMANFER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD_ELECTROMANFER}
+      POSTGRES_DB: ${DB_NAME_ELECTROMANFER}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    container_name: electromanfer_backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - media_imagenes:/app/media/imagenes
+      - media_fichas:/app/media/media/fichas
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: electromanfer_frontend
+    restart: always
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: electromanfer_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - media_imagenes:/usr/share/nginx/media/imagenes
+      - media_fichas:/usr/share/nginx/media/fichas
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  postgres_data:
+  media_imagenes:
+  media_fichas:
