@@ -10,7 +10,7 @@ class ItemCreate(BaseModel):
     cod_tip: Optional[str] = None
     nom_tip: Optional[str] = None
     cantidad: float
-    precio_unitario: float
+    valor_web: float
     descuento_unitario: float = 0.00
     imagen_url_snapshot: Optional[str] = None
     ficha_tecnica_url_snapshot: Optional[str] = None
@@ -38,7 +38,9 @@ class ItemResponse(BaseModel):
 class CotizacionCreate(BaseModel):
     cliente: ClienteCreate
     items: list[ItemCreate]
-    
+    notas: Optional[str] = None
+    observaciones_pdf: Optional[str] = None
+
 
 class CotizacionResponse(BaseModel):
     id: int

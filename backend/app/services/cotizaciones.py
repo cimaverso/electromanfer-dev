@@ -32,18 +32,18 @@ class CotizacionesService:
         numero = 1 if ultimo is None else int(ultimo.consecutivo.split("-")[-1]) + 1
         return f"{prefijo}{numero:04d}"
 
-    # Cálculos
+    # Cálculos 
 
     @staticmethod
     def _calcular_item(item) -> dict:
-        subtotal  = round(item.precio_unitario * item.cantidad, 2)
+        subtotal  = round(item.valor_web * item.cantidad, 2)
         descuento = round(item.descuento_unitario * item.cantidad, 2)
         base      = round(subtotal - descuento, 2)
         iva       = round(base * IVA, 2)
         total     = round(base + iva, 2)
         return {"subtotal_linea": subtotal, "iva_linea": iva, "total_linea": total}
 
-    # Crear 
+    # Crear
 
     @staticmethod
     def crear(db: Session, data: CotizacionCreate, usuario_id: int) -> Cotizaciones:
@@ -59,6 +59,7 @@ class CotizacionesService:
             descuento         = 0,
             iva               = 0,
             total             = 0,
+            observaciones_pdf = data.observaciones_pdf,
         )
         db.add(cotizacion)
         db.flush()
@@ -80,7 +81,7 @@ class CotizacionesService:
                 cod_tip                    = item.cod_tip,
                 nom_tip                    = item.nom_tip,
                 cantidad                   = item.cantidad,
-                precio_unitario            = item.precio_unitario,
+                precio_unitario            = item.valor_web,
                 descuento_unitario         = item.descuento_unitario,
                 subtotal_linea             = calc["subtotal_linea"],
                 iva_linea                  = calc["iva_linea"],
@@ -98,7 +99,8 @@ class CotizacionesService:
         db.refresh(cotizacion)
         return cotizacion
 
-    # Listar 
+    # Listar
+
     @staticmethod
     def listar(db: Session) -> list[Cotizaciones]:
         return db.execute(

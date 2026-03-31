@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, DateTime, BigInteger, Numeric, Text, ForeignKey
+from sqlalchemy import String, DateTime, BigInteger, Numeric, ForeignKey, Text
 from app.db.base import Base
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
@@ -69,11 +69,16 @@ class Cotizaciones(Base):
         default=0.00
     )
 
-    pdf_url: Mapped[Optional[str]] = mapped_column(
+    notas: Mapped[Optional[str]] = mapped_column(      # ← agregar
         Text, 
         nullable=True
     )
-    
+
+    observaciones_pdf: Mapped[Optional[str]] = mapped_column(  # ← agregar
+        Text, 
+        nullable=True
+    )
+
     fecha_envio: Mapped[Optional[datetime]] = mapped_column(
         DateTime, 
         nullable=True
