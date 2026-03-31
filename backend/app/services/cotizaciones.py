@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from app.models.cotizaciones import Cotizaciones
 from app.models.cotizaciones_item import CotizacionesItem
@@ -15,24 +15,22 @@ IVA = 0.19
 
 class CotizacionesService:
 
-    # Consecutivo 
+    # ─── Consecutivo ─────────────────────────────────────────────────────────
 
     @staticmethod
     def _generar_consecutivo(db: Session) -> str:
         anio = datetime.now(timezone.utc).year
         prefijo = f"COT-{anio}-"
-
         ultimo = db.execute(
             select(Cotizaciones)
             .where(Cotizaciones.consecutivo.like(f"{prefijo}%"))
             .order_by(Cotizaciones.id.desc())
             .limit(1)
         ).scalar_one_or_none()
-
         numero = 1 if ultimo is None else int(ultimo.consecutivo.split("-")[-1]) + 1
         return f"{prefijo}{numero:04d}"
 
-    # Cálculos 
+    # ─── Cálculos ─────────────────────────────────────────────────────────────
 
     @staticmethod
     def _calcular_item(item) -> dict:
@@ -43,7 +41,7 @@ class CotizacionesService:
         total     = round(base + iva, 2)
         return {"subtotal_linea": subtotal, "iva_linea": iva, "total_linea": total}
 
-    # Crear
+    # ─── Crear ────────────────────────────────────────────────────────────────
 
     @staticmethod
     def crear(db: Session, data: CotizacionCreate, usuario_id: int) -> Cotizaciones:
@@ -59,6 +57,7 @@ class CotizacionesService:
             descuento         = 0,
             iva               = 0,
             total             = 0,
+            notas             = data.notas,
             observaciones_pdf = data.observaciones_pdf,
         )
         db.add(cotizacion)
@@ -68,7 +67,6 @@ class CotizacionesService:
 
         for item in data.items:
             calc = CotizacionesService._calcular_item(item)
-
             subtotal_total  += calc["subtotal_linea"]
             descuento_total += round(item.descuento_unitario * item.cantidad, 2)
             iva_total       += calc["iva_linea"]
@@ -96,21 +94,32 @@ class CotizacionesService:
         cotizacion.total     = round(total_total, 2)
 
         db.commit()
-        db.refresh(cotizacion)
-        return cotizacion
 
-    # Listar
+        # Recarga con relaciones
+        return CotizacionesService.obtener_por_id(db, cotizacion.id)
+
+    # ─── Listar ───────────────────────────────────────────────────────────────
 
     @staticmethod
     def listar(db: Session) -> list[Cotizaciones]:
         return db.execute(
-            select(Cotizaciones).order_by(Cotizaciones.id.desc())
-        ).scalars().all()
+            select(Cotizaciones)
+            .options(
+                joinedload(Cotizaciones.clientes),       # ← eager load cliente
+                joinedload(Cotizaciones.cotizaciones_items)  # ← eager load items
+            )
+            .order_by(Cotizaciones.id.desc())
+        ).unique().scalars().all()
 
-    # Detalle 
+    # ─── Detalle ──────────────────────────────────────────────────────────────
 
     @staticmethod
     def obtener_por_id(db: Session, cotizacion_id: int) -> Optional[Cotizaciones]:
         return db.execute(
-            select(Cotizaciones).where(Cotizaciones.id == cotizacion_id)
-        ).scalar_one_or_none()
+            select(Cotizaciones)
+            .options(
+                joinedload(Cotizaciones.clientes),           # ← eager load cliente
+                joinedload(Cotizaciones.cotizaciones_items)  # ← eager load items
+            )
+            .where(Cotizaciones.id == cotizacion_id)
+        ).unique().scalar_one_or_none()

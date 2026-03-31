@@ -57,8 +57,8 @@ class CotizacionResponse(BaseModel):
     updated_at: datetime
     cliente_id: Optional[int] = None
     usuario_id: int
-    cliente: Optional[ClienteResponse] = None
-    items: list[ItemResponse] = []
+    clientes: Optional[ClienteResponse] = None          # ← era cliente
+    cotizaciones_items: list[ItemResponse] = []         # ← era items
 
     class Config:
         from_attributes = True
