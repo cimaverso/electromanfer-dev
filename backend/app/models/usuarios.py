@@ -14,44 +14,55 @@ class Usuarios(Base):
 
     __tablename__ = "usuarios"
     
-    usu_id: Mapped[int] = mapped_column(
+    id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True
     )
 
-    usu_nombre: Mapped[str] = mapped_column(
-        String(120),
+    usuario: Mapped[str] = mapped_column(
+        String(50),
         nullable=False
     )
 
-    usu_email: Mapped[str] = mapped_column(
-        String(180),
+    nombre_completo: Mapped[str] = mapped_column(
+        String(100),
         nullable=False
     )
 
-    usu_password: Mapped[str] = mapped_column(
+    email: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+    cedula_ciudadania: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False, 
+        unique=True
+    )
+
+    clave: Mapped[str] = mapped_column(
         String(255),
         nullable=False
     )
 
-    usu_role: Mapped[str] = mapped_column(
+    rol: Mapped[str] = mapped_column(
         String(50),
         default=RoleEnum.ADMINISTRADOR
     )
 
-    usu_activo: Mapped[bool] = mapped_column(
+    activo: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True
     )
 
-    usu_created_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=datetime.now(timezone.utc)
     )
 
-    usu_updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=datetime.now(timezone.utc)

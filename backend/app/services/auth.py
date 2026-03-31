@@ -10,7 +10,6 @@ class auth_service:
         user = UsuariosService.buscar_por_id(db, user_id)
         if not user:
             return None
-        
         return user
 
     @staticmethod
@@ -18,16 +17,16 @@ class auth_service:
         if "@" in email_or_username:
             user = UsuariosService.buscar_por_email(db, email_or_username)
         else:
-            user = UsuariosService.buscar_por_nombre(db, email_or_username)
+            user = UsuariosService.buscar_por_usuario(db, email_or_username)  # ← corregido
 
-        if not user or not verify_password(password, user.usu_password): 
+        if not user or not verify_password(password, user.clave):  # ← corregido
             return None
-        
+
         token_data = {
-            "user_name": user.usu_nombre,
-            "sub": user.usu_email,
-            "user_id": user.usu_id,
-            "role": user.usu_role
+            "user_name": user.nombre_completo,   
+            "sub": user.email,                   
+            "user_id": user.id,                  
+            "role": user.rol                     
         }
 
         acces_token = create_access_token(data=token_data)

@@ -34,7 +34,7 @@ class Cotizaciones(Base):
     
     usuario_id: Mapped[int] = mapped_column(
         BigInteger, 
-        ForeignKey("usuarios.usu_id"), # Ajustado a usu_id según tu modelo de Usuario
+        ForeignKey("usuarios.id"), # Ajustado a usu_id según tu modelo de Usuario
         nullable=False
     )
 
