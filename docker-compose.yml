@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16
@@ -18,10 +16,10 @@ services:
     container_name: electromanfer_backend
     restart: always
     env_file:
-      - ./backend/.env
+      - .env
     volumes:
       - media_imagenes:/app/media/imagenes
-      - media_fichas:/app/media/media/fichas
+      - media_fichas:/app/media/fichas
     depends_on:
       - db
 
