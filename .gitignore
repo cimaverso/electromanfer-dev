@@ -13,4 +13,4 @@ frontend/dist/
 
 # Otros
 *.log
-.DS_Store
+.DS_Store".env.save" 
