@@ -151,6 +151,16 @@
   cursor: pointer;
 }
 
+.hist-table__notas {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  max-width: 200px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hist-table__accion-btn svg {
   width: 15px;
   height: 15px;

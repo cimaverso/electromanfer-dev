@@ -50,6 +50,7 @@ class CotizacionResponse(BaseModel):
     descuento: float
     iva: float
     total: float
+    notas: Optional[str] = None
     observaciones_pdf: Optional[str] = None
     pdf_url: Optional[str] = None
     fecha_envio: Optional[datetime] = None

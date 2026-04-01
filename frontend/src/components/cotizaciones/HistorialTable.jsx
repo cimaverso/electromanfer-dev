@@ -160,6 +160,7 @@ export default function HistorialTable({
                 {/* 6 Columnas declaradas */}
                 <th>Consecutivo</th>
                 <th>Cliente</th>
+                <th>Notas</th>
                 <th className="u-text-right">Total</th>
                 <th>Estado</th>
                 <th>Fecha</th>
@@ -179,6 +180,11 @@ export default function HistorialTable({
                   <td>
                     <span className="hist-table__cliente">
                       {cot.clientes?.nombre_razon_social || '—'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="hist-table__notas">
+                      {cot.notas || '—'}
                     </span>
                   </td>
                   {/* Celda 3 */}

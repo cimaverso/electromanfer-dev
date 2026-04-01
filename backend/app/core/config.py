@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     EXTERNAL_API_PRODUCTOS: str
     EXTERNAL_API_CLIENTES: str
     EXTERNAL_API_KEY: str
+    MEDIA_BASE: str = "/app/media"
 
 
 settings = Settings()

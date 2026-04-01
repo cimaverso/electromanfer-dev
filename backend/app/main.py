@@ -1,12 +1,15 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import app.models
+import os
 from app.routes import auth, productos, cotizaciones, multimedia, clientes
 from app.db.base import Base
 from app.core.db import engine
 from app.routes import usuarios
 from app.scheduler import iniciar_scheduler, detener_scheduler
+from app.core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,3 +38,7 @@ app.include_router(productos.router, prefix="/api")
 app.include_router(multimedia.router, prefix="/api")
 app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
+
+# Servir archivos estáticos de media
+os.makedirs(settings.MEDIA_BASE, exist_ok=True)
+app.mount("/media", StaticFiles(directory=settings.MEDIA_BASE), name="media")

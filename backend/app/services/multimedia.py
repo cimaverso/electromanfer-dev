@@ -6,8 +6,9 @@ from sqlalchemy import select
 from app.models.productos import Productos
 from app.models.productos_multimedia import ProductosMultimedia
 from app.schemas.multimedia import ArchivoResponse, MultimediaResponse
+from app.core.config import settings
 
-MEDIA_BASE = "/app/media"
+MEDIA_BASE = settings.MEDIA_BASE
 ALLOWED_IMAGES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_PDFS = {"application/pdf"}
 MAX_SIZE = 10 * 1024 * 1024
