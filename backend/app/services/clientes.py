@@ -1,9 +1,10 @@
+import httpx
 import logging
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.models.clientes import Clientes
-from app.schemas.clientes import ClienteCreate
-from typing import Optional
+from app.core.config import settings
+from app.core.db import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -11,57 +12,78 @@ logger = logging.getLogger(__name__)
 class ClientesService:
 
     @staticmethod
-    def obtener_o_crear(db: Session, data: ClienteCreate) -> Clientes:
-        cliente = None
-
-        # Buscar por nit_cedula primero
-        if data.nit_cedula:
-            cliente = db.execute(
-                select(Clientes).where(Clientes.nit_cedula == data.nit_cedula)
-            ).scalar_one_or_none()
-
-        # Si no, buscar por email
-        if cliente is None and data.email:
-            cliente = db.execute(
-                select(Clientes).where(Clientes.email == data.email)
-            ).scalar_one_or_none()
-
-        if cliente is None:
-            cliente = Clientes(
-                nombre_razon_social = data.nombre_razon_social,
-                nit_cedula          = data.nit_cedula,
-                nombre_contacto     = data.nombre_contacto,
-                email               = data.email,
-                telefono            = data.telefono,
-                direccion           = data.direccion,
-                ciudad              = data.ciudad,
-            )
-            db.add(cliente)
-            db.flush()
+    def buscar_clientes(db: Session, q: str = "") -> list[Clientes]:
+        stmt = select(Clientes)
+        if q:
+            termino = f"%{q.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    Clientes.nombre_razon_social.ilike(termino),
+                    Clientes.nit_cedula.ilike(termino),
+                )
+            ).limit(20)
         else:
-            cliente.nombre_razon_social = data.nombre_razon_social
-            cliente.nombre_contacto     = data.nombre_contacto
-            cliente.email               = data.email
-            cliente.telefono            = data.telefono
-            cliente.direccion           = data.direccion
-            cliente.ciudad              = data.ciudad
-
-        return cliente
+            stmt = stmt.limit(20)
+        return db.execute(stmt).scalars().all()
 
     @staticmethod
-    def buscar_por_nit(db: Session, nit_cedula: str) -> Optional[Clientes]:
-        return db.execute(
-            select(Clientes).where(Clientes.nit_cedula == nit_cedula)
-        ).scalar_one_or_none()
+    def _fetch_externos() -> list[dict]:
+        try:
+            with httpx.Client(timeout=60) as client:
+                response = client.get(
+                    settings.EXTERNAL_API_CLIENTES,
+                    headers={"x-api-key": settings.EXTERNAL_API_KEY},
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error al consumir API clientes: {e}")
+            return []
 
     @staticmethod
-    def buscar_por_email(db: Session, email: str) -> Optional[Clientes]:
-        return db.execute(
-            select(Clientes).where(Clientes.email == email)
-        ).scalar_one_or_none()
+    def sincronizar() -> None:
+        logger.info("Iniciando sincronización de clientes...")
+        externos = ClientesService._fetch_externos()
 
-    @staticmethod
-    def listar(db: Session) -> list[Clientes]:
-        return db.execute(
-            select(Clientes).order_by(Clientes.id.desc())
-        ).scalars().all()
+        if not externos:
+            logger.warning("Sin datos de clientes, se omite la sincronización.")
+            return
+
+        db: Session = SessionLocal()
+        try:
+            insertados = actualizados = 0
+
+            for item in externos:
+                nit = item.get("cod_ter", "").strip()
+                if not nit:
+                    continue
+
+                stmt = select(Clientes).where(Clientes.nit_cedula == nit)
+                cliente = db.execute(stmt).scalar_one_or_none()
+
+                if cliente is None:
+                    db.add(Clientes(
+                        nit_cedula=nit,
+                        nombre_razon_social=item.get("nom_ter", ""),
+                        email=item.get("email") or None,
+                        telefono=item.get("cel") or item.get("tell") or None,
+                        ciudad=item.get("ciudad") or None,
+                        direccion=item.get("dir") or None,
+                    ))
+                    insertados += 1
+                else:
+                    cliente.nombre_razon_social = item.get("nom_ter", cliente.nombre_razon_social)
+                    cliente.email = item.get("email") or cliente.email
+                    cliente.telefono = item.get("cel") or item.get("tell") or cliente.telefono
+                    cliente.ciudad = item.get("ciudad") or cliente.ciudad
+                    cliente.direccion = item.get("dir") or cliente.direccion
+                    actualizados += 1
+
+            db.commit()
+            logger.info(f"Clientes — insertados: {insertados}, actualizados: {actualizados}")
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error sincronizando clientes: {e}")
+        finally:
+            db.close()

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import app.models
-from app.routes import auth, productos, cotizaciones, multimedia
+from app.routes import auth, productos, cotizaciones, multimedia, clientes
 from app.db.base import Base
 from app.core.db import engine
 from app.routes import usuarios
@@ -32,5 +32,6 @@ Base.metadata.create_all(bind=engine)
 app.include_router(usuarios.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(productos.router, prefix="/api")
-app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(multimedia.router, prefix="/api")
+app.include_router(cotizaciones.router, prefix="/api")
+app.include_router(clientes.router, prefix="/api")

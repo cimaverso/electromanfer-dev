@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     EXTERNAL_API_PRODUCTOS: str
+    EXTERNAL_API_CLIENTES: str
     EXTERNAL_API_KEY: str
 
 

@@ -1,4 +1,6 @@
+import { useState, useEffect, useRef } from 'react'
 import { useCotizacionDraft } from '../../hooks/useCotizacionDraft'
+import { buscarClientes } from '../../api/clientesApi'
 import './CotizacionForm.css'
 
 export default function CotizacionForm() {
@@ -12,10 +14,62 @@ export default function CotizacionForm() {
   } = useCotizacionDraft()
 
   const cliente = clienteDraft || {}
+  const [sugerencias, setSugerencias] = useState([])
+  const [showSugerencias, setShowSugerencias] = useState(false)
+  const [loadingClientes, setLoadingClientes] = useState(false)
+  const timeoutRef = useRef(null)
+  const wrapperRef = useRef(null)
 
   const handleCliente = (field, value) => {
     setClienteDraft({ ...cliente, [field]: value })
   }
+
+  const handleNombreChange = (value) => {
+    handleCliente('nombre_razon_social', value)
+    clearTimeout(timeoutRef.current)
+    if (value.trim().length < 2) {
+      setSugerencias([])
+      setShowSugerencias(false)
+      return
+    }
+    timeoutRef.current = setTimeout(async () => {
+      setLoadingClientes(true)
+      try {
+        const result = await buscarClientes(value)
+        setSugerencias(result)
+        setShowSugerencias(result.length > 0)
+      } catch {
+        setSugerencias([])
+      } finally {
+        setLoadingClientes(false)
+      }
+    }, 300)
+  }
+
+  const seleccionarCliente = (c) => {
+    setClienteDraft({
+      ...cliente,
+      nombre_razon_social: c.nombre_razon_social,
+      nit_cedula: c.nit_cedula || '',
+      email: c.email || '',
+      telefono: c.telefono || '',
+      ciudad: c.ciudad || '',
+      direccion: c.direccion || '',
+      nombre_contacto: c.nombre_contacto || '',
+    })
+    setSugerencias([])
+    setShowSugerencias(false)
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowSugerencias(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <div className="cot-form">
@@ -23,17 +77,41 @@ export default function CotizacionForm() {
         <h4 className="cot-form__section-title">Datos del cliente</h4>
 
         <div className="cot-form__grid">
-          <div className="cot-form__field cot-form__field--full">
+
+          {/* ── Campo con autocompletado ── */}
+          <div className="cot-form__field cot-form__field--full" ref={wrapperRef}>
             <label className="cot-form__label">
               Razón social / Nombre <span className="cot-form__required">*</span>
             </label>
-            <input
-              type="text"
-              className="cot-form__input"
-              placeholder="Empresa o persona natural"
-              value={cliente.nombre_razon_social || ''}
-              onChange={(e) => handleCliente('nombre_razon_social', e.target.value)}
-            />
+            <div className="cot-form__autocomplete-wrapper">
+              <input
+                type="text"
+                className="cot-form__input"
+                placeholder="Empresa o persona natural"
+                value={cliente.nombre_razon_social || ''}
+                onChange={(e) => handleNombreChange(e.target.value)}
+                autoComplete="off"
+              />
+              {loadingClientes && (
+                <span className="cot-form__autocomplete-loading">Buscando...</span>
+              )}
+              {showSugerencias && (
+                <ul className="cot-form__autocomplete">
+                  {sugerencias.map((c) => (
+                    <li
+                      key={c.id}
+                      className="cot-form__autocomplete-item"
+                      onMouseDown={() => seleccionarCliente(c)}
+                    >
+                      <span className="cot-form__autocomplete-nombre">{c.nombre_razon_social}</span>
+                      {c.nit_cedula && (
+                        <span className="cot-form__autocomplete-nit">{c.nit_cedula}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="cot-form__field">
@@ -91,7 +169,7 @@ export default function CotizacionForm() {
             />
           </div>
 
-          <div className="cot-form__field cot-form__field--full">
+          <div className="cot-form__field">
             <label className="cot-form__label">Dirección</label>
             <input
               type="text"

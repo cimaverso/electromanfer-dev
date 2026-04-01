@@ -2,11 +2,10 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from app.services.productos import ProductosService
+from app.services.clientes import ClientesService
 
 logger = logging.getLogger(__name__)
-
 scheduler = BackgroundScheduler()
-
 
 def iniciar_scheduler() -> None:
     scheduler.add_job(
@@ -16,12 +15,15 @@ def iniciar_scheduler() -> None:
         replace_existing=True,
         misfire_grace_time=300,
     )
+    scheduler.add_job(
+        ClientesService.sincronizar,
+        trigger=IntervalTrigger(hours=1),
+        id="sync_clientes",
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
     scheduler.start()
-    logger.info("Scheduler iniciado — sincronización cada hora.")
-
-    # Primera sync inmediata al arrancar el servidor
-    ProductosService.sincronizar()
-
+    logger.info("Scheduler iniciado.")
 
 def detener_scheduler() -> None:
     scheduler.shutdown(wait=False)
