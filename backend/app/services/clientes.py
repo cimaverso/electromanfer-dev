@@ -27,6 +27,37 @@ class ClientesService:
         return db.execute(stmt).scalars().all()
 
     @staticmethod
+    def obtener_o_crear(db: Session, data) -> Clientes:
+        # Busca por NIT si viene
+        if data.nit_cedula:
+            stmt = select(Clientes).where(Clientes.nit_cedula == data.nit_cedula)
+            cliente = db.execute(stmt).scalar_one_or_none()
+            if cliente:
+                return cliente
+
+        # Busca por nombre exacto
+        stmt = select(Clientes).where(
+            Clientes.nombre_razon_social == data.nombre_razon_social
+        )
+        cliente = db.execute(stmt).scalar_one_or_none()
+        if cliente:
+            return cliente
+
+        # No existe — crea uno nuevo
+        nuevo = Clientes(
+            nombre_razon_social=data.nombre_razon_social,
+            nit_cedula=data.nit_cedula or None,
+            nombre_contacto=data.nombre_contacto or None,
+            email=data.email or None,
+            telefono=data.telefono or None,
+            ciudad=data.ciudad or None,
+            direccion=data.direccion or None,
+        )
+        db.add(nuevo)
+        db.flush()
+        return nuevo
+
+    @staticmethod
     def _fetch_externos() -> list[dict]:
         try:
             with httpx.Client(timeout=60) as client:
