@@ -14,3 +14,4 @@ frontend/dist/
 # Otros
 *.log
 .DS_Store".env.save" 
+"docker-compose.dev.yml" 

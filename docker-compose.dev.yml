@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16
+    container_name: electromanfer_db_dev
+    restart: always
+    ports:
+      - "5433:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER_ELECTROMANFER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD_ELECTROMANFER}
+      POSTGRES_DB: ${DB_NAME_ELECTROMANFER}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+
+volumes:
+  postgres_data_dev:
