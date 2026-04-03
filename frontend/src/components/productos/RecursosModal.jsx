@@ -47,7 +47,12 @@ const IconUpload = () => (
   </svg>
 )
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Ícono estrella ────────────────────────────────────────────────────────────
+const IconStar = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+)
 
 export default function RecursosModal({ codRef, nomRef, onClose }) {
   const [tab, setTab] = useState('imagenes') // 'imagenes' | 'pdfs'
@@ -65,6 +70,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
     subir,
     eliminar,
     toggleSel,
+    setPrincipal,
     MAX_SELECCION,
   } = useRecursos(codRef)
 
@@ -229,6 +235,17 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
 
                   {/* ── Acciones ── */}
                   <div className="recursos-modal__item-actions">
+                    {/* Principal (solo imágenes) */}
+                    {tab === 'imagenes' && (
+                      <button
+                        className={`recursos-modal__star-btn ${recurso.principal ? 'recursos-modal__star-btn--on' : ''}`}
+                        onClick={() => setPrincipal(recurso.id)}
+                        title={recurso.principal ? 'Imagen principal' : 'Marcar como principal'}
+                      >
+                        <IconStar />
+                      </button>
+                    )}
+
                     {/* Checkbox selección para cotización */}
                     <button
                       className={`recursos-modal__check-btn ${recurso.seleccionada ? 'recursos-modal__check-btn--on' : ''}`}

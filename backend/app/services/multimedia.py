@@ -69,6 +69,29 @@ class MultimediaService:
         db.commit()
         db.refresh(registro)
         return registro
+    
+    @staticmethod
+    def marcar_principal(db: Session, archivo_id: int) -> ArchivoResponse:
+        # Busca el archivo
+        stmt = select(ProductosMultimedia).where(ProductosMultimedia.id == archivo_id)
+        archivo = db.execute(stmt).scalar_one_or_none()
+        if not archivo:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+        
+        # Quita principal de todas las imágenes del producto
+        stmt_reset = select(ProductosMultimedia).where(
+            ProductosMultimedia.producto_id == archivo.producto_id,
+            ProductosMultimedia.tipo == "imagen"
+        )
+        todas = db.execute(stmt_reset).scalars().all()
+        for img in todas:
+            img.principal = False
+        
+        # Marca la seleccionada como principal
+        archivo.principal = True
+        db.commit()
+        db.refresh(archivo)
+        return archivo
 
     @staticmethod
     async def subir_pdf(db: Session, cod_ref: str, file: UploadFile) -> ArchivoResponse:

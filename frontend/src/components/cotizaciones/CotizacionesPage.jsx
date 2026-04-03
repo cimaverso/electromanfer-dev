@@ -14,8 +14,8 @@ import Toast from '../components/common/Toast'
 import './CotizacionesPage.css'
 
 const TABS = [
-  { id: 'productos',  label: 'Productos seleccionados' },
-  { id: 'preview',   label: 'Vista previa / PDF' },
+  { id: 'productos', label: 'Productos seleccionados' },
+  { id: 'preview', label: 'Vista previa / PDF' },
   { id: 'historial', label: 'Historial' },
 ]
 
@@ -69,9 +69,9 @@ export default function CotizacionesPage() {
       notas,
       observaciones_pdf: observacionesPdf,
       items: selectedProducts.map((p) => ({
-        cod_ref:   p.cod_ref,
-        nom_ref:   p.nom_ref,
-        cantidad:  p.cantidad,
+        cod_ref: p.cod_ref,
+        nom_ref: p.nom_ref,
+        cantidad: p.cantidad,
         valor_web: p.valor_web,
       })),
     }
@@ -117,13 +117,13 @@ export default function CotizacionesPage() {
     setTabActivo('preview')
   }
 
+  const [previewKey, setPreviewKey] = useState(0)
+
   const handleTabChange = (id) => {
     setTabActivo(id)
-    if (id === 'historial') {
-      cargarHistorial()
-    }
+    if (id === 'historial') cargarHistorial()
+    if (id === 'preview') setPreviewKey((k) => k + 1)
   }
-
   const tabsConBadge = TABS.map((t) => ({
     ...t,
     badge: t.id === 'productos' ? selectedProducts.length : undefined,
@@ -200,6 +200,7 @@ export default function CotizacionesPage() {
           </div>
           <div className="cotizaciones-page__card-body">
             <PdfPreview
+              key={previewKey}
               cotizacion={cotizacionActual}
               onEnviarEmail={handleEmail}
               onEnviarWhatsapp={handleWhatsapp}

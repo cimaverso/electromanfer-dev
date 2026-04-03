@@ -72,3 +72,8 @@ export async function contarRecursos(codRef) {
     return { imagenes: 0, pdfs: 0 }
   }
 }
+
+export async function marcarPrincipal(id) {
+  const { data } = await axiosClient.patch(`/multimedia/${id}/principal`)
+  return data
+}

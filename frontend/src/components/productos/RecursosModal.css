@@ -524,6 +524,42 @@
   border-top-color: var(--color-primary);
 }
 
+.recursos-modal__star-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.recursos-modal__star-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+}
+
+.recursos-modal__star-btn--on {
+  background-color: #f59e0b22;
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.recursos-modal__star-btn--on svg {
+  fill: #f59e0b;
+}
+
+.recursos-modal__star-btn:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+
 @keyframes recursos-spin {
   to { transform: rotate(360deg) }
 }

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
+import { getRecursos } from '../../api/recursosApi'
 import EmailModal from './EmailModal'
 import './PdfPreview.css'
+
 
 function formatCOP(value) {
   if (!value && value !== 0) return '—'
@@ -20,18 +22,17 @@ export default function PdfPreview({
   imagenesDisponibles = [],
   pdfsDisponibles = [],
 }) {
-  const [blobUrl, setBlobUrl]                 = useState(null)
-  const [generando, setGenerando]             = useState(false)
+  const [blobUrl, setBlobUrl] = useState(null)
+  const [generando, setGenerando] = useState(false)
   const [mostrarEmailModal, setMostrarEmailModal] = useState(false)
-  const [mostrarWaForm, setMostrarWaForm]     = useState(false)
-  const [telefonoWa, setTelefonoWa]           = useState('')
+  const [mostrarWaForm, setMostrarWaForm] = useState(false)
+  const [telefonoWa, setTelefonoWa] = useState('')
   const blobUrlRef = useRef(null)
 
   // Genera el PDF como blob al montar o cuando cambia la cotización
   useEffect(() => {
     if (!cotizacion) return
 
-    // Revoca el blob anterior para liberar memoria
     if (blobUrlRef.current) {
       URL.revokeObjectURL(blobUrlRef.current)
       blobUrlRef.current = null
@@ -40,10 +41,31 @@ export default function PdfPreview({
     setBlobUrl(null)
     setGenerando(true)
 
-    const urlsImagenes = imagenesDisponibles.map((i) => i.url)
-    const urlsPdfs     = pdfsDisponibles.map((p) => p.url)
+    async function generarConImagenes() {
+      const items = cotizacion.cotizaciones_items || []
 
-    generarPdfCotizacion(cotizacion, urlsImagenes, urlsPdfs, false)
+      // Carga imagen principal de cada item
+      const imagenesPorCodRef = {}
+      await Promise.all(
+        items.map(async (item) => {
+          try {
+            const recursos = await getRecursos(item.cod_ref)
+            const principal = recursos.find((r) => r.tipo === 'imagen' && r.principal)
+              || recursos.find((r) => r.tipo === 'imagen')
+            if (principal) imagenesPorCodRef[item.cod_ref] = principal.url
+          } catch {
+            // sin imagen
+          }
+        })
+      )
+
+      const urlsImagenes = imagenesDisponibles.map((i) => i.url)
+      const urlsPdfs = pdfsDisponibles.map((p) => p.url)
+
+      return generarPdfCotizacion(cotizacion, urlsImagenes, urlsPdfs, false, imagenesPorCodRef)
+    }
+
+    generarConImagenes()
       .then((url) => {
         blobUrlRef.current = url
         setBlobUrl(url)
@@ -51,7 +73,6 @@ export default function PdfPreview({
       .catch(() => setBlobUrl(null))
       .finally(() => setGenerando(false))
 
-    // Limpia al desmontar
     return () => {
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current)

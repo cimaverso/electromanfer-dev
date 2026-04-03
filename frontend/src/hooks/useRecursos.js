@@ -4,6 +4,7 @@ import {
   subirRecurso,
   eliminarRecurso,
   toggleSeleccion,
+  marcarPrincipal,
 } from '../api/recursosApi'
 
 const MAX_SELECCION = 3
@@ -88,6 +89,25 @@ export function useRecursos(codRef) {
       setError('Error al actualizar selección.')
     }
   }, [codRef, recursos, cargar])
+  
+  // ── Marcar imagen principal ──────────────────────────────────────────────
+  const setPrincipal = useCallback(async (id) => {
+    setRecursos((prev) =>
+      prev.map((r) =>
+        r.tipo === 'imagen'
+          ? { ...r, principal: r.id === id }
+          : r
+      )
+    )
+    try {
+      await marcarPrincipal(id)
+      setError(null)
+    } catch {
+      cargar()
+      setError('Error al marcar imagen principal.')
+    }
+  }, [cargar])
+
 
   // ── Selectores derivados ─────────────────────────────────────────────────
   const imagenes = recursos.filter((r) => r.tipo === 'imagen')
@@ -109,6 +129,7 @@ export function useRecursos(codRef) {
     subir,
     eliminar,
     toggleSel,
+    setPrincipal,
     MAX_SELECCION,
   }
 }
