@@ -55,3 +55,11 @@ def require_admin(token_data: TokenData = Depends(get_current_user_data)):
             detail="No tienes permisos para realizar esta acción",
         )
     return token_data
+
+def require_auth(token_data: TokenData = Depends(get_current_user_data)):
+    if not token_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autenticado",
+        )
+    return token_data
