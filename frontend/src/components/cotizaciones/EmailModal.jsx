@@ -12,7 +12,7 @@ function cargarBase64(url) {
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       const canvas = document.createElement('canvas')
-      canvas.width  = img.naturalWidth
+      canvas.width = img.naturalWidth
       canvas.height = img.naturalHeight
       canvas.getContext('2d').drawImage(img, 0, 0)
       resolve(canvas.toDataURL('image/png'))
@@ -26,36 +26,36 @@ function cargarBase64(url) {
 function blobToBase64(blob) {
   return new Promise((resolve) => {
     const reader = new FileReader()
-    reader.onload  = () => resolve(reader.result)
+    reader.onload = () => resolve(reader.result)
     reader.onerror = () => resolve(null)
     reader.readAsDataURL(blob)
   })
 }
 
 export default function EmailModal({ cotizacion, onEnviar, onClose, loading = false }) {
-  const nombreCliente = cotizacion?.cliente?.nombre_contacto
-    || cotizacion?.cliente?.nombre_razon_social
+  const nombreCliente = cotizacion?.clientes?.nombre_contacto
+    || cotizacion?.clientes?.nombre_razon_social
     || 'Cliente'
-  const empresa = cotizacion?.cliente?.nombre_razon_social || ''
-  const numCot  = cotizacion?.consecutivo || ''
+  const empresa = cotizacion?.clientes?.nombre_razon_social || ''
+  const numCot = cotizacion?.consecutivo || ''
 
   // ── Estado del formulario ─────────────────────────────────────────────────
   const [destino, setDestino] = useState(cotizacion?.cliente?.email || '')
-  const [asunto,  setAsunto]  = useState(`Cotización ${numCot} - ELECTROMANFER LTDA.`)
-  const [cuerpo,  setCuerpo]  = useState(
+  const [asunto, setAsunto] = useState(`Cotización ${numCot} - ELECTROMANFER LTDA.`)
+  const [cuerpo, setCuerpo] = useState(
     `Estimado Cliente ${nombreCliente}:\n\nReciba un cordial saludo. En atención a su solicitud, adjunto cotización:\n\nNúmero Cotización: ${numCot}\n${empresa}\n\nQuedamos atentos a cualquier inquietud o comentario adicional.\n\nAtentamente,`
   )
 
   // ── Firma imagen ──────────────────────────────────────────────────────────
-  const [firmaB64,       setFirmaB64]       = useState(null)
-  const [firmaLoading,   setFirmaLoading]   = useState(true)
-  const [mostrarFirma,   setMostrarFirma]   = useState(true)
+  const [firmaB64, setFirmaB64] = useState(null)
+  const [firmaLoading, setFirmaLoading] = useState(true)
+  const [mostrarFirma, setMostrarFirma] = useState(true)
 
   // ── Recursos de los productos ─────────────────────────────────────────────
-  const [imagenes,       setImagenes]       = useState([])  // [{ id, nombre, url, cod_ref }]
-  const [pdfs,           setPdfs]           = useState([])  // [{ id, nombre, url, cod_ref }]
-  const [adjImgs,        setAdjImgs]        = useState([])  // ids seleccionados
-  const [adjPdfs,        setAdjPdfs]        = useState([])  // ids seleccionados
+  const [imagenes, setImagenes] = useState([])  // [{ id, nombre, url, cod_ref }]
+  const [pdfs, setPdfs] = useState([])  // [{ id, nombre, url, cod_ref }]
+  const [adjImgs, setAdjImgs] = useState([])  // ids seleccionados
+  const [adjPdfs, setAdjPdfs] = useState([])  // ids seleccionados
   const [recursosLoading, setRecursosLoading] = useState(true)
 
   // ── PDF de cotización en base64 ───────────────────────────────────────────
@@ -71,7 +71,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
   // Carga firma, recursos y PDF en paralelo al montar
   useEffect(() => {
     const cargarTodo = async () => {
-      const items = cotizacion?.items || []
+      const items = cotizacion?.cotizaciones_items || []
 
       // 1. Firma
       cargarBase64('/harvie_firma.png')
@@ -81,25 +81,21 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       // 2. Recursos de todos los productos
       setRecursosLoading(true)
       const todasImagenes = []
-      const todosPdfs     = []
+      const todosPdfs = []
 
-      await Promise.all(
-        items.map(async (item) => {
-          try {
-            const recursos = await getRecursos(item.cod_ref)
-            recursos.forEach((r) => {
-              if (r.tipo === 'imagen') todasImagenes.push({ ...r, cod_ref: item.cod_ref })
-              if (r.tipo === 'pdf')    todosPdfs.push({ ...r, cod_ref: item.cod_ref })
-            })
-          } catch { /* silencioso */ }
+      items.forEach((item) => {
+        (item.imagenes_urls || []).forEach((url, i) => {
+          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+        });
+        (item.fichas_urls || []).forEach((url, i) => {
+          todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
         })
-      )
+      })  
 
       setImagenes(todasImagenes)
       setPdfs(todosPdfs)
-      // Preselecciona las marcadas como seleccionadas en el modal de recursos
-      setAdjImgs(todasImagenes.filter((i) => i.seleccionada).map((i) => i.id))
-      setAdjPdfs(todosPdfs.filter((p) => p.seleccionada).map((p) => p.id))
+      setAdjImgs(todasImagenes.map((i) => i.id))
+      setAdjPdfs(todosPdfs.map((p) => p.id))
       setRecursosLoading(false)
 
       // 3. Genera PDF como blob y lo convierte a base64
@@ -129,13 +125,13 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       .map((p) => ({ nombre: p.nombre, url: p.url }))
 
     onEnviar(cotizacion.id, {
-      destino:       destino.trim(),
+      destino: destino.trim(),
       asunto,
       cuerpo,
-      firma_base64:  firmaB64,           // imagen firma para embeber en HTML
-      pdf_base64:    pdfB64Ref.current,  // PDF cotización
+      firma_base64: firmaB64,           // imagen firma para embeber en HTML
+      pdf_base64: pdfB64Ref.current,  // PDF cotización
       adjuntos_imagenes: imagenesAdj,
-      adjuntos_pdfs:     pdfsAdj,
+      adjuntos_pdfs: pdfsAdj,
     })
   }
 
@@ -249,22 +245,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
               {recursosLoading && <span className="email-modal__dot-loading" />}
             </p>
 
-            {/* PDF cotización — siempre incluido */}
-            <div className="email-modal__adj-item email-modal__adj-item--fixed">
-              <span className="email-modal__adj-check email-modal__adj-check--on">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </span>
-              <span className="email-modal__adj-icon email-modal__adj-icon--pdf">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-              </span>
-              <span className="email-modal__adj-nombre">{numCot}.pdf</span>
-              <span className="email-modal__adj-tag">Siempre incluido</span>
-            </div>
 
             {/* Imágenes */}
             {!recursosLoading && imagenes.length > 0 && (
