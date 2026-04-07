@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.multimedia import MultimediaService
 from app.schemas.multimedia import ArchivoResponse, MultimediaResponse
+from app.schemas.auth import TokenData
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/multimedia", tags=["Multimedia"])
 
@@ -28,5 +30,9 @@ def marcar_principal(archivo_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{archivo_id}")
-def eliminar_archivo(archivo_id: int, db: Session = Depends(get_db)):
+def eliminar_archivo(
+    archivo_id: int, 
+    db: Session = Depends(get_db),
+    _: TokenData = Depends(require_admin)
+):
     return MultimediaService.eliminar(db, archivo_id)
