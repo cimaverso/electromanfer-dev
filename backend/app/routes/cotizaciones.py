@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.db import get_db
+from typing import Optional
+from datetime import date
 from app.services.cotizaciones import CotizacionesService
 from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse
 
@@ -18,9 +20,20 @@ def crear_cotizacion(
 @router.get("/", response_model=list[CotizacionResponse])
 def listar_cotizaciones(
     db: Session = Depends(get_db),
+    cliente: Optional[str] = Query(None),
+    consecutivo: Optional[str] = Query(None),
+    estado: Optional[str] = Query(None),
+    fecha_inicio: Optional[date] = Query(None),
+    fecha_fin: Optional[date] = Query(None),
 ):
-    return CotizacionesService.listar(db)
-
+    return CotizacionesService.listar(
+        db,
+        cliente=cliente,
+        consecutivo=consecutivo,
+        estado=estado,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+    )
 
 @router.get("/{cotizacion_id}", response_model=CotizacionResponse)
 def detalle_cotizacion(

@@ -9,6 +9,8 @@ from app.models.productos_multimedia import ProductosMultimedia
 from app.schemas.cotizaciones import CotizacionCreate
 from app.services.clientes import ClientesService
 from typing import Optional
+from datetime import date
+from app.models.clientes import Clientes
 
 logger = logging.getLogger(__name__)
 
@@ -127,15 +129,37 @@ class CotizacionesService:
 
     # Listar
     @staticmethod
-    def listar(db: Session) -> list[Cotizaciones]:
-        return db.execute(
+    def listar(
+        db: Session,
+        cliente: Optional[str] = None,
+        consecutivo: Optional[str] = None,
+        estado: Optional[str] = None,
+        fecha_inicio: Optional[date] = None,
+        fecha_fin: Optional[date] = None,
+    ) -> list[Cotizaciones]:
+        query = (
             select(Cotizaciones)
             .options(
                 joinedload(Cotizaciones.clientes),
                 joinedload(Cotizaciones.cotizaciones_items)
             )
             .order_by(Cotizaciones.id.desc())
-        ).unique().scalars().all()
+        )
+
+        if consecutivo:
+            query = query.where(Cotizaciones.consecutivo.ilike(f"%{consecutivo}%"))
+        if estado:
+            query = query.where(Cotizaciones.estado == estado)
+        if fecha_inicio:
+            query = query.where(Cotizaciones.created_at >= fecha_inicio)
+        if fecha_fin:
+            query = query.where(Cotizaciones.created_at <= fecha_fin)
+        if cliente:
+            query = query.join(Cotizaciones.clientes).where(
+                Clientes.nombre_razon_social.ilike(f"%{cliente}%")
+            )
+
+        return db.execute(query).unique().scalars().all()
 
     # Detalle
     @staticmethod
