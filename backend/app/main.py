@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 import app.models
 import os
 from app.routes import auth, productos, cotizaciones, multimedia, clientes
@@ -17,7 +18,16 @@ async def lifespan(app: FastAPI):
     yield
     detener_scheduler()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Electromanfer API",
+    description="Sistema de cotizaciones Electromanfer Ltda.",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
 
 app.add_middleware(
     CORSMiddleware,
