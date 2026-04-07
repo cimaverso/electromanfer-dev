@@ -43,9 +43,9 @@ export default function PdfPreview({
     async function generarConImagenes() {
       const items = cotizacion.cotizaciones_items || []
 
-      // Usa imagen_url del snapshot — ya no consulta la API
       const imagenesPorCodRef = {}
       items.forEach((item) => {
+        console.log('item:', item.cod_ref, 'imagen_url:', item.imagen_url)
         if (item.imagen_url) {
           imagenesPorCodRef[item.cod_ref] = item.imagen_url
         }

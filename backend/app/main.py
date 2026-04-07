@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 import app.models
 import os
 from app.routes import auth, productos, cotizaciones, multimedia, clientes
@@ -49,6 +48,12 @@ app.include_router(multimedia.router, prefix="/api")
 app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
 
-# Servir archivos estáticos de media
+# Servir archivos de media con CORS
 os.makedirs(settings.MEDIA_BASE, exist_ok=True)
-app.mount("/media", StaticFiles(directory=settings.MEDIA_BASE), name="media")
+
+@app.get("/media/{file_path:path}", include_in_schema=False)
+def servir_media(file_path: str):
+    full_path = os.path.join(settings.MEDIA_BASE, file_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(full_path)

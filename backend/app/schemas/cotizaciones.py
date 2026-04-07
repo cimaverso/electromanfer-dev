@@ -27,7 +27,8 @@ class ItemResponse(BaseModel):
     iva: float
     total: float
     imagen_url: Optional[str] = None
-    ficha_tecnica_url: Optional[str] = None
+    imagenes_urls: Optional[list] = None
+    fichas_urls: Optional[list] = None
 
     class Config:
         from_attributes = True

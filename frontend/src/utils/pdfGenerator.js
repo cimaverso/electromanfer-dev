@@ -18,36 +18,30 @@ function formatFecha(isoString) {
   })
 }
 
-function cargarImagenBase64(url) {
-  return new Promise((resolve) => {
-    if (!url) return resolve(null)
-    if (url.startsWith('data:')) return resolve(url)
-    
-    // URLs de media van al backend, el resto al frontend
-    const urlAbsoluta = url.startsWith('http')
-      ? url
-      : url.startsWith('/media')
-        ? `${API_BASE}${url}`
-        : `${window.location.origin}${url}`
-    
-    try {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas')
-          canvas.width = img.naturalWidth || img.width
-          canvas.height = img.naturalHeight || img.height
-          canvas.getContext('2d').drawImage(img, 0, 0)
-          resolve(canvas.toDataURL('image/png'))
-        } catch { resolve(null) }
-      }
-      img.onerror = () => resolve(null)
-      img.src = urlAbsoluta
-    } catch { resolve(null) }
-  })
-}
+async function cargarImagenBase64(url) {
+  if (!url) return null
+  if (url.startsWith('data:')) return url
 
+  const urlAbsoluta = url.startsWith('http')
+    ? url
+    : url.startsWith('/media')
+      ? `${API_BASE}${url}`
+      : `${window.location.origin}${url}`
+
+  try {
+    const response = await fetch(urlAbsoluta, { mode: 'cors' })
+    if (!response.ok) return null
+    const blob = await response.blob()
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
 function dibujarPlaceholder(doc, x, y, grisClaro, gris) {
   doc.setFillColor(...grisClaro)
   doc.rect(x, y + 1, 12, 12, 'F')

@@ -73,6 +73,8 @@ export default function CotizacionesPage() {
       items: selectedProducts.map((p) => ({
         cod_ref: p.cod_ref,
         nom_ref: p.nom_ref,
+        cod_tip: p.cod_tip || null,
+        nom_tip: p.nom_tip || null,
         cantidad: p.cantidad,
         valor_web: p.valor_web,
       })),

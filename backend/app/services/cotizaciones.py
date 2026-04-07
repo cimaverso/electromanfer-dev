@@ -57,19 +57,31 @@ class CotizacionesService:
             )
             .limit(1)
         ).scalar_one_or_none()
+    
 
     @staticmethod
-    def _ficha_principal(db: Session, cod_ref: str) -> Optional[str]:
-        return db.execute(
+    def _imagenes(db: Session, cod_ref: str) -> Optional[list]:
+        resultados = db.execute(
+            select(ProductosMultimedia.url)
+            .join(Productos, Productos.id == ProductosMultimedia.producto_id)
+            .where(
+                Productos.cod_ref == cod_ref,
+                ProductosMultimedia.tipo == "imagen",
+            )
+        ).scalars().all()
+        return list(resultados) if resultados else None
+
+    @staticmethod
+    def _fichas(db: Session, cod_ref: str) -> Optional[list]:
+        resultados = db.execute(
             select(ProductosMultimedia.url)
             .join(Productos, Productos.id == ProductosMultimedia.producto_id)
             .where(
                 Productos.cod_ref == cod_ref,
                 ProductosMultimedia.tipo == "ficha_tecnica",
-                ProductosMultimedia.principal == true()
             )
-            .limit(1)
-        ).scalar_one_or_none()
+        ).scalars().all()
+        return list(resultados) if resultados else None
 
     # Crear
 
@@ -114,8 +126,9 @@ class CotizacionesService:
                 subtotal           = calc["subtotal"],
                 iva                = calc["iva"],
                 total              = calc["total"],
-                imagen_url         = CotizacionesService._imagen_principal(db, item.cod_ref),
-                ficha_tecnica_url  = CotizacionesService._ficha_principal(db, item.cod_ref),
+                imagen_url    = CotizacionesService._imagen_principal(db, item.cod_ref),
+                imagenes_urls = CotizacionesService._imagenes(db, item.cod_ref),
+                fichas_urls   = CotizacionesService._fichas(db, item.cod_ref),
             ))
 
         cotizacion.subtotal  = round(subtotal_total, 2)
