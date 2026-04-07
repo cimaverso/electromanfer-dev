@@ -37,8 +37,14 @@ export function useRecursos(codRef) {
     setError(null)
     try {
       const nuevo = await subirRecurso(codRef, archivo, tipo)
-      setRecursos((prev) => [...prev, nuevo])
-    } catch (e) {
+      setRecursos((prev) => {
+        if (tipo === 'imagen') {
+          const hayPrincipal = prev.some((r) => r.tipo === 'imagen' && r.principal)
+          return [...prev, { ...nuevo, principal: !hayPrincipal }]
+        }
+        return [...prev, nuevo]
+      })
+    } catch {
       setError('Error al subir el archivo.')
     } finally {
       setUploading(false)
@@ -89,7 +95,7 @@ export function useRecursos(codRef) {
       setError('Error al actualizar selección.')
     }
   }, [codRef, recursos, cargar])
-  
+
   // ── Marcar imagen principal ──────────────────────────────────────────────
   const setPrincipal = useCallback(async (id) => {
     setRecursos((prev) =>

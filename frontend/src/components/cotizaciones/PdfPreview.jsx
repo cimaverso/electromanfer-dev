@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
-import { getRecursos } from '../../api/recursosApi'
 import EmailModal from './EmailModal'
 import './PdfPreview.css'
 
@@ -44,20 +43,13 @@ export default function PdfPreview({
     async function generarConImagenes() {
       const items = cotizacion.cotizaciones_items || []
 
-      // Carga imagen principal de cada item
+      // Usa imagen_url del snapshot — ya no consulta la API
       const imagenesPorCodRef = {}
-      await Promise.all(
-        items.map(async (item) => {
-          try {
-            const recursos = await getRecursos(item.cod_ref)
-            const principal = recursos.find((r) => r.tipo === 'imagen' && r.principal)
-              || recursos.find((r) => r.tipo === 'imagen')
-            if (principal) imagenesPorCodRef[item.cod_ref] = principal.url
-          } catch {
-            // sin imagen
-          }
-        })
-      )
+      items.forEach((item) => {
+        if (item.imagen_url) {
+          imagenesPorCodRef[item.cod_ref] = item.imagen_url
+        }
+      })
 
       const urlsImagenes = imagenesDisponibles.map((i) => i.url)
       const urlsPdfs = pdfsDisponibles.map((p) => p.url)

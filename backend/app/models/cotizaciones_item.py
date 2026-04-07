@@ -1,9 +1,8 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, DateTime, BigInteger, Numeric, Text, ForeignKey, Integer
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import String, DateTime, BigInteger, Numeric, Text, ForeignKey
 from app.db.base import Base
 from datetime import datetime, timezone
-from typing import Optional, Any, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from backend.app.models.cotizaciones import Cotizaciones
@@ -51,55 +50,34 @@ class CotizacionesItem(Base):
         default=0.00
     )
     
-    subtotal_linea: Mapped[float] = mapped_column(
+    subtotal: Mapped[float] = mapped_column(
         Numeric(14, 2), 
         nullable=False, 
         default=0.00
     )
     
-    iva_linea: Mapped[float] = mapped_column(
+    iva: Mapped[float] = mapped_column(
         Numeric(14, 2), 
         nullable=False, 
         default=0.00
     )
     
-    total_linea: Mapped[float] = mapped_column(
+    total: Mapped[float] = mapped_column(
         Numeric(14, 2), 
         nullable=False, 
         default=0.00
     )
-
 
     # Multimedia persistida
-    imagen_url_snapshot: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
-    
-    ficha_tecnica_url_snapshot: Mapped[Optional[str]] = mapped_column(
-        Text, 
-        nullable=True
-    )
+    imagen_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ficha_tecnica_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    # Datos adicionales en formato JSON
-    metadata_snapshot: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONB, 
-        nullable=True
-    )
-
-    orden: Mapped[int] = mapped_column(
-        Integer, 
-        nullable=False, 
-        default=0
-    )
-    
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 
         nullable=False, 
         default=lambda: datetime.now(timezone.utc)
     )
 
-   
     cotizaciones: Mapped["Cotizaciones"] = relationship(
     "Cotizaciones",
     back_populates="cotizaciones_items"

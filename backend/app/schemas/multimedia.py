@@ -7,9 +7,7 @@ class ArchivoResponse(BaseModel):
     tipo: str
     titulo: Optional[str]
     url: str
-    orden: int
     principal: bool
-    activo: bool
     created_at: datetime
 
     class Config:

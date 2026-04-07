@@ -12,8 +12,6 @@ class ItemCreate(BaseModel):
     cantidad: float
     valor_web: float
     descuento_unitario: float = 0.00
-    imagen_url_snapshot: Optional[str] = None
-    ficha_tecnica_url_snapshot: Optional[str] = None
 
 
 class ItemResponse(BaseModel):
@@ -25,11 +23,11 @@ class ItemResponse(BaseModel):
     cantidad: float
     precio_unitario: float
     descuento_unitario: float
-    subtotal_linea: float
-    iva_linea: float
-    total_linea: float
-    imagen_url_snapshot: Optional[str] = None
-    ficha_tecnica_url_snapshot: Optional[str] = None
+    subtotal: float
+    iva: float
+    total: float
+    imagen_url: Optional[str] = None
+    ficha_tecnica_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -58,8 +56,8 @@ class CotizacionResponse(BaseModel):
     updated_at: datetime
     cliente_id: Optional[int] = None
     usuario_id: int
-    clientes: Optional[ClienteResponse] = None          # ← era cliente
-    cotizaciones_items: list[ItemResponse] = []         # ← era items
+    clientes: Optional[ClienteResponse] = None
+    cotizaciones_items: list[ItemResponse] = []
 
     class Config:
         from_attributes = True

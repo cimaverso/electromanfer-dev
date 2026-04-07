@@ -1,9 +1,11 @@
 import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select
+from sqlalchemy import select, true
 from app.models.cotizaciones import Cotizaciones
 from app.models.cotizaciones_item import CotizacionesItem
+from app.models.productos import Productos
+from app.models.productos_multimedia import ProductosMultimedia
 from app.schemas.cotizaciones import CotizacionCreate
 from app.services.clientes import ClientesService
 from typing import Optional
@@ -15,8 +17,7 @@ IVA = 0.19
 
 class CotizacionesService:
 
-    # ─── Consecutivo ─────────────────────────────────────────────────────────
-
+    #Consecutivo
     @staticmethod
     def _generar_consecutivo(db: Session) -> str:
         anio = datetime.now(timezone.utc).year
@@ -30,7 +31,7 @@ class CotizacionesService:
         numero = 1 if ultimo is None else int(ultimo.consecutivo.split("-")[-1]) + 1
         return f"{prefijo}{numero:04d}"
 
-    # ─── Cálculos ─────────────────────────────────────────────────────────────
+    # Cálculos
 
     @staticmethod
     def _calcular_item(item) -> dict:
@@ -39,9 +40,36 @@ class CotizacionesService:
         base      = round(subtotal - descuento, 2)
         iva       = round(base * IVA, 2)
         total     = round(base + iva, 2)
-        return {"subtotal_linea": subtotal, "iva_linea": iva, "total_linea": total}
+        return {"subtotal": subtotal, "iva": iva, "total": total}
 
-    # ─── Crear ────────────────────────────────────────────────────────────────
+    # Snapshot multimedia 
+    @staticmethod
+    def _imagen_principal(db: Session, cod_ref: str) -> Optional[str]:
+        return db.execute(
+            select(ProductosMultimedia.url)
+            .join(Productos, Productos.id == ProductosMultimedia.producto_id)
+            .where(
+                Productos.cod_ref == cod_ref,
+                ProductosMultimedia.tipo == "imagen",
+                ProductosMultimedia.principal == true(),
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+
+    @staticmethod
+    def _ficha_principal(db: Session, cod_ref: str) -> Optional[str]:
+        return db.execute(
+            select(ProductosMultimedia.url)
+            .join(Productos, Productos.id == ProductosMultimedia.producto_id)
+            .where(
+                Productos.cod_ref == cod_ref,
+                ProductosMultimedia.tipo == "ficha_tecnica",
+                ProductosMultimedia.principal == true()
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+
+    # Crear
 
     @staticmethod
     def crear(db: Session, data: CotizacionCreate, usuario_id: int) -> Cotizaciones:
@@ -67,25 +95,25 @@ class CotizacionesService:
 
         for item in data.items:
             calc = CotizacionesService._calcular_item(item)
-            subtotal_total  += calc["subtotal_linea"]
+            subtotal_total  += calc["subtotal"]
             descuento_total += round(item.descuento_unitario * item.cantidad, 2)
-            iva_total       += calc["iva_linea"]
-            total_total     += calc["total_linea"]
+            iva_total       += calc["iva"]
+            total_total     += calc["total"]
 
             db.add(CotizacionesItem(
-                cotizacion_id              = cotizacion.id,
-                cod_ref                    = item.cod_ref,
-                nom_ref                    = item.nom_ref,
-                cod_tip                    = item.cod_tip,
-                nom_tip                    = item.nom_tip,
-                cantidad                   = item.cantidad,
-                precio_unitario            = item.valor_web,
-                descuento_unitario         = item.descuento_unitario,
-                subtotal_linea             = calc["subtotal_linea"],
-                iva_linea                  = calc["iva_linea"],
-                total_linea                = calc["total_linea"],
-                imagen_url_snapshot        = item.imagen_url_snapshot,
-                ficha_tecnica_url_snapshot = item.ficha_tecnica_url_snapshot,
+                cotizacion_id      = cotizacion.id,
+                cod_ref            = item.cod_ref,
+                nom_ref            = item.nom_ref,
+                cod_tip            = item.cod_tip,
+                nom_tip            = item.nom_tip,
+                cantidad           = item.cantidad,
+                precio_unitario    = item.valor_web,
+                descuento_unitario = item.descuento_unitario,
+                subtotal           = calc["subtotal"],
+                iva                = calc["iva"],
+                total              = calc["total"],
+                imagen_url         = CotizacionesService._imagen_principal(db, item.cod_ref),
+                ficha_tecnica_url  = CotizacionesService._ficha_principal(db, item.cod_ref),
             ))
 
         cotizacion.subtotal  = round(subtotal_total, 2)
@@ -95,31 +123,28 @@ class CotizacionesService:
 
         db.commit()
 
-        # Recarga con relaciones
         return CotizacionesService.obtener_por_id(db, cotizacion.id)
 
-    # ─── Listar ───────────────────────────────────────────────────────────────
-
+    # Listar
     @staticmethod
     def listar(db: Session) -> list[Cotizaciones]:
         return db.execute(
             select(Cotizaciones)
             .options(
-                joinedload(Cotizaciones.clientes),       # ← eager load cliente
-                joinedload(Cotizaciones.cotizaciones_items)  # ← eager load items
+                joinedload(Cotizaciones.clientes),
+                joinedload(Cotizaciones.cotizaciones_items)
             )
             .order_by(Cotizaciones.id.desc())
         ).unique().scalars().all()
 
-    # ─── Detalle ──────────────────────────────────────────────────────────────
-
+    # Detalle
     @staticmethod
     def obtener_por_id(db: Session, cotizacion_id: int) -> Optional[Cotizaciones]:
         return db.execute(
             select(Cotizaciones)
             .options(
-                joinedload(Cotizaciones.clientes),           # ← eager load cliente
-                joinedload(Cotizaciones.cotizaciones_items)  # ← eager load items
+                joinedload(Cotizaciones.clientes),
+                joinedload(Cotizaciones.cotizaciones_items)
             )
             .where(Cotizaciones.id == cotizacion_id)
         ).unique().scalar_one_or_none()

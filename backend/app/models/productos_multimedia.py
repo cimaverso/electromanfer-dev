@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, DateTime, BigInteger, Integer, Text, ForeignKey
+from sqlalchemy import String, Boolean, DateTime, BigInteger, Text, ForeignKey
 from app.db.base import Base
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
@@ -38,11 +38,6 @@ class ProductosMultimedia(Base):
         nullable=False
     )
     
-
-    orden: Mapped[int] = mapped_column(
-        Integer, 
-        default=0
-    )
     
     principal: Mapped[bool] = mapped_column(
         Boolean, 
@@ -50,11 +45,6 @@ class ProductosMultimedia(Base):
         default=False
     )
     
-    activo: Mapped[bool] = mapped_column(
-        Boolean, 
-        nullable=False, 
-        default=True
-    )
     
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 

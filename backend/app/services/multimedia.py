@@ -9,7 +9,7 @@ from app.schemas.multimedia import ArchivoResponse, MultimediaResponse
 from app.core.config import settings
 
 MEDIA_BASE = settings.MEDIA_BASE
-ALLOWED_IMAGES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+ALLOWED_IMAGES = {"image/jpeg", "image/png"}
 ALLOWED_PDFS = {"application/pdf"}
 MAX_SIZE = 10 * 1024 * 1024
 
@@ -34,9 +34,8 @@ class MultimediaService:
     def listar(db: Session, cod_ref: str) -> MultimediaResponse:
         producto = MultimediaService._get_producto(db, cod_ref)
         stmt = select(ProductosMultimedia).where(
-            ProductosMultimedia.producto_id == producto.id,
-            ProductosMultimedia.activo == True
-        ).order_by(ProductosMultimedia.orden)
+            ProductosMultimedia.producto_id == producto.id
+        )
         archivos = db.execute(stmt).scalars().all()
         imagenes = [a for a in archivos if a.tipo == "imagen"]
         pdfs = [a for a in archivos if a.tipo == "ficha_tecnica"]
@@ -53,17 +52,26 @@ class MultimediaService:
         ext = file.filename.split(".")[-1].lower()
         filename = f"{uuid.uuid4().hex}.{ext}"
         folder = MultimediaService._get_folder(cod_ref, "imagen")
+
         with open(os.path.join(folder, filename), "wb") as f:
             f.write(contents)
         url = f"/media/imagenes/{cod_ref}/{filename}"
+
+        # Si no hay ninguna principal, esta será la principal
+        stmt_principal = select(ProductosMultimedia).where(
+            ProductosMultimedia.producto_id == producto.id,
+            ProductosMultimedia.tipo == "imagen",
+            ProductosMultimedia.principal.is_(True)
+        )
+        hay_principal = db.execute(stmt_principal).scalar_one_or_none()
+
+
         registro = ProductosMultimedia(
             producto_id=producto.id,
             tipo="imagen",
             titulo=file.filename,
             url=url,
-            orden=0,
-            principal=False,
-            activo=True
+            principal=hay_principal is None
         )
         db.add(registro)
         db.commit()
@@ -111,9 +119,8 @@ class MultimediaService:
             tipo="ficha_tecnica",
             titulo=file.filename,
             url=url,
-            orden=0,
             principal=False,
-            activo=True
+        
         )
         db.add(registro)
         db.commit()

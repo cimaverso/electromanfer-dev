@@ -18,7 +18,7 @@ export async function getRecursos(codRef) {
     nombre: r.titulo || r.nombre,
     url: getMediaUrl(r.url),
     seleccionada: false,
-    orden: r.orden || 0,
+    principal: r.principal || false,
   }))
   const pdfs = (data.pdfs || []).map((r) => ({
     id: r.id,

@@ -49,12 +49,6 @@ class Productos(Base):
         nullable=True
     )
 
-   
-    sincronizado_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, 
-        nullable=True
-    )
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 
         nullable=False, 

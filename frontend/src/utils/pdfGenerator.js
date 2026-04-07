@@ -1,5 +1,7 @@
 import jsPDF from 'jspdf'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000'
+
 function formatCOP(value) {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -20,6 +22,14 @@ function cargarImagenBase64(url) {
   return new Promise((resolve) => {
     if (!url) return resolve(null)
     if (url.startsWith('data:')) return resolve(url)
+    
+    // URLs de media van al backend, el resto al frontend
+    const urlAbsoluta = url.startsWith('http')
+      ? url
+      : url.startsWith('/media')
+        ? `${API_BASE}${url}`
+        : `${window.location.origin}${url}`
+    
     try {
       const img = new Image()
       img.crossOrigin = 'anonymous'
@@ -33,7 +43,7 @@ function cargarImagenBase64(url) {
         } catch { resolve(null) }
       }
       img.onerror = () => resolve(null)
-      img.src = url
+      img.src = urlAbsoluta
     } catch { resolve(null) }
   })
 }
@@ -77,7 +87,7 @@ export async function generarPdfCotizacion(
 
   const H_ENCABEZADO = 44   // altura imagen encabezado
   const H_FRANJA = 10   // franja número cotización / fecha
-  const H_PIE = 28
+  const H_PIE = 57
   const Y_PIE = PAGE_H - H_PIE
 
   const items = cotizacion.cotizaciones_items || []
