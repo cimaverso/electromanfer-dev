@@ -1,4 +1,3 @@
-# Controller para Usuarios, solo registro de ADMIN
 # app/routes/usuario.py
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,34 +17,18 @@ router = APIRouter(
     tags=["Usuarios"]
 )
 
-# Listar todos los usuarios — solo admin
 @router.get("/", response_model=list[UsuariosRead])
 def listar_usuarios(
     db: Session = Depends(get_db),
-    admin: TokenData = Depends(require_admin)
+    _: TokenData = Depends(require_admin)
 ):
     return UsuariosService.listar_usuarios(db)
 
-
-# Buscar usuario por ID — solo admin
-@router.get("/{usuario_id}", response_model=UsuariosRead)
-def obtener_usuario(
-    usuario_id: int,
-    db: Session = Depends(get_db),
-    admin: TokenData = Depends(require_admin)
-):
-    usuario = UsuariosService.buscar_por_id(db, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return usuario
-
-
-# Crear usuarios
 @router.post("/", response_model=UsuariosRead, status_code=201)
 def crear_usuario(
     usuario_data: UsuariosCreate,
     db: Session = Depends(get_db),
-    #admin: TokenData = Depends(require_admin)
+    _: TokenData = Depends(require_admin)
 ):
     usuario = UsuariosService.crear_usuario(db, usuario_data)
     if not usuario:
@@ -55,17 +38,25 @@ def crear_usuario(
         )
     return usuario
 
+@router.get("/{usuario_id}", response_model=UsuariosRead)
+def obtener_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    _: TokenData = Depends(require_admin)
+):
+    usuario = UsuariosService.buscar_por_id(db, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return usuario
 
-# Actualizar cualquier usuario — solo admin
 @router.patch("/{usuario_id}", response_model=UsuariosRead)
 def actualizar_usuario(
     usuario_id: int,
     data: UsuariosUpdateAdmin,
     db: Session = Depends(get_db),
-    admin: TokenData = Depends(require_admin)
+    _: TokenData = Depends(require_admin)
 ):
     usuario = UsuariosService.actualizar_por_admin(db, usuario_id, data)
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return usuario
-

@@ -1,9 +1,10 @@
-# Schema para Usuarios, solo registro de ADMIN
 # app/schemas/usuario.py
 
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime
+from app.enums import RoleEnum
+
 
 # Base 
 class UsuariosBase(BaseModel):
@@ -39,7 +40,7 @@ class UsuariosAuthMe(BaseModel):
 # Crear
 class UsuariosCreate(UsuariosBase):
     clave: str = Field(..., max_length=255)
-    rol: str = Field(default="ADMINISTRADOR", max_length=50)
+    rol: RoleEnum = Field(default=RoleEnum.VENDEDOR)
 
     class Config:
         from_attributes = True
@@ -62,7 +63,7 @@ class UsuariosUpdateAdmin(BaseModel):
     usuario: Optional[str] = Field(None, max_length=50)
     nombre_completo: Optional[str] = Field(None, max_length=100)
     cedula_ciudadania: Optional[str] = Field(None, max_length=12)
-    rol: Optional[str] = Field(None, max_length=50)
+    rol: Optional[RoleEnum] = None
     activo: Optional[bool] = None
 
     class Config:

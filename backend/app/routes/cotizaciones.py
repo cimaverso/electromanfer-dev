@@ -9,14 +9,6 @@ from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse
 router = APIRouter(prefix="/cotizaciones", tags=["Cotizaciones"])
 
 
-@router.post("/", response_model=CotizacionResponse)
-def crear_cotizacion(
-    data: CotizacionCreate,
-    db: Session = Depends(get_db),
-):
-    return CotizacionesService.crear(db, data, usuario_id=1)
-
-
 @router.get("/", response_model=list[CotizacionResponse])
 def listar_cotizaciones(
     db: Session = Depends(get_db),
@@ -34,6 +26,15 @@ def listar_cotizaciones(
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
     )
+
+
+@router.post("/", response_model=CotizacionResponse)
+def crear_cotizacion(
+    data: CotizacionCreate,
+    db: Session = Depends(get_db),
+):
+    return CotizacionesService.crear(db, data, usuario_id=1)
+
 
 @router.get("/{cotizacion_id}", response_model=CotizacionResponse)
 def detalle_cotizacion(
