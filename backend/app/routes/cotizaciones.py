@@ -5,6 +5,8 @@ from typing import Optional
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
 from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse
+from app.schemas.auth import TokenData
+from app.core.security import require_auth
 
 router = APIRouter(prefix="/cotizaciones", tags=["Cotizaciones"])
 
@@ -17,6 +19,7 @@ def listar_cotizaciones(
     estado: Optional[str] = Query(None),
     fecha_inicio: Optional[date] = Query(None),
     fecha_fin: Optional[date] = Query(None),
+    _: TokenData = Depends(require_auth)
 ):
     return CotizacionesService.listar(
         db,
@@ -32,6 +35,7 @@ def listar_cotizaciones(
 def crear_cotizacion(
     data: CotizacionCreate,
     db: Session = Depends(get_db),
+    _: TokenData = Depends(require_auth)
 ):
     return CotizacionesService.crear(db, data, usuario_id=1)
 
@@ -40,6 +44,7 @@ def crear_cotizacion(
 def detalle_cotizacion(
     cotizacion_id: int,
     db: Session = Depends(get_db),
+    _: TokenData = Depends(require_auth)
 ):
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
