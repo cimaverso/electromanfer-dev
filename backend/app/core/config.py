@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     EXTERNAL_API_PRODUCTOS: str
     EXTERNAL_API_CLIENTES: str
     EXTERNAL_API_KEY: str
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = ""
+    BREVO_SENDER_NAME: str = ""
     MEDIA_BASE: str = "/app/media"
 
 

@@ -74,7 +74,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const items = cotizacion?.cotizaciones_items || []
 
       // 1. Firma
-      cargarBase64('/harvie_firma.png')
+      cargarBase64('/firma_harvie.jpeg')
         .then(setFirmaB64)
         .finally(() => setFirmaLoading(false))
 
