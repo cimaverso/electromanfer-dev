@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str = ""
     BREVO_SENDER_EMAIL: str = ""
     BREVO_SENDER_NAME: str = ""
+    API_BASE_URL: str = ""
+    LOGO_URL: str = ""
+    FIRMA_URL: str = ""
     MEDIA_BASE: str = "/app/media"
 
 

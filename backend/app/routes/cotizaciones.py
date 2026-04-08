@@ -32,7 +32,6 @@ def listar_cotizaciones(
         fecha_fin=fecha_fin,
     )
 
-
 @router.post("/", response_model=CotizacionResponse)
 def crear_cotizacion(
     data: CotizacionCreate,
@@ -40,7 +39,6 @@ def crear_cotizacion(
     _: TokenData = Depends(require_auth)
 ):
     return CotizacionesService.crear(db, data, usuario_id=1)
-
 
 @router.get("/{cotizacion_id}", response_model=CotizacionResponse)
 def detalle_cotizacion(
@@ -53,7 +51,6 @@ def detalle_cotizacion(
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
     return cotizacion
 
-
 @router.post("/{cotizacion_id}/enviar-email")
 def enviar_email(
     cotizacion_id: int,
@@ -65,6 +62,13 @@ def enviar_email(
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
 
+    # Combinar imágenes y fichas en una sola lista
+    adjuntos_urls = []
+    if data.adjuntos_imagenes:
+        adjuntos_urls.extend(data.adjuntos_imagenes)
+    if data.adjuntos_pdfs:
+        adjuntos_urls.extend(data.adjuntos_pdfs)
+
     enviado = enviar_cotizacion_email(
         destino=data.destino,
         asunto=data.asunto,
@@ -72,6 +76,8 @@ def enviar_email(
         pdf_base64=data.pdf_base64,
         nombre_pdf=f"{cotizacion.consecutivo}.pdf",
         firma_base64=data.firma_base64,
+        consecutivo=cotizacion.consecutivo,
+        adjuntos_urls=adjuntos_urls,
     )
 
     if not enviado:
@@ -81,7 +87,6 @@ def enviar_email(
     db.commit()
 
     return {"ok": True, "mensaje": "Correo enviado correctamente"}
-
 
 @router.post("/{cotizacion_id}/enviar-whatsapp")
 def enviar_whatsapp(
