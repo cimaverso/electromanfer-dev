@@ -31,7 +31,7 @@ def root():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://app.electromanfer.cimaverso.site",
+        "https://app.electromanfer.com",
         "http://localhost:5173",
         "http://localhost:3000",
     ],
