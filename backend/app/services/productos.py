@@ -1,6 +1,5 @@
 import httpx
 import logging
-from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
@@ -66,7 +65,7 @@ class ProductosService:
         db: Session = SessionLocal()
         try:
             insertados = actualizados = 0
-            ahora = datetime.now(timezone.utc)
+            
 
             for item in externos:
                 cod = item.get("cod_ref", "").strip()
