@@ -84,7 +84,7 @@ class ProductosService:
                         nom_tip         = item.get("nom_tip"),
                         saldo           = item.get("saldo"),
                         valor_web       = item.get("valor_web"),
-                        sincronizado_at = ahora,
+                        
                     ))
                     insertados += 1
                 else:
@@ -93,7 +93,6 @@ class ProductosService:
                     producto.nom_tip         = item.get("nom_tip", producto.nom_tip)
                     producto.saldo           = item.get("saldo", producto.saldo)
                     producto.valor_web       = item.get("valor_web", producto.valor_web)
-                    producto.sincronizado_at = ahora
                     actualizados += 1
 
             db.commit()
