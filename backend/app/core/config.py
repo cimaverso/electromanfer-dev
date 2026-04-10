@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     API_BASE_URL: str = ""
     LOGO_URL: str = ""
     FIRMA_URL: str = ""
+    GMAIL_USER: str = ""
+    GMAIL_APP_PASSWORD: str = ""
     MEDIA_BASE: str = "/app/media"
 
 
