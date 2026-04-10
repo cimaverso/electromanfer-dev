@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
 import EmailModal from './EmailModal'
 import './PdfPreview.css'
-
+import { getRecursos } from '../../api/recursosApi'
 
 function formatCOP(value) {
   if (!value && value !== 0) return '—'
@@ -42,18 +42,25 @@ export default function PdfPreview({
 
     async function generarConImagenes() {
       const items = cotizacion.cotizaciones_items || []
-
       const imagenesPorCodRef = {}
-      items.forEach((item) => {
-        console.log('item:', item.cod_ref, 'imagen_url:', item.imagen_url)
-        if (item.imagen_url) {
-          imagenesPorCodRef[item.cod_ref] = item.imagen_url
-        }
-      })
+      const codRefs = [...new Set(items.map((i) => i.cod_ref))]
+
+      await Promise.all(
+        codRefs.map(async (cod) => {
+          try {
+            const recursos = await getRecursos(cod)
+            const principal = recursos.find((r) => r.tipo === 'imagen' && r.principal)
+              || recursos.find((r) => r.tipo === 'imagen')
+            if (principal) imagenesPorCodRef[cod] = principal.url
+          } catch {
+            const item = items.find((i) => i.cod_ref === cod)
+            if (item?.imagen_url) imagenesPorCodRef[cod] = item.imagen_url
+          }
+        })
+      )
 
       const urlsImagenes = imagenesDisponibles.map((i) => i.url)
       const urlsPdfs = pdfsDisponibles.map((p) => p.url)
-
       return generarPdfCotizacion(cotizacion, urlsImagenes, urlsPdfs, false, imagenesPorCodRef)
     }
 
