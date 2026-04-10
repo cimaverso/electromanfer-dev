@@ -100,6 +100,18 @@ class MultimediaService:
         db.commit()
         db.refresh(archivo)
         return archivo
+    
+
+    @staticmethod
+    def toggle_seleccionada(db: Session, archivo_id: int, seleccionada: bool) -> ArchivoResponse:
+        stmt = select(ProductosMultimedia).where(ProductosMultimedia.id == archivo_id)
+        archivo = db.execute(stmt).scalar_one_or_none()
+        if not archivo:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+        archivo.seleccionada = seleccionada
+        db.commit()
+        db.refresh(archivo)
+        return archivo
 
     @staticmethod
     async def subir_pdf(db: Session, cod_ref: str, file: UploadFile) -> ArchivoResponse:

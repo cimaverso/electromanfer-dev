@@ -16,7 +16,7 @@ export async function getRecursos(codRef) {
     tipo: 'imagen',
     nombre: r.titulo || r.nombre,
     url: getMediaUrl(r.url),
-    seleccionada: false,
+    seleccionada: r.seleccionada ?? false,
     principal: r.principal || false,
   }))
   const pdfs = (data.pdfs || []).map((r) => ({
@@ -25,7 +25,7 @@ export async function getRecursos(codRef) {
     tipo: 'pdf',
     nombre: r.titulo || r.nombre,
     url: getMediaUrl(r.url),
-    seleccionada: false,
+    seleccionada: r.seleccionada ?? false,
     orden: r.orden || 0,
   }))
   return [...imagenes, ...pdfs]
@@ -57,7 +57,8 @@ export async function eliminarRecurso(codRef, id) {
 }
 
 export async function toggleSeleccion(codRef, id, seleccionada) {
-  return { id, seleccionada }
+  const { data } = await axiosClient.patch(`/multimedia/${id}/seleccionada`, { seleccionada })  // ← cambio
+  return data
 }
 
 export async function contarRecursos(codRef) {

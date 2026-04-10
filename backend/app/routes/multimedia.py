@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.multimedia import MultimediaService
-from app.schemas.multimedia import ArchivoResponse, MultimediaResponse
+from app.schemas.multimedia import ArchivoResponse, MultimediaResponse, SeleccionadaPayload
 from app.schemas.auth import TokenData
 from app.core.security import require_admin, require_auth
 
@@ -47,6 +47,16 @@ def marcar_principal(
     _: TokenData = Depends(require_auth)
 ):
     return MultimediaService.marcar_principal(db, archivo_id)
+
+
+@router.patch("/{archivo_id}/seleccionada", response_model=ArchivoResponse)
+def toggle_seleccionada(
+    archivo_id: int,
+    payload: SeleccionadaPayload,
+    db: Session = Depends(get_db),
+    _: TokenData = Depends(require_auth)
+):
+    return MultimediaService.toggle_seleccionada(db, archivo_id, payload.seleccionada)
 
 
 @router.delete("/{archivo_id}")

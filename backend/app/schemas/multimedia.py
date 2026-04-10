@@ -8,6 +8,7 @@ class ArchivoResponse(BaseModel):
     titulo: Optional[str]
     url: str
     principal: bool
+    seleccionada: bool 
     created_at: datetime
 
     class Config:
@@ -16,3 +17,7 @@ class ArchivoResponse(BaseModel):
 class MultimediaResponse(BaseModel):
     imagenes: list[ArchivoResponse] = []
     pdfs: list[ArchivoResponse] = []
+
+
+class SeleccionadaPayload(BaseModel):    # ← agregar
+    seleccionada: bool

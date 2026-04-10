@@ -79,23 +79,37 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
         .finally(() => setFirmaLoading(false))
 
       // 2. Recursos de todos los productos
+      // 2. Recursos de todos los productos
+      // 2. Recursos de todos los productos — lee selección real desde BD
       setRecursosLoading(true)
       const todasImagenes = []
       const todosPdfs = []
+      const preselImgs = []
+      const preselPdfs = []
 
-      items.forEach((item) => {
-        (item.imagenes_urls || []).forEach((url, i) => {
-          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
-        });
-        (item.fichas_urls || []).forEach((url, i) => {
-          todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+      const codRefs = [...new Set(items.map((i) => i.cod_ref))]
+      await Promise.all(
+        codRefs.map(async (cod) => {
+          try {
+            const recursos = await getRecursos(cod)
+            recursos.filter((r) => r.tipo === 'imagen').forEach((r, i) => {
+              const id = `${cod}-img-${i}`
+              todasImagenes.push({ id, nombre: r.nombre, url: r.url, cod_ref: cod })
+              if (r.seleccionada) preselImgs.push(id)
+            })
+            recursos.filter((r) => r.tipo === 'pdf').forEach((r, i) => {
+              const id = `${cod}-pdf-${i}`
+              todosPdfs.push({ id, nombre: r.nombre, url: r.url, cod_ref: cod })
+              if (r.seleccionada) preselPdfs.push(id)
+            })
+          } catch { /* sin recursos */ }
         })
-      })  
+      )
 
       setImagenes(todasImagenes)
       setPdfs(todosPdfs)
-      setAdjImgs([])
-      setAdjPdfs([])
+      setAdjImgs(preselImgs)
+      setAdjPdfs(preselPdfs)
       setRecursosLoading(false)
 
       // 3. Genera PDF como blob y lo convierte a base64
