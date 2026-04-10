@@ -94,8 +94,8 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
 
       setImagenes(todasImagenes)
       setPdfs(todosPdfs)
-      setAdjImgs(todasImagenes.map((i) => i.id))
-      setAdjPdfs(todosPdfs.map((p) => p.id))
+      setAdjImgs([])
+      setAdjPdfs([])
       setRecursosLoading(false)
 
       // 3. Genera PDF como blob y lo convierte a base64
