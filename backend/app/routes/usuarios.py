@@ -28,7 +28,7 @@ def listar_usuarios(
 def crear_usuario(
     usuario_data: UsuariosCreate,
     db: Session = Depends(get_db),
-    _: TokenData = Depends(require_admin)
+    #_: TokenData = Depends(require_admin)
 ):
     usuario = UsuariosService.crear_usuario(db, usuario_data)
     if not usuario:

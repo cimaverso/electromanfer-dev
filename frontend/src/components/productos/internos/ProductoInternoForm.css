@@ -1,0 +1,163 @@
+.pi-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--space-4);
+}
+
+.pi-form {
+  background: #1a1a1a;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ─── Header ─── */
+.pi-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pi-form__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.pi-form__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  padding: var(--space-1);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.pi-form__close:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+/* ─── Body ─── */
+.pi-form__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface-1);
+}
+
+.pi-form__row--2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.pi-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pi-form__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+}
+
+.pi-form__required {
+  color: var(--color-primary);
+}
+
+.pi-form__input {
+  height: 38px;
+  padding: 0 var(--space-3);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  transition: var(--transition-fast);
+  outline: none;
+}
+
+.pi-form__input:focus {
+  border-color: var(--color-primary);
+}
+
+.pi-form__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pi-form__input--error {
+  border-color: var(--color-danger, #e53e3e);
+}
+
+.pi-form__error-msg {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger, #e53e3e);
+}
+
+/* ─── Footer ─── */
+.pi-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.pi-form__btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.pi-form__btn--cancel {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-text-soft);
+}
+
+.pi-form__btn--cancel:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.pi-form__btn--save {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.pi-form__btn--save:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.pi-form__btn--save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

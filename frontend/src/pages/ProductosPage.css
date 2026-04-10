@@ -123,3 +123,35 @@
     max-height: calc(100vh - var(--header-height) - 120px);
   }
 }
+
+
+
+/* ─── Tabs ─── */
+.productos-page__tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: calc(-1 * var(--space-2));
+}
+
+.productos-page__tab {
+  padding: var(--space-3) var(--space-6);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  margin-bottom: -1px;
+}
+
+.productos-page__tab:hover {
+  color: var(--color-text);
+}
+
+.productos-page__tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
