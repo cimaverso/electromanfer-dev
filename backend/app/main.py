@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse, FileResponse
 import app.models
 import os
+import mimetypes
 from app.routes import auth, productos, cotizaciones, multimedia, clientes
 from app.db.base import Base
 from app.core.db import engine
@@ -50,5 +50,14 @@ app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
 
 # Servir archivos de media (solo local — en prod lo maneja Nginx)
-if os.path.exists(settings.MEDIA_BASE):
-    app.mount("/media", StaticFiles(directory=settings.MEDIA_BASE), name="media")
+@app.get("/media/{file_path:path}", include_in_schema=False)
+def servir_media(file_path: str):
+    full_path = os.path.join(settings.MEDIA_BASE, file_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    mime_type, _ = mimetypes.guess_type(full_path)
+    return FileResponse(
+        full_path,
+        media_type=mime_type or "application/octet-stream",
+        headers={"Access-Control-Allow-Origin": "*"}
+    )

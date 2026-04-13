@@ -49,10 +49,13 @@ export default function PdfPreview({
         codRefs.map(async (cod) => {
           try {
             const recursos = await getRecursos(cod)
+            console.log('recursos de', cod, recursos)
             const principal = recursos.find((r) => r.tipo === 'imagen' && r.principal)
               || recursos.find((r) => r.tipo === 'imagen')
+            console.log('principal:', principal)
             if (principal) imagenesPorCodRef[cod] = principal.url
-          } catch {
+          } catch (e) {
+            console.log('error getRecursos', cod, e)
             const item = items.find((i) => i.cod_ref === cod)
             if (item?.imagen_url) imagenesPorCodRef[cod] = item.imagen_url
           }
