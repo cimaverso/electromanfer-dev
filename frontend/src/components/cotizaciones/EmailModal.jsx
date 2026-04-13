@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getRecursos } from '../../api/recursosApi'
+import { listarFirmas, subirFirma } from '../../api/firmasApi'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
 import './EmailModal.css'
 
@@ -46,82 +46,117 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     `Estimado Cliente ${nombreCliente}:\n\nReciba un cordial saludo. En atención a su solicitud, adjunto cotización:\n\nNúmero Cotización: ${numCot}\n${empresa}\n\nQuedamos atentos a cualquier inquietud o comentario adicional.\n\nAtentamente,`
   )
 
-  // ── Firma imagen ──────────────────────────────────────────────────────────
+  // ── Firmas ────────────────────────────────────────────────────────────────
+  const [firmas, setFirmas] = useState([])
+  const [firmaSeleccionada, setFirmaSeleccionada] = useState(null) // objeto firma
   const [firmaB64, setFirmaB64] = useState(null)
   const [firmaLoading, setFirmaLoading] = useState(true)
   const [mostrarFirma, setMostrarFirma] = useState(true)
+  const [selectorAbierto, setSelectorAbierto] = useState(false)
 
   // ── Recursos de los productos ─────────────────────────────────────────────
-  const [imagenes, setImagenes] = useState([])  // [{ id, nombre, url, cod_ref }]
-  const [pdfs, setPdfs] = useState([])  // [{ id, nombre, url, cod_ref }]
-  const [adjImgs, setAdjImgs] = useState([])  // ids seleccionados
-  const [adjPdfs, setAdjPdfs] = useState([])  // ids seleccionados
+  const [imagenes, setImagenes] = useState([])
+  const [pdfs, setPdfs] = useState([])
+  const [adjImgs, setAdjImgs] = useState([])
+  const [adjPdfs, setAdjPdfs] = useState([])
   const [recursosLoading, setRecursosLoading] = useState(true)
 
   // ── PDF de cotización en base64 ───────────────────────────────────────────
   const pdfB64Ref = useRef(null)
+  const fileInputRef = useRef(null)
+  const [subiendoFirma, setSubiendoFirma] = useState(false)
 
   // Cierra con Escape
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (selectorAbierto) setSelectorAbierto(false)
+        else onClose()
+      }
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [onClose, selectorAbierto])
 
-  // Carga firma, recursos y PDF en paralelo al montar
+  // Carga firmas, recursos y PDF al montar
   useEffect(() => {
     const cargarTodo = async () => {
       const items = cotizacion?.cotizaciones_items || []
 
-      // 1. Firma
-      cargarBase64('/firma_harvie.jpeg')
-        .then(setFirmaB64)
-        .finally(() => setFirmaLoading(false))
+      // 1. Firmas disponibles
+      setFirmaLoading(true)
+      try {
+        const lista = await listarFirmas()
+        setFirmas(lista)
+        if (lista.length > 0) {
+          // Por defecto: primera firma
+          setFirmaSeleccionada(lista[0])
+          const b64 = await cargarBase64(lista[0].url)
+          setFirmaB64(b64)
+        }
+      } catch {
+        setFirmas([])
+      } finally {
+        setFirmaLoading(false)
+      }
 
       // 2. Recursos de todos los productos
-      // 2. Recursos de todos los productos
-      // 2. Recursos de todos los productos — lee selección real desde BD
       setRecursosLoading(true)
       const todasImagenes = []
       const todosPdfs = []
-      const preselImgs = []
-      const preselPdfs = []
-
-      const codRefs = [...new Set(items.map((i) => i.cod_ref))]
-      await Promise.all(
-        codRefs.map(async (cod) => {
-          try {
-            const recursos = await getRecursos(cod)
-            recursos.filter((r) => r.tipo === 'imagen').forEach((r, i) => {
-              const id = `${cod}-img-${i}`
-              todasImagenes.push({ id, nombre: r.nombre, url: r.url, cod_ref: cod })
-              if (r.seleccionada) preselImgs.push(id)
-            })
-            recursos.filter((r) => r.tipo === 'pdf').forEach((r, i) => {
-              const id = `${cod}-pdf-${i}`
-              todosPdfs.push({ id, nombre: r.nombre, url: r.url, cod_ref: cod })
-              if (r.seleccionada) preselPdfs.push(id)
-            })
-          } catch { /* sin recursos */ }
+      items.forEach((item) => {
+        ;(item.imagenes_urls || []).forEach((url, i) => {
+          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
         })
-      )
-
+        ;(item.fichas_urls || []).forEach((url, i) => {
+          todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+        })
+      })
       setImagenes(todasImagenes)
       setPdfs(todosPdfs)
-      setAdjImgs(preselImgs)
-      setAdjPdfs(preselPdfs)
+      setAdjImgs(todasImagenes.map((i) => i.id))
+      setAdjPdfs(todosPdfs.map((p) => p.id))
       setRecursosLoading(false)
 
-      // 3. Genera PDF como blob y lo convierte a base64
+      // 3. PDF como base64
       try {
         const blob = await generarPdfCotizacion(cotizacion, [], [], false)
           .then((blobUrl) => fetch(blobUrl).then((r) => r.blob()))
         pdfB64Ref.current = await blobToBase64(blob)
-      } catch { /* el backend puede generarlo también */ }
+      } catch { /* el backend puede generarlo */ }
     }
 
     cargarTodo()
   }, [cotizacion])
+
+  // Cuando cambia la firma seleccionada, recarga el base64
+  const handleNuevaFirma = async (e) => {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+    e.target.value = ''
+    setSubiendoFirma(true)
+    try {
+      const formData = new FormData()
+      formData.append('nombre', archivo.name.replace(/\.[^.]+$/, ''))
+      formData.append('archivo', archivo)
+      const nueva = await subirFirma(formData)
+      setFirmas((prev) => [...prev, nueva])
+      handleSeleccionarFirma(nueva)
+    } catch {
+      // silencioso — el mock no falla, el real puede fallar por tipo/tamaño
+    } finally {
+      setSubiendoFirma(false)
+    }
+  }
+
+  const handleSeleccionarFirma = async (firma) => {
+    setFirmaSeleccionada(firma)
+    setSelectorAbierto(false)
+    setFirmaLoading(true)
+    const b64 = await cargarBase64(firma.url)
+    setFirmaB64(b64)
+    setFirmaLoading(false)
+  }
 
   const toggleAdj = (id, setFn) => {
     setFn((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
@@ -129,11 +164,9 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
 
   const handleEnviar = () => {
     if (!destino.trim()) return
-
     const imagenesAdj = imagenes
       .filter((i) => adjImgs.includes(i.id))
       .map((i) => ({ nombre: i.nombre, url: i.url, base64: i.url.startsWith('data:') ? i.url : null }))
-
     const pdfsAdj = pdfs
       .filter((p) => adjPdfs.includes(p.id))
       .map((p) => ({ nombre: p.nombre, url: p.url }))
@@ -142,8 +175,9 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       destino: destino.trim(),
       asunto,
       cuerpo,
-      firma_base64: firmaB64,           // imagen firma para embeber en HTML
-      pdf_base64: pdfB64Ref.current,  // PDF cotización
+      firma_base64: firmaB64,
+      firma_id: firmaSeleccionada?.id || null,
+      pdf_base64: pdfB64Ref.current,
       adjuntos_imagenes: imagenesAdj,
       adjuntos_pdfs: pdfsAdj,
     })
@@ -212,7 +246,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
             />
           </div>
 
-          {/* Firma imagen */}
+          {/* ── Firma ── */}
           <div className="email-modal__firma-section">
             <button
               className="email-modal__firma-toggle"
@@ -227,26 +261,100 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                 <polyline points="9 18 15 12 9 6" />
               </svg>
               Firma del correo
+              {firmaSeleccionada && !firmaLoading && (
+                <span className="email-modal__firma-nombre">{firmaSeleccionada.nombre}</span>
+              )}
               {firmaLoading && <span className="email-modal__dot-loading" />}
             </button>
 
             {mostrarFirma && (
-              <div className="email-modal__firma-preview">
-                {firmaLoading ? (
-                  <div className="email-modal__firma-placeholder">
-                    <span className="email-modal__spinner email-modal__spinner--sm" />
-                    <span>Cargando firma...</span>
+              <div className="email-modal__firma-wrapper">
+                {/* Imagen clickeable */}
+                <div
+                  className="email-modal__firma-preview email-modal__firma-preview--clickable"
+                  onClick={() => setSelectorAbierto((v) => !v)}
+                  title="Clic para cambiar firma"
+                >
+                  {firmaLoading ? (
+                    <div className="email-modal__firma-placeholder">
+                      <span className="email-modal__spinner email-modal__spinner--sm" />
+                      <span>Cargando firma...</span>
+                    </div>
+                  ) : firmaB64 ? (
+                    <>
+                      <img src={firmaB64} alt={firmaSeleccionada?.nombre || 'Firma'} className="email-modal__firma-img" />
+                      <div className="email-modal__firma-overlay">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        <span>Cambiar firma</span>
+                      </div>
+                    </>
+                  ) : firmas.length === 0 ? (
+                    <p className="email-modal__firma-error">
+                      No hay firmas disponibles. Agrega una desde el panel de configuración.
+                    </p>
+                  ) : (
+                    <p className="email-modal__firma-error">No se pudo cargar la imagen.</p>
+                  )}
+                </div>
+
+                {/* Selector de firmas */}
+                {selectorAbierto && firmas.length > 0 && (
+                  <div className="email-modal__firma-selector">
+                    <p className="email-modal__firma-selector-title">Selecciona una firma</p>
+                    <div className="email-modal__firma-opciones">
+                      {firmas.map((firma) => (
+                        <button
+                          key={firma.id}
+                          type="button"
+                          className={`email-modal__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'email-modal__firma-opcion--active' : ''}`}
+                          onClick={() => handleSeleccionarFirma(firma)}
+                        >
+                          <img
+                            src={firma.url}
+                            alt={firma.nombre}
+                            className="email-modal__firma-opcion-img"
+                            onError={(e) => { e.target.style.display = 'none' }}
+                          />
+                          <div className="email-modal__firma-opcion-info">
+                            <span className="email-modal__firma-opcion-nombre">{firma.nombre}</span>
+                            {firma.descripcion && (
+                              <span className="email-modal__firma-opcion-desc">{firma.descripcion}</span>
+                            )}
+                          </div>
+                          {firmaSeleccionada?.id === firma.id && (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--color-primary)', flexShrink: 0 }}>
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+
+                      {/* Botón agregar nueva firma */}
+                      <button
+                        type="button"
+                        className="email-modal__firma-agregar"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={subiendoFirma}
+                      >
+                        {subiendoFirma ? (
+                          <span className="email-modal__spinner email-modal__spinner--sm" />
+                        ) : (
+                          <span className="email-modal__firma-agregar-icon">+</span>
+                        )}
+                        <span>{subiendoFirma ? 'Subiendo...' : 'Agregar firma'}</span>
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        style={{ display: 'none' }}
+                        onChange={handleNuevaFirma}
+                      />
+                    </div>
                   </div>
-                ) : firmaB64 ? (
-                  <img
-                    src={firmaB64}
-                    alt="Firma Harvey Cano - Electromanfer"
-                    className="email-modal__firma-img"
-                  />
-                ) : (
-                  <p className="email-modal__firma-error">
-                    No se pudo cargar la firma. Verifica que <code>public/harvie_firma.png</code> existe.
-                  </p>
                 )}
               </div>
             )}
@@ -259,8 +367,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
               {recursosLoading && <span className="email-modal__dot-loading" />}
             </p>
 
-
-            {/* Imágenes */}
             {!recursosLoading && imagenes.length > 0 && (
               <>
                 <p className="email-modal__adj-grupo">Imágenes de productos</p>
@@ -293,7 +399,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
               </>
             )}
 
-            {/* Fichas PDF */}
             {!recursosLoading && pdfs.length > 0 && (
               <>
                 <p className="email-modal__adj-grupo">Fichas técnicas PDF</p>
