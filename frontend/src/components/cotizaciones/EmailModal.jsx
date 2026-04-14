@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { listarFirmas, subirFirma } from '../../api/firmasApi'
+import { listarFirmas, subirFirma, eliminarFirma } from '../../api/firmasApi'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
 import './EmailModal.css'
 
@@ -65,6 +65,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
   const pdfB64Ref = useRef(null)
   const fileInputRef = useRef(null)
   const [subiendoFirma, setSubiendoFirma] = useState(false)
+  const [confirmarEliminar, setConfirmarEliminar] = useState(null)
 
   // Cierra con Escape
   useEffect(() => {
@@ -152,6 +153,24 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     setFirmaSeleccionada(firma)
     setSelectorAbierto(false)
     setFirmaB64(firma.url)
+  }
+
+  const handleEliminarFirma = (e, firmaId) => {
+    e.stopPropagation()
+    setConfirmarEliminar(firmaId)
+  }
+
+  const confirmarYEliminar = async () => {
+    try {
+      await eliminarFirma(confirmarEliminar)
+      setFirmas((prev) => prev.filter((f) => f.id !== confirmarEliminar))
+      if (firmaSeleccionada?.id === confirmarEliminar) {
+        const restantes = firmas.filter((f) => f.id !== confirmarEliminar)
+        setFirmaSeleccionada(restantes[0] || null)
+        setFirmaB64(restantes[0]?.url || null)
+      }
+    } catch { }
+    setConfirmarEliminar(null)
   }
 
   const toggleAdj = (id, setFn) => {
@@ -302,11 +321,11 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                     <p className="email-modal__firma-selector-title">Selecciona una firma</p>
                     <div className="email-modal__firma-opciones">
                       {firmas.map((firma) => (
-                        <button
+                        <div
                           key={firma.id}
-                          type="button"
                           className={`email-modal__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'email-modal__firma-opcion--active' : ''}`}
                           onClick={() => handleSeleccionarFirma(firma)}
+                          style={{ cursor: 'pointer' }}
                         >
                           <img
                             src={firma.url}
@@ -325,8 +344,46 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                               <polyline points="20 6 9 17 4 12" />
                             </svg>
                           )}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleEliminarFirma(e, firma.id)}
+                            style={{
+                              marginLeft: 4,
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--color-text-muted)',  // gris por defecto
+                              flexShrink: 0,
+                              padding: '4px',
+                              transition: 'color 0.15s ease'
+                            }}
+                            title="Eliminar firma"
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#e74c3c'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4h6v2" />
+                            </svg>
+                          </button>
+                        </div>
                       ))}
+
+                      {confirmarEliminar && (
+                        <div className="email-modal__firma-confirm">
+                          <span className="email-modal__firma-confirm-text">¿Eliminar esta firma?</span>
+                          <div className="email-modal__firma-confirm-btns">
+                            <button type="button" className="email-modal__firma-confirm-cancel" onClick={() => setConfirmarEliminar(null)}>
+                              Cancelar
+                            </button>
+                            <button type="button" className="email-modal__firma-confirm-ok" onClick={confirmarYEliminar}>
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Botón agregar nueva firma */}
                       <button

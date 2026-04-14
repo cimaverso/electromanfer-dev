@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 FIRMAS_DIR = os.path.join(settings.MEDIA_BASE, "firmas")
 ALLOWED_TYPES = {"image/jpeg", "image/png"}
-MAX_FIRMAS = 6
+MAX_FIRMAS = 10
 
 os.makedirs(FIRMAS_DIR, exist_ok=True)
 
