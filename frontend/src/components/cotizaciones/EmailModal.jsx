@@ -91,8 +91,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
         if (lista.length > 0) {
           // Por defecto: primera firma
           setFirmaSeleccionada(lista[0])
-          const b64 = await cargarBase64(lista[0].url)
-          setFirmaB64(b64)
+          setFirmaB64(lista[0].url)
         }
       } catch {
         setFirmas([])
@@ -105,12 +104,12 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const todasImagenes = []
       const todosPdfs = []
       items.forEach((item) => {
-        ;(item.imagenes_urls || []).forEach((url, i) => {
+        ; (item.imagenes_urls || []).forEach((url, i) => {
           todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
         })
-        ;(item.fichas_urls || []).forEach((url, i) => {
-          todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
-        })
+          ; (item.fichas_urls || []).forEach((url, i) => {
+            todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+          })
       })
       setImagenes(todasImagenes)
       setPdfs(todosPdfs)
@@ -149,13 +148,10 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     }
   }
 
-  const handleSeleccionarFirma = async (firma) => {
+  const handleSeleccionarFirma = (firma) => {
     setFirmaSeleccionada(firma)
     setSelectorAbierto(false)
-    setFirmaLoading(true)
-    const b64 = await cargarBase64(firma.url)
-    setFirmaB64(b64)
-    setFirmaLoading(false)
+    setFirmaB64(firma.url)
   }
 
   const toggleAdj = (id, setFn) => {
@@ -175,7 +171,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       destino: destino.trim(),
       asunto,
       cuerpo,
-      firma_base64: firmaB64,
+      firma_url: firmaSeleccionada?.url || null,
       firma_id: firmaSeleccionada?.id || null,
       pdf_base64: pdfB64Ref.current,
       adjuntos_imagenes: imagenesAdj,
