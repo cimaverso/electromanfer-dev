@@ -21,6 +21,7 @@ services:
     volumes:
       - media_imagenes:/app/media/imagenes
       - media_fichas:/app/media/fichas
+      - media_firmas:/app/media/firmas
     depends_on:
       - db
   frontend:
@@ -46,6 +47,7 @@ services:
       - frontend_build:/usr/share/nginx/html
       - media_imagenes:/usr/share/nginx/media/imagenes
       - media_fichas:/usr/share/nginx/media/fichas
+      - media_firmas:/usr/share/nginx/media/firmas      
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
@@ -54,4 +56,5 @@ volumes:
   postgres_data:
   media_imagenes:
   media_fichas:
+  media_firmas:  
   frontend_build:
