@@ -5,6 +5,7 @@ import httpx
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from email import encoders
 from app.core.config import settings
 
@@ -17,18 +18,16 @@ def _url_a_base64(url: str):
             url = f"{settings.API_BASE_URL}{url}"
         response = httpx.get(url, timeout=10)
         if response.status_code == 200:
-            data = response.content
-            nombre = url.split('/')[-1]
-            return data, nombre
-    except Exception:
-        pass
+            return response.content, url.split('/')[-1]
+    except Exception as e:
+        logger.error(f"Error descargando {url}: {e}")
     return None
 
 
-def _construir_html(cuerpo: str, consecutivo: str) -> str:
+def _construir_html(cuerpo: str, consecutivo: str, con_firma: bool = False) -> str:
     cuerpo_html = cuerpo.replace('\n', '<br>')
     logo_url = settings.LOGO_URL
-    firma_url = settings.FIRMA_URL
+    firma_tag = '<img src="cid:firma_image" style="max-width:380px;margin-top:24px;" />' if con_firma else ''
 
     return f"""
     <!DOCTYPE html>
@@ -64,7 +63,7 @@ def _construir_html(cuerpo: str, consecutivo: str) -> str:
                   <p style="color:#1E2130;font-size:15px;line-height:1.8;margin:0;">
                     {cuerpo_html}
                   </p>
-                  <img src="{firma_url}" style="max-width:380px;margin-top:24px;" />
+                  {firma_tag}
                 </td>
               </tr>
               <tr>
@@ -104,17 +103,33 @@ def enviar_cotizacion_email(
     pdf_base64: str = None,
     nombre_pdf: str = "cotizacion.pdf",
     adjuntos_urls: list = None,
-    firma_base64: str = None,
+    firma_url: str = None,
     consecutivo: str = "",
 ) -> bool:
     try:
-        msg = MIMEMultipart()
+        # Descargar firma
+        firma_data = None
+        if firma_url:
+            resultado = _url_a_base64(firma_url)
+            if resultado:
+                firma_data, _ = resultado
+
+        msg = MIMEMultipart('related')
         msg['From'] = f"{settings.BREVO_SENDER_NAME} <{settings.GMAIL_USER}>"
         msg['To'] = destino
         msg['Subject'] = asunto
 
-        html_content = _construir_html(cuerpo, consecutivo)
-        msg.attach(MIMEText(html_content, 'html'))
+        html_content = _construir_html(cuerpo, consecutivo, con_firma=firma_data is not None)
+        msg_alt = MIMEMultipart('alternative')
+        msg.attach(msg_alt)
+        msg_alt.attach(MIMEText(html_content, 'html'))
+
+        # Adjuntar firma como inline
+        if firma_data:
+            img = MIMEImage(firma_data)
+            img.add_header('Content-ID', '<firma_image>')
+            img.add_header('Content-Disposition', 'inline')
+            msg.attach(img)
 
         # PDF cotización
         if pdf_base64:

@@ -75,7 +75,7 @@ def enviar_email(
         cuerpo=data.cuerpo,
         pdf_base64=data.pdf_base64,
         nombre_pdf=f"{cotizacion.consecutivo}.pdf",
-        firma_base64=data.firma_base64,
+        firma_url=data.firma_url,
         consecutivo=cotizacion.consecutivo,
         adjuntos_urls=adjuntos_urls,
     )

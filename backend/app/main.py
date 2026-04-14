@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, FileResponse
 import app.models
 import os
 import mimetypes
-from app.routes import auth, productos, cotizaciones, multimedia, clientes
+from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas
 from app.db.base import Base
 from app.core.db import engine
 from app.routes import usuarios
@@ -33,8 +33,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://app.electromanfer.com",
-        "http://localhost:5173",
-        "http://localhost:3000",
+        "http://localhost:5173"
+        
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -48,6 +48,7 @@ app.include_router(productos.router, prefix="/api")
 app.include_router(multimedia.router, prefix="/api")
 app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
+app.include_router(firmas.router, prefix="/api")
 
 # Servir archivos de media (solo local — en prod lo maneja Nginx)
 @app.get("/media/{file_path:path}", include_in_schema=False)

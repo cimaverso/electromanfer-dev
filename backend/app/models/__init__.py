@@ -6,3 +6,4 @@ from .cotizaciones import Cotizaciones
 from .cotizaciones_item import CotizacionesItem
 from .cotizaciones_envio import CotizacionesEnvio
 from .productos_multimedia import ProductosMultimedia
+from .firmas import Firmas
