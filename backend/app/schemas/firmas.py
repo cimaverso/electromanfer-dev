@@ -1,5 +1,6 @@
 from pydantic import BaseModel, computed_field
 from typing import Optional
+from app.core.config import settings
 
 class FirmaOut(BaseModel):
     id: int
@@ -10,6 +11,6 @@ class FirmaOut(BaseModel):
     @computed_field
     @property
     def url(self) -> str:
-        return f"/media/firmas/{self.archivo}"
+        return f"{settings.API_BASE_URL}/media/firmas/{self.archivo}"
 
     model_config = {"from_attributes": True}
