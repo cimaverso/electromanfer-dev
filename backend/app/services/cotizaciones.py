@@ -62,29 +62,28 @@ class CotizacionesService:
     @staticmethod
     def _imagenes(db: Session, cod_ref: str) -> Optional[list]:
         resultados = db.execute(
-            select(ProductosMultimedia.url)
+            select(ProductosMultimedia.url, ProductosMultimedia.titulo)
             .join(Productos, Productos.id == ProductosMultimedia.producto_id)
             .where(
                 Productos.cod_ref == cod_ref,
                 ProductosMultimedia.tipo == "imagen",
             )
-        ).scalars().all()
-        return list(resultados) if resultados else None
+        ).all()
+        return [{"url": r.url, "nombre": r.titulo} for r in resultados] if resultados else None
 
     @staticmethod
     def _fichas(db: Session, cod_ref: str) -> Optional[list]:
         resultados = db.execute(
-            select(ProductosMultimedia.url)
+            select(ProductosMultimedia.url, ProductosMultimedia.titulo)
             .join(Productos, Productos.id == ProductosMultimedia.producto_id)
             .where(
                 Productos.cod_ref == cod_ref,
                 ProductosMultimedia.tipo == "ficha_tecnica",
             )
-        ).scalars().all()
-        return list(resultados) if resultados else None
+        ).all()
+        return [{"url": r.url, "nombre": r.titulo} for r in resultados] if resultados else None
 
     # Crear
-
     @staticmethod
     def crear(db: Session, data: CotizacionCreate, usuario_id: int) -> Cotizaciones:
         cliente     = ClientesService.obtener_o_crear(db, data.cliente)

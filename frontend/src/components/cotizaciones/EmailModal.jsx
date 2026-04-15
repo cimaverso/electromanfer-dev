@@ -105,11 +105,16 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const todasImagenes = []
       const todosPdfs = []
       items.forEach((item) => {
-        ; (item.imagenes_urls || []).forEach((url, i) => {
-          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+        ; (item.imagenes_urls || []).forEach((item_url, i) => {
+          const url = typeof item_url === 'string' ? item_url : item_url.url
+          const nombre = typeof item_url === 'string' ? url.split('/').pop() : item_url.nombre
+          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre, url, cod_ref: item.cod_ref })
         })
-          ; (item.fichas_urls || []).forEach((url, i) => {
-            todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+
+          ; (item.fichas_urls || []).forEach((item_url, i) => {
+            const url = typeof item_url === 'string' ? item_url : item_url.url
+            const nombre = typeof item_url === 'string' ? url.split('/').pop() : item_url.nombre
+            todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre, url, cod_ref: item.cod_ref })
           })
       })
       setImagenes(todasImagenes)
