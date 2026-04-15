@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import Optional
 from datetime import datetime
 from app.schemas.clientes import ClienteCreate, ClienteResponse
@@ -57,8 +57,16 @@ class CotizacionResponse(BaseModel):
     updated_at: datetime
     cliente_id: Optional[int] = None
     usuario_id: int
+    usuario_nombre: Optional[str] = None  
     clientes: Optional[ClienteResponse] = None
     cotizaciones_items: list[ItemResponse] = []
+
+    @model_validator(mode='before')
+    @classmethod
+    def poblar_usuario_nombre(cls, data):
+        if hasattr(data, 'usuarios') and data.usuarios:
+            data.__dict__['usuario_nombre'] = data.usuarios.nombre_completo
+        return data
 
     class Config:
         from_attributes = True

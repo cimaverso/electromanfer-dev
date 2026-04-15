@@ -2,6 +2,7 @@ import { useState } from 'react'
 import EmptyState from '../common/EmptyState'
 import LoadingSpinner from '../common/LoadingSpinner'
 import './HistorialTable.css'
+import { useAuth } from '../../hooks/useAuth'
 
 function formatCOP(value) {
   if (!value && value !== 0) return '—'
@@ -40,6 +41,9 @@ export default function HistorialTable({
     consecutivo: '',
     estado: '',
   })
+
+  const { user } = useAuth()
+  const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
 
   const handleFiltro = (field, value) => {
     const nuevos = { ...filtros, [field]: value }
@@ -163,6 +167,7 @@ export default function HistorialTable({
                 <th>Notas</th>
                 <th className="u-text-right">Total</th>
                 <th>Estado</th>
+                {esAdmin && <th>Usuario</th>}
                 <th>Fecha</th>
                 <th>Acciones</th>
               </tr>
@@ -197,6 +202,14 @@ export default function HistorialTable({
                   <td>
                     <EstadoBadge estado={cot.estado} />
                   </td>
+
+                  {esAdmin && (
+                    <td>
+                      <span className="hist-table__notas">
+                        {cot.usuario_nombre || '—'}
+                      </span>
+                    </td>
+                  )}
                   {/* Celda 5: Fecha correctamente contenida */}
                   <td className="u-text-muted">
                     {cot.created_at

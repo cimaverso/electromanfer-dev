@@ -154,8 +154,9 @@ class CotizacionesService:
             select(Cotizaciones)
             .options(
                 joinedload(Cotizaciones.clientes),
-                joinedload(Cotizaciones.cotizaciones_items)
-            )
+                joinedload(Cotizaciones.cotizaciones_items),
+                joinedload(Cotizaciones.usuarios),
+            )  
             .order_by(Cotizaciones.id.desc())
         )
 
@@ -181,7 +182,8 @@ class CotizacionesService:
             select(Cotizaciones)
             .options(
                 joinedload(Cotizaciones.clientes),
-                joinedload(Cotizaciones.cotizaciones_items)
+                joinedload(Cotizaciones.cotizaciones_items),
+                joinedload(Cotizaciones.usuarios),
             )
             .where(Cotizaciones.id == cotizacion_id)
         ).unique().scalar_one_or_none()
