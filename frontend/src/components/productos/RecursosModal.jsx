@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRecursos } from '../../hooks/useRecursos'
 import './RecursosModal.css'
+import { useAuth } from '../../hooks/useAuth'
 
 // ── Ícono imagen ──────────────────────────────────────────────────────────────
 const IconImagen = () => (
@@ -73,6 +74,9 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
     setPrincipal,
     MAX_SELECCION,
   } = useRecursos(codRef)
+
+  const { user } = useAuth()
+  const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
 
   // Carga recursos al montar
   useEffect(() => {
@@ -256,13 +260,15 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
                     </button>
 
                     {/* Eliminar */}
-                    <button
-                      className="recursos-modal__delete-btn"
-                      onClick={() => eliminar(recurso.id)}
-                      title="Eliminar"
-                    >
-                      <IconTrash />
-                    </button>
+                    {esAdmin && (
+                      <button
+                        className="recursos-modal__delete-btn"
+                        onClick={() => eliminar(recurso.id)}
+                        title="Eliminar"
+                      >
+                        <IconTrash />
+                      </button>
+                    )}
                   </div>
 
                   {/* Badge de selección */}
