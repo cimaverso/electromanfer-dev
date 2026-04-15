@@ -11,8 +11,8 @@ router = APIRouter(prefix="/firmas", tags=["firmas"])
 
 
 @router.get("", response_model=list[FirmaOut])
-def listar_firmas(db: Session = Depends(get_db),  _: TokenData = Depends(require_auth)):
-    return FirmasService.listar(db)
+def listar_firmas(db: Session = Depends(get_db), token : TokenData = Depends(require_auth)):
+    return FirmasService.listar(db, usuario_id=token.user_id)
 
 
 @router.post("", response_model=FirmaOut)

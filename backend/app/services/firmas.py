@@ -20,8 +20,10 @@ os.makedirs(FIRMAS_DIR, exist_ok=True)
 class FirmasService:
 
     @staticmethod
-    def listar(db: Session) -> list[Firmas]:
+    def listar(db: Session, usuario_id: int = None) -> list[Firmas]:
         stmt = select(Firmas).order_by(Firmas.id)
+        if usuario_id:
+            stmt = stmt.where(Firmas.usuario_id == usuario_id)
         return db.execute(stmt).scalars().all()
 
     @staticmethod

@@ -7,6 +7,7 @@ class FirmaOut(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
     archivo: str
+    usuario_id: Optional[int] = None
 
     @computed_field
     @property
