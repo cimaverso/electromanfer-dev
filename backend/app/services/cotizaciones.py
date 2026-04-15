@@ -67,6 +67,7 @@ class CotizacionesService:
             .where(
                 Productos.cod_ref == cod_ref,
                 ProductosMultimedia.tipo == "imagen",
+                ProductosMultimedia.seleccionada.is_(True),
             )
         ).all()
         return [{"url": r.url, "nombre": r.titulo} for r in resultados] if resultados else None
@@ -79,6 +80,7 @@ class CotizacionesService:
             .where(
                 Productos.cod_ref == cod_ref,
                 ProductosMultimedia.tipo == "ficha_tecnica",
+                ProductosMultimedia.seleccionada.is_(True),
             )
         ).all()
         return [{"url": r.url, "nombre": r.titulo} for r in resultados] if resultados else None
