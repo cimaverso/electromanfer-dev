@@ -66,7 +66,12 @@ export async function generarPdfCotizacion(
   descargar = true,
   imagenesPorCodRef = {}
 ) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    compress: true
+  })
 
   const PAGE_W = 210
   const PAGE_H = 297

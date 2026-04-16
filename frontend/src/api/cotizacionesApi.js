@@ -28,7 +28,9 @@ export async function getCotizacion(id) {
  * POST /cotizaciones/:id/enviar-email
  */
 export async function enviarEmail(id, payload) {
-  const response = await axiosClient.post(`/cotizaciones/${id}/enviar-email`, payload)
+  const response = await axiosClient.post(`/cotizaciones/${id}/enviar-email`, payload, {
+    timeout: 60000  // 60 segundos solo para este endpoint
+  })
   return response.data
 }
 
