@@ -5,6 +5,7 @@ from app.schemas.auth import Token, TokenData
 from app.schemas.usuarios import UsuariosAuthMe
 from app.services.auth import auth_service
 from app.core.security import get_current_user_data
+from app.models.usuarios import Usuarios
 
 router = APIRouter(
     prefix="/auth",
@@ -46,3 +47,14 @@ async def login(
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     
     return token_response
+
+@router.post("/logout")
+def logout(
+    current_user: TokenData = Depends(get_current_user_data),
+    db: Session = Depends(get_db)
+):
+    user = db.query(Usuarios).filter(Usuarios.id == current_user.user_id).first()
+    if user:
+        user.session_token = None
+        db.commit()
+    return {"ok": True}

@@ -2,32 +2,39 @@ from app.core.security import verify_password, create_access_token
 from app.services.usuarios import UsuariosService
 from sqlalchemy.orm import Session
 
-
 class auth_service:
 
     @staticmethod
     def auth_me(user_id: int, db: Session):
-        user = UsuariosService.buscar_por_id(db, user_id)
-        if not user:
-            return None
-        return user
+        return UsuariosService.buscar_por_id(db, user_id)
 
     @staticmethod
     def autheticate_user(email_or_username: str, password: str, db: Session):
         if "@" in email_or_username:
             user = UsuariosService.buscar_por_email(db, email_or_username)
         else:
-            user = UsuariosService.buscar_por_usuario(db, email_or_username)  # ← corregido
+            user = UsuariosService.buscar_por_usuario(db, email_or_username)
 
-        if not user or not verify_password(password, user.clave):  # ← corregido
+        if not user or not verify_password(password, user.clave):
             return None
 
+        # Verificar si ya tiene sesión activa
+        if user.session_token:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=400,
+                detail="El usuario ya tiene una sesión activa en otro dispositivo"
+            )
+
         token_data = {
-            "user_name": user.nombre_completo,   
-            "sub": user.email,                   
-            "user_id": user.id,                  
-            "role": user.rol                     
+            "user_name": user.nombre_completo,
+            "sub": user.email,
+            "user_id": user.id,
+            "role": user.rol
         }
 
-        acces_token = create_access_token(data=token_data)
-        return {"access_token": acces_token, "token_type": "bearer", "user": user}
+        access_token, session_token = create_access_token(data=token_data)
+        user.session_token = session_token
+        db.commit()
+
+        return {"access_token": access_token, "token_type": "bearer", "user": user}

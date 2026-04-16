@@ -1,6 +1,6 @@
 # app/models/usuario.py
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Boolean, DateTime
 from app.db.base import Base
@@ -48,6 +48,11 @@ class Usuarios(Base):
     rol: Mapped[str] = mapped_column(
         String(50),
         default=RoleEnum.ADMINISTRADOR
+    )
+
+    session_token: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True
     )
 
     activo: Mapped[bool] = mapped_column(

@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react'
 import { AuthContext } from '../context/AuthContext'
-import { loginRequest } from '../api/authApi' // Importación que ya tenías
+import { loginRequest, logoutRequest } from '../api/authApi'
+
 
 export function useAuth() {
   const context = useContext(AuthContext)
@@ -18,25 +19,30 @@ export function useAuth() {
     try {
       // ── CONEXIÓN REAL CON EL BACKEND ──
       const data = await loginRequest(email, password)
-      
+
       // data contiene: { access_token, token_type, user } según tu JSDoc
       context.login(data.access_token, data.user)
-      
+
       setIsSubmitting(false)
       return { success: true }
 
     } catch (error) {
       // Manejo de errores basado en la respuesta de Axios
-      const message = error.response?.data?.detail 
-                      || 'Error de conexión. Inténtalo más tarde.'
-      
+      const message = error.response?.data?.detail
+        || 'Error de conexión. Inténtalo más tarde.'
+
       setAuthError(message)
       setIsSubmitting(false)
       return { success: false }
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutRequest()
+    } catch (e) {
+      console.log('logout error:', e)
+    }
     context.logout()
   }
 

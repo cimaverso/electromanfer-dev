@@ -6,6 +6,9 @@ from passlib.context import CryptContext
 from app.core.config import settings
 from app.schemas.auth import TokenData
 from app.enums import RoleEnum
+import secrets
+from app.core.db import SessionLocal
+from app.models.usuarios import Usuarios
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
@@ -21,8 +24,10 @@ def verify_password(plain_password, hashed_password):
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=30))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    session_token = secrets.token_hex(16)
+    to_encode.update({"exp": expire, "session_token": session_token})
+    encoded = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded, session_token
 
 
 def get_current_user_data(token: str = Depends(oauth2_scheme)) -> TokenData:
@@ -39,9 +44,19 @@ def get_current_user_data(token: str = Depends(oauth2_scheme)) -> TokenData:
         email: str = payload.get("sub")
         user_id: int = payload.get("user_id")
         role: str = payload.get("role")
+        session_token: str = payload.get("session_token")
 
         if email is None or user_id is None:
             raise credentials_exception
+
+        # Verificar session_token en BD
+        db = SessionLocal()
+        try:
+            user = db.query(Usuarios).filter(Usuarios.id == user_id).first()
+            if not user or user.session_token != session_token:
+                raise credentials_exception
+        finally:
+            db.close()
 
         return TokenData(name=nombre, email=email, user_id=user_id, role=role)
     except JWTError:
