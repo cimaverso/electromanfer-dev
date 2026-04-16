@@ -10,8 +10,6 @@ import NotFoundPage from '../pages/NotFoundPage'
 function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth()
 
-  console.log('PrivateRoute — isLoading:', isLoading, '| isAuthenticated:', isAuthenticated)
-
   if (isLoading) {
     return (
       <div style={{
@@ -38,8 +36,6 @@ function PrivateRoute({ children }) {
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth()
 
-  console.log('RootRedirect — isLoading:', isLoading, '| isAuthenticated:', isAuthenticated)
-
   if (isLoading) {
     return (
       <div style={{
@@ -60,7 +56,7 @@ function RootRedirect() {
 }
 
 export default function AppRouter() {
-  console.log('AppRouter renderizando')
+  
 
   return (
     <BrowserRouter>

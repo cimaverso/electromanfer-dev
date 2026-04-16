@@ -2,7 +2,7 @@ import { AuthProvider } from './context/AuthContext'
 import { CotizacionDraftProvider } from './context/CotizacionDraftContext'
 import AppRouter from './router/AppRouter'
 
-console.log('App.jsx cargando')
+
 
 export default function App() {
   return (

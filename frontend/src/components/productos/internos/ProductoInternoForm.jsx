@@ -18,11 +18,11 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
   useEffect(() => {
     if (producto) {
       setForm({
-        cod_ref:   producto.cod_ref   || '',
-        nom_ref:   producto.nom_ref   || '',
-        nom_tip:   form.tipo.trim().toUpperCase() || null,
-        saldo:     producto.saldo     ?? '',
-        valor_web: producto.valor_web ?? '',
+        cod_ref: producto.cod_ref || '',
+        nom_ref: producto.nom_ref || '',
+        tipo: producto.nom_tip || '',
+        saldo: producto.saldo != null ? String(producto.saldo) : '',
+        valor_web: producto.valor_web != null ? String(producto.valor_web) : '',
       })
     } else {
       setForm(EMPTY)
@@ -51,10 +51,10 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
       return
     }
     onGuardar({
-      cod_ref:   form.cod_ref.trim().toUpperCase(),
-      nom_ref:   form.nom_ref.trim().toUpperCase(),
-      nom_tip:   form.tipo.trim().toUpperCase() || null,
-      saldo:     Number(form.saldo)     || 0,
+      cod_ref: form.cod_ref.trim().toUpperCase(),
+      nom_ref: form.nom_ref.trim().toUpperCase(),
+      nom_tip: form.tipo.trim().toUpperCase() || null,
+      saldo: Number(form.saldo) || 0,
       valor_web: Number(form.valor_web) || 0,
     })
   }

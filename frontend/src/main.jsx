@@ -4,7 +4,6 @@ import './styles/global.css'
 import './styles/utilities.css'
 import App from './App'
 
-console.log('main.jsx ejecutándose')
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
