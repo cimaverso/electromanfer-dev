@@ -57,7 +57,7 @@ def enviar_email(
     cotizacion_id: int,
     data: EnviarEmailSchema,
     db: Session = Depends(get_db),
-    _: TokenData = Depends(require_auth)
+    token: TokenData = Depends(require_auth)
 ):
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
@@ -85,6 +85,7 @@ def enviar_email(
         raise HTTPException(status_code=500, detail="Error al enviar el correo")
 
     cotizacion.estado = "enviada_email"
+    cotizacion.usuario_id = token.user_id
     db.commit()
 
     return {"ok": True, "mensaje": "Correo enviado correctamente"}
