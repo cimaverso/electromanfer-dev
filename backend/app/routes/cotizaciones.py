@@ -36,9 +36,10 @@ def listar_cotizaciones(
 def crear_cotizacion(
     data: CotizacionCreate,
     db: Session = Depends(get_db),
-    _: TokenData = Depends(require_auth)
+    token : TokenData = Depends(require_auth)
 ):
-    return CotizacionesService.crear(db, data, usuario_id=1)
+    print(f">>> usuario_id del token: {token.user_id}")
+    return CotizacionesService.crear(db, data, usuario_id=token.user_id)
 
 @router.get("/{cotizacion_id}", response_model=CotizacionResponse)
 def detalle_cotizacion(
