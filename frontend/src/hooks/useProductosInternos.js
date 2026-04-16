@@ -7,11 +7,11 @@ import {
 } from '../api/productosInternosApi'
 
 export function useProductosInternos() {
-  const [resultados, setResultados]     = useState([])
-  const [loading, setLoading]           = useState(false)
-  const [loadingForm, setLoadingForm]   = useState(false)
-  const [error, setError]               = useState(null)
-  const [query, setQuery]               = useState('')
+  const [resultados, setResultados] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [loadingForm, setLoadingForm] = useState(false)
+  const [error, setError] = useState(null)
+  const [query, setQuery] = useState('')
 
   const buscar = useCallback(async (q = '') => {
     setLoading(true)
@@ -41,14 +41,11 @@ export function useProductosInternos() {
     }
   }, [])
 
-  const actualizar = useCallback(async (id, payload) => {
+  const actualizar = useCallback(async (cod_ref, payload) => {
     setLoadingForm(true)
-    setError(null)
     try {
-      const actualizado = await actualizarProductoInterno(id, payload)
-      setResultados((prev) =>
-        prev.map((p) => (p.id === id ? actualizado : p))
-      )
+      const actualizado = await actualizarProductoInterno(cod_ref, payload)
+      setResultados((prev) => prev.map((p) => (p.cod_ref === cod_ref ? actualizado : p)))
       return { success: true, data: actualizado }
     } catch {
       return { success: false, error: 'Error al actualizar el producto.' }
@@ -57,11 +54,10 @@ export function useProductosInternos() {
     }
   }, [])
 
-  const eliminar = useCallback(async (id) => {
-    setError(null)
+  const eliminar = useCallback(async (cod_ref) => {
     try {
-      await eliminarProductoInterno(id)
-      setResultados((prev) => prev.filter((p) => p.id !== id))
+      await eliminarProductoInterno(cod_ref)
+      setResultados((prev) => prev.filter((p) => p.cod_ref !== cod_ref))
       return { success: true }
     } catch {
       return { success: false, error: 'Error al eliminar el producto.' }

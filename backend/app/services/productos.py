@@ -35,7 +35,7 @@ class ProductosService:
         resultado = db.execute(stmt)
         return resultado.scalar_one_or_none()
 
-    # ── Sincronización ──────────────────────────────────────────────────────
+    # Sincronización
 
     @staticmethod
     def _fetch_externos() -> list[dict]:
@@ -102,3 +102,77 @@ class ProductosService:
             logger.error(f"Error durante la sincronización: {e}")
         finally:
             db.close()
+
+    @staticmethod
+    def listar_internos(db: Session, q: str = "") -> list[Productos]:
+        stmt = select(Productos).where(Productos.origen == 'interno')
+        if q:
+            termino = f"%{q.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    Productos.nom_ref.ilike(termino),
+                    Productos.cod_ref.ilike(termino),
+                )
+            )
+        return db.execute(stmt.limit(50)).scalars().all()
+
+    @staticmethod
+    def crear_interno(db: Session, data) -> Productos:
+        # Verificar que no exista el cod_ref
+        existe = db.execute(
+            select(Productos).where(Productos.cod_ref == data.cod_ref)
+        ).scalar_one_or_none()
+        if existe:
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Ya existe un producto con código {data.cod_ref}")
+        
+        producto = Productos(
+            cod_ref   = data.cod_ref,
+            nom_ref   = data.nom_ref,
+            cod_tip   = data.cod_tip,
+            nom_tip   = data.nom_tip,
+            saldo     = data.saldo,
+            valor_web = data.valor_web,
+            origen    = 'interno'
+        )
+        db.add(producto)
+        db.commit()
+        db.refresh(producto)
+        return producto
+
+
+    @staticmethod
+    def actualizar_interno(db: Session, cod_ref: str, data) -> Productos:
+        producto = db.execute(
+            select(Productos).where(
+                Productos.cod_ref == cod_ref,
+                Productos.origen == 'interno'
+            )
+        ).scalar_one_or_none()
+        if not producto:
+            from fastapi import HTTPException
+            raise HTTPException(404, "Producto interno no encontrado")
+        
+        producto.nom_ref   = data.nom_ref
+        producto.cod_tip   = data.cod_tip
+        producto.nom_tip   = data.nom_tip
+        producto.saldo     = data.saldo
+        producto.valor_web = data.valor_web
+        db.commit()
+        db.refresh(producto)
+        return producto
+
+    @staticmethod
+    def eliminar_interno(db: Session, cod_ref: str) -> dict:
+        producto = db.execute(
+            select(Productos).where(
+                Productos.cod_ref == cod_ref,
+                Productos.origen == 'interno'
+            )
+        ).scalar_one_or_none()
+        if not producto:
+            from fastapi import HTTPException
+            raise HTTPException(404, "Producto interno no encontrado")
+        db.delete(producto)
+        db.commit()
+        return {"ok": True}

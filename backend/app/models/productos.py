@@ -49,6 +49,12 @@ class Productos(Base):
         nullable=True
     )
 
+    origen: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default='externo'  # 'externo' = API | 'interno' = creado manualmente
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 
         nullable=False, 

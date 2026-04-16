@@ -20,7 +20,7 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
       setForm({
         cod_ref:   producto.cod_ref   || '',
         nom_ref:   producto.nom_ref   || '',
-        tipo:      producto.tipo      || '',
+        nom_tip:   form.tipo.trim().toUpperCase() || null,
         saldo:     producto.saldo     ?? '',
         valor_web: producto.valor_web ?? '',
       })
@@ -53,7 +53,7 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
     onGuardar({
       cod_ref:   form.cod_ref.trim().toUpperCase(),
       nom_ref:   form.nom_ref.trim().toUpperCase(),
-      tipo:      form.tipo.trim().toUpperCase() || 'GENERAL',
+      nom_tip:   form.tipo.trim().toUpperCase() || null,
       saldo:     Number(form.saldo)     || 0,
       valor_web: Number(form.valor_web) || 0,
     })

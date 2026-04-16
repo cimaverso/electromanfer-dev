@@ -63,7 +63,7 @@ export default function ProductosInternosList() {
 
   const handleGuardar = async (payload) => {
     if (productoEditar) {
-      const result = await actualizar(productoEditar.id, payload)
+      const result = await actualizar(productoEditar.cod_ref, payload)
       if (result.success) {
         showToast('Producto actualizado', 'success')
         setModalAbierto(false)
@@ -81,8 +81,8 @@ export default function ProductosInternosList() {
     }
   }
 
-  const handleEliminar = async (id) => {
-    const result = await eliminar(id)
+  const handleEliminar = async (cod_ref) => {
+    const result = await eliminar(cod_ref)
     if (result.success) {
       showToast('Producto eliminado', 'success')
     } else {
@@ -93,10 +93,10 @@ export default function ProductosInternosList() {
 
   const handleAgregar = (producto) => {
     addProduct({
-      cod_ref:   producto.cod_ref,
-      nom_ref:   producto.nom_ref,
-      tipo:      producto.tipo || 'GENERAL',
-      saldo:     producto.saldo || 0,
+      cod_ref: producto.cod_ref,
+      nom_ref: producto.nom_ref,
+      tipo: producto.tipo || 'GENERAL',
+      saldo: producto.saldo || 0,
       valor_web: producto.valor_web || 0,
     })
   }
@@ -184,8 +184,8 @@ export default function ProductosInternosList() {
                       <td className="pi-list__cod">{p.cod_ref}</td>
                       <td className="pi-list__nom">{p.nom_ref}</td>
                       <td>
-                        {p.tipo ? (
-                          <span className="pi-list__badge">{p.tipo}</span>
+                        {p.nom_tip ? (
+                          <span className="pi-list__badge">{p.nom_tip}</span>
                         ) : '—'}
                       </td>
                       <td>{p.saldo ?? 0}</td>
@@ -251,7 +251,7 @@ export default function ProductosInternosList() {
               </button>
               <button
                 className="pi-list__btn-danger"
-                onClick={() => handleEliminar(confirmEliminar.id)}
+                onClick={() => handleEliminar(confirmEliminar.cod_ref)}
               >
                 Sí, eliminar
               </button>
