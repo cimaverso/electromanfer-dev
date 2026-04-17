@@ -52,8 +52,11 @@ def get_current_user_data(token: str = Depends(oauth2_scheme)) -> TokenData:
         # Verificar session_token en BD
         db = SessionLocal()
         try:
+            # Después
             user = db.query(Usuarios).filter(Usuarios.id == user_id).first()
-            if not user or user.session_token != session_token:
+            if not user:
+                raise credentials_exception
+            if user.session_token and user.session_token != session_token:
                 raise credentials_exception
         finally:
             db.close()

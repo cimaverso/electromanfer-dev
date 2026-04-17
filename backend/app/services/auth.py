@@ -18,14 +18,6 @@ class auth_service:
         if not user or not verify_password(password, user.clave):
             return None
 
-        # Verificar si ya tiene sesión activa
-        if user.session_token:
-            from fastapi import HTTPException
-            raise HTTPException(
-                status_code=400,
-                detail="El usuario ya tiene una sesión activa en otro dispositivo"
-            )
-
         token_data = {
             "user_name": user.nombre_completo,
             "sub": user.email,
@@ -34,7 +26,7 @@ class auth_service:
         }
 
         access_token, session_token = create_access_token(data=token_data)
-        user.session_token = session_token
+        user.session_token = session_token  # siempre sobreescribe
         db.commit()
 
         return {"access_token": access_token, "token_type": "bearer", "user": user}
