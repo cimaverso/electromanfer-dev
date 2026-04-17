@@ -12,7 +12,7 @@ export async function crearCotizacion(payload) {
  * GET /cotizaciones
  */
 export async function listarCotizaciones(filtros = {}) {
-  const response = await axiosClient.get('/cotizaciones', { params: filtros })
+  const response = await axiosClient.get('/cotizaciones/', { params: filtros })
   return response.data
 }
 

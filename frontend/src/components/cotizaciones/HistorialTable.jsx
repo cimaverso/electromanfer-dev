@@ -34,9 +34,14 @@ export default function HistorialTable({
   onDescargar, // Nota: onDescargar no se está usando en el componente, deberíamos evaluar si quitarlo o implementarlo
   onReenviar,
 }) {
+
+
+  // Fecha de hoy en Colombia
+  const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+
   const [filtros, setFiltros] = useState({
-    fecha_inicio: '',
-    fecha_fin: '',
+    fecha_inicio: hoyColombia,
+    fecha_fin: hoyColombia,
     cliente: '',
     consecutivo: '',
     estado: '',
@@ -60,15 +65,14 @@ export default function HistorialTable({
 
   const handleLimpiar = () => {
     const vacios = {
-      fecha_inicio: '',
-      fecha_fin: '',
+      fecha_inicio: hoyColombia,
+      fecha_fin: hoyColombia,
       cliente: '',
       consecutivo: '',
       estado: '',
     }
     setFiltros(vacios)
-    // Aseguramos que el componente padre entienda que se limpiaron todos los filtros
-    onFiltrar({})
+    onFiltrar({ fecha_inicio: hoyColombia, fecha_fin: hoyColombia })
   }
 
   return (

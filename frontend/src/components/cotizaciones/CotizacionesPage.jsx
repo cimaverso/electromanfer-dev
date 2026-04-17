@@ -49,8 +49,11 @@ export default function CotizacionesPage() {
     selectedProducts.length > 0 ? 'productos' : 'historial'
   )
 
+  const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+  const filtrosHoy = { fecha_inicio: hoyColombia, fecha_fin: hoyColombia }
+
   useEffect(() => {
-    cargarHistorial()
+    cargarHistorial(filtrosHoy)
   }, [cargarHistorial])
 
   const handleGenerar = async () => {
@@ -85,7 +88,7 @@ export default function CotizacionesPage() {
       // Limpia el draft DESPUÉS del cambio de tab para evitar re-renders conflictivos
       setTimeout(() => {
         clearDraft()
-        cargarHistorial()
+        cargarHistorial(filtrosHoy)
       }, 50)
     } else {
       showToast(result.error || 'Error al generar la cotización', 'error')
@@ -96,7 +99,7 @@ export default function CotizacionesPage() {
     const result = await handleEnviarEmail(id, payload)
     if (result.success) {
       showToast('Correo enviado correctamente', 'success')
-      cargarHistorial()
+      cargarHistorial(filtrosHoy)
     } else {
       showToast('Error al enviar el correo', 'error')
     }
@@ -107,7 +110,7 @@ export default function CotizacionesPage() {
     if (result.success && result.url) {
       window.open(result.url, '_blank', 'noopener,noreferrer')
       showToast('Enlace de WhatsApp generado', 'success')
-      cargarHistorial()
+      cargarHistorial(filtrosHoy)
     } else {
       showToast('Error al generar el enlace de WhatsApp', 'error')
     }
@@ -121,9 +124,10 @@ export default function CotizacionesPage() {
 
   const handleTabChange = (id) => {
     setTabActivo(id)
-    if (id === 'historial') cargarHistorial()
+    if (id === 'historial') cargarHistorial(filtrosHoy)
     if (id === 'preview') setPreviewKey((k) => k + 1)
   }
+
   const tabsConBadge = TABS.map((t) => ({
     ...t,
     badge: t.id === 'productos' ? selectedProducts.length : undefined,

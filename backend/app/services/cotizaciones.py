@@ -10,6 +10,7 @@ from app.schemas.cotizaciones import CotizacionCreate
 from app.services.clientes import ClientesService
 from typing import Optional
 from app.models.clientes import Clientes
+from datetime import timedelta
 from datetime import date
 
 
@@ -153,11 +154,6 @@ class CotizacionesService:
         fecha_fin: Optional[date] = None,
     ) -> list[Cotizaciones]:
 
-        # Si no hay filtros de fecha, mostrar solo las de hoy
-        if not fecha_inicio and not fecha_fin and not cliente and not consecutivo and not estado:
-            fecha_inicio = date.today()
-            fecha_fin = date.today()
-
         query = (
             select(Cotizaciones)
             .options(
@@ -175,7 +171,7 @@ class CotizacionesService:
         if fecha_inicio:
             query = query.where(Cotizaciones.created_at >= fecha_inicio)
         if fecha_fin:
-            query = query.where(Cotizaciones.created_at <= fecha_fin)
+            query = query.where(Cotizaciones.created_at < fecha_fin + timedelta(days=1))
         if cliente:
             query = query.join(Cotizaciones.clientes).where(
                 Clientes.nombre_razon_social.ilike(f"%{cliente}%")

@@ -1,18 +1,27 @@
 import axiosClient from './axiosClient'
-import { listarCotizaciones } from './cotizacionesApi'
+
+// Convierte un timestamp UTC de la DB a fecha Colombia (YYYY-MM-DD)
+const fechaColombia = (isoString) => {
+  if (!isoString) return ''
+  const fecha = new Date(isoString.includes('Z') ? isoString : isoString + 'Z')
+  return fecha.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+}
 
 export async function getMetricas() {
-  const cotizaciones = await listarCotizaciones()
+  // Llamada directa sin pasar por el hook de cotizaciones
+  const response = await axiosClient.get('/cotizaciones/')
+  const cotizaciones = response.data
 
-  const hoy = new Date().toISOString().split('T')[0]
-  const primerDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+  const [anio, mes] = hoy.split('-').map(Number)
+  const primerDiaMes = `${anio}-${String(mes).padStart(2, '0')}-01`
 
   const cotizaciones_hoy = cotizaciones.filter(
-    (c) => c.created_at?.startsWith(hoy)
+    (c) => fechaColombia(c.created_at) === hoy
   ).length
 
   const cotizaciones_mes = cotizaciones.filter(
-    (c) => new Date(c.created_at) >= primerDiaMes
+    (c) => fechaColombia(c.created_at) >= primerDiaMes
   ).length
 
   const cotizaciones_pendientes = cotizaciones.filter(
@@ -20,7 +29,7 @@ export async function getMetricas() {
   ).length
 
   const monto_total_mes = cotizaciones
-    .filter((c) => new Date(c.created_at) >= primerDiaMes)
+    .filter((c) => fechaColombia(c.created_at) >= primerDiaMes)
     .reduce((acc, c) => acc + (c.total || 0), 0)
 
   const cotizaciones_recientes = cotizaciones.slice(0, 5).map((c) => ({
@@ -29,7 +38,7 @@ export async function getMetricas() {
     cliente:     c.clientes?.nombre_razon_social || 'Sin cliente',
     total:       c.total,
     estado:      c.estado,
-    fecha:       c.created_at?.split('T')[0],
+    fecha:       fechaColombia(c.created_at),
   }))
 
   return {
