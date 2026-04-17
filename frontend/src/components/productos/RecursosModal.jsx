@@ -146,7 +146,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
               {selCount} / {MAX_SELECCION} seleccionados
             </span>
             <span className="recursos-modal__sel-hint">
-              — se incluirán en la cotización y el PDF
+              — se enviarán como adjuntos por email
             </span>
           </p>
           <button
@@ -284,7 +284,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
         {/* ── Footer ── */}
         <div className="recursos-modal__footer">
           <p className="recursos-modal__footer-note">
-            Las primeras {MAX_SELECCION} seleccionadas de cada tipo se incluyen en el PDF por defecto.
+            ⭐ La imagen principal aparece en el PDF · ✓ Las seleccionadas se adjuntan en el email
           </p>
           <button className="recursos-modal__done-btn" onClick={onClose}>
             Listo
