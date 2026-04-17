@@ -122,10 +122,11 @@
   vertical-align: middle;
 }
 
+
 .pi-list__cod {
   font-family: var(--font-mono, monospace);
   font-size: 12px;
-  color: var(--color-text-muted) !important;
+  color: var(--color-primary) !important;
 }
 
 .pi-list__nom {
@@ -161,11 +162,11 @@
 }
 
 .pi-list__action-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--color-border);
   background: var(--color-surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -280,3 +281,15 @@
 }
 
 .pi-list__btn-danger:hover { opacity: 0.88; }
+
+
+.pi-list__action-btn--recursos-active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(140, 166, 83, 0.1);
+}
+
+.pi-list__table td.pi-list__cod,
+.pi-list__cod {
+  color: var(--color-primary) !important;
+}

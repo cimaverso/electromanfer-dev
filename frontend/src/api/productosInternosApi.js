@@ -11,11 +11,11 @@ export async function crearProductoInterno(payload) {
 }
 
 export async function actualizarProductoInterno(cod_ref, payload) {
-  const response = await axiosClient.patch(`/productos/internos/${cod_ref}`, payload)
+  const response = await axiosClient.patch(`/productos/internos/${cod_ref}/`, payload)
   return response.data
 }
 
-export async function eliminarProductoInterno(id) {
-  await axiosClient.delete(`/productos/internos/${id}`)
+export async function eliminarProductoInterno(cod_ref) {
+  await axiosClient.delete(`/productos/internos/${cod_ref}/`)
   return { success: true }
 }

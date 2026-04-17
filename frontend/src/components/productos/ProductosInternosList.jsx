@@ -77,7 +77,7 @@ export default function ProductosInternosList() {
 
   const handleGuardar = async (payload) => {
     if (productoEditar) {
-      const result = await actualizar(productoEditar.id, payload)
+      const result = await actualizar(productoEditar.cod_ref, payload)
       if (result.success) {
         showToast('Producto actualizado', 'success')
         setModalAbierto(false)
@@ -107,10 +107,10 @@ export default function ProductosInternosList() {
 
   const handleAgregar = (producto) => {
     addProduct({
-      cod_ref:   producto.cod_ref,
-      nom_ref:   producto.nom_ref,
-      tipo:      producto.tipo || 'GENERAL',
-      saldo:     producto.saldo || 0,
+      cod_ref: producto.cod_ref,
+      nom_ref: producto.nom_ref,
+      tipo: producto.tipo || 'GENERAL',
+      saldo: producto.saldo || 0,
       valor_web: producto.valor_web || 0,
     })
   }
@@ -195,11 +195,11 @@ export default function ProductosInternosList() {
                 <tbody>
                   {resultados.map((p) => (
                     <tr key={p.id || p.cod_ref}>
-                      <td className="pi-list__cod">{p.cod_ref}</td>
+                      <td><span className="pi-list__cod">{p.cod_ref}</span></td>
                       <td className="pi-list__nom">{p.nom_ref}</td>
                       <td>
-                        {p.tipo ? (
-                          <span className="pi-list__badge">{p.tipo}</span>
+                        {p.nom_tip ? (
+                          <span className="pi-list__badge">{p.nom_tip}</span>
                         ) : '—'}
                       </td>
                       <td>{p.saldo ?? 0}</td>
@@ -221,12 +221,18 @@ export default function ProductosInternosList() {
                                 : 'Sin recursos — clic para agregar'
                             }
                             onClick={() => setRecursoActivo({ cod_ref: p.cod_ref, nom_ref: p.nom_ref })}
+                            style={{ position: 'relative' }}
                           >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
                               <rect x="3" y="3" width="18" height="18" rx="2" />
                               <circle cx="8.5" cy="8.5" r="1.5" />
                               <polyline points="21 15 16 10 5 21" />
                             </svg>
+                            {((contadores[p.cod_ref]?.imagenes ?? 0) + (contadores[p.cod_ref]?.pdfs ?? 0)) > 0 && (
+                              <span className="productos-table__recurso-count">
+                                {(contadores[p.cod_ref]?.imagenes ?? 0) + (contadores[p.cod_ref]?.pdfs ?? 0)}
+                              </span>
+                            )}
                           </button>
                           <button
                             className="pi-list__action-btn pi-list__action-btn--delete"
@@ -263,7 +269,7 @@ export default function ProductosInternosList() {
               .then((counts) =>
                 setContadores((prev) => ({ ...prev, [recursoActivo.cod_ref]: counts }))
               )
-              .catch(() => {})
+              .catch(() => { })
             setRecursoActivo(null)
           }}
         />
@@ -296,7 +302,7 @@ export default function ProductosInternosList() {
               </button>
               <button
                 className="pi-list__btn-danger"
-                onClick={() => handleEliminar(confirmEliminar.id)}
+                onClick={() => handleEliminar(confirmEliminar.cod_ref)}
               >
                 Sí, eliminar
               </button>
