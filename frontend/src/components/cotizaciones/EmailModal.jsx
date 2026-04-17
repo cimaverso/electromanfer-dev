@@ -3,7 +3,6 @@ import { listarFirmas, subirFirma, eliminarFirma } from '../../api/firmasApi'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
 import './EmailModal.css'
 
-// ── Helper: carga imagen como base64 ─────────────────────────────────────────
 function cargarBase64(url) {
   return new Promise((resolve) => {
     if (!url) return resolve(null)
@@ -22,7 +21,6 @@ function cargarBase64(url) {
   })
 }
 
-// ── Helper: convierte blob a base64 ──────────────────────────────────────────
 function blobToBase64(blob) {
   return new Promise((resolve) => {
     const reader = new FileReader()
@@ -39,35 +37,30 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
   const empresa = cotizacion?.clientes?.nombre_razon_social || ''
   const numCot = cotizacion?.consecutivo || ''
 
-  // ── Estado del formulario ─────────────────────────────────────────────────
   const [destino, setDestino] = useState(cotizacion?.cliente?.email || '')
   const [asunto, setAsunto] = useState(`Cotización ${numCot} - ELECTROMANFER LTDA.`)
   const [cuerpo, setCuerpo] = useState(
     `Estimado Cliente ${nombreCliente}:\n\nReciba un cordial saludo. En atención a su solicitud, adjunto cotización:\n\nNúmero Cotización: ${numCot}\n${empresa}\n\nQuedamos atentos a cualquier inquietud o comentario adicional.\n\nAtentamente,`
   )
 
-  // ── Firmas ────────────────────────────────────────────────────────────────
   const [firmas, setFirmas] = useState([])
-  const [firmaSeleccionada, setFirmaSeleccionada] = useState(null) // objeto firma
+  const [firmaSeleccionada, setFirmaSeleccionada] = useState(null)
   const [firmaB64, setFirmaB64] = useState(null)
   const [firmaLoading, setFirmaLoading] = useState(true)
   const [mostrarFirma, setMostrarFirma] = useState(true)
   const [selectorAbierto, setSelectorAbierto] = useState(false)
 
-  // ── Recursos de los productos ─────────────────────────────────────────────
   const [imagenes, setImagenes] = useState([])
   const [pdfs, setPdfs] = useState([])
   const [adjImgs, setAdjImgs] = useState([])
   const [adjPdfs, setAdjPdfs] = useState([])
   const [recursosLoading, setRecursosLoading] = useState(true)
 
-  // ── PDF de cotización en base64 ───────────────────────────────────────────
   const pdfB64Ref = useRef(null)
   const fileInputRef = useRef(null)
   const [subiendoFirma, setSubiendoFirma] = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(null)
 
-  // Cierra con Escape
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') {
@@ -79,18 +72,15 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     return () => window.removeEventListener('keydown', handler)
   }, [onClose, selectorAbierto])
 
-  // Carga firmas, recursos y PDF al montar
   useEffect(() => {
     const cargarTodo = async () => {
       const items = cotizacion?.cotizaciones_items || []
 
-      // 1. Firmas disponibles
       setFirmaLoading(true)
       try {
         const lista = await listarFirmas()
         setFirmas(lista)
         if (lista.length > 0) {
-          // Por defecto: primera firma
           setFirmaSeleccionada(lista[0])
           setFirmaB64(lista[0].url)
         }
@@ -100,7 +90,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
         setFirmaLoading(false)
       }
 
-      // 2. Recursos de todos los productos
       setRecursosLoading(true)
       const todasImagenes = []
       const todosPdfs = []
@@ -110,7 +99,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
           const nombre = typeof item_url === 'string' ? url.split('/').pop() : item_url.nombre
           todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre, url, cod_ref: item.cod_ref })
         })
-
           ; (item.fichas_urls || []).forEach((item_url, i) => {
             const url = typeof item_url === 'string' ? item_url : item_url.url
             const nombre = typeof item_url === 'string' ? url.split('/').pop() : item_url.nombre
@@ -123,18 +111,16 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       setAdjPdfs(todosPdfs.map((p) => p.id))
       setRecursosLoading(false)
 
-      // 3. PDF como base64
       try {
         const blob = await generarPdfCotizacion(cotizacion, [], [], false)
           .then((blobUrl) => fetch(blobUrl).then((r) => r.blob()))
         pdfB64Ref.current = await blobToBase64(blob)
-      } catch { /* el backend puede generarlo */ }
+      } catch { }
     }
 
     cargarTodo()
   }, [cotizacion])
 
-  // Cuando cambia la firma seleccionada, recarga el base64
   const handleNuevaFirma = async (e) => {
     const archivo = e.target.files?.[0]
     if (!archivo) return
@@ -147,9 +133,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const nueva = await subirFirma(formData)
       setFirmas((prev) => [...prev, nueva])
       handleSeleccionarFirma(nueva)
-    } catch {
-      // silencioso — el mock no falla, el real puede fallar por tipo/tamaño
-    } finally {
+    } catch { } finally {
       setSubiendoFirma(false)
     }
   }
@@ -160,11 +144,19 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     setFirmaB64(firma.url)
   }
 
-  const handleEliminarFirma = (e, firmaId) => {
+  const handleEliminarFirma = async (e, firmaId) => {
     e.stopPropagation()
-    setConfirmarEliminar(firmaId)
+    try {
+      await eliminarFirma(firmaId)
+      setFirmas((prev) => prev.filter((f) => f.id !== firmaId))
+      if (firmaSeleccionada?.id === firmaId) {
+        const restantes = firmas.filter((f) => f.id !== firmaId)
+        setFirmaSeleccionada(restantes[0] || null)
+        setFirmaB64(restantes[0]?.url || null)
+      }
+    } catch { }
   }
-
+  
   const confirmarYEliminar = async () => {
     try {
       await eliminarFirma(confirmarEliminar)
@@ -212,7 +204,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     >
       <div className="email-modal" role="dialog" aria-modal="true">
 
-        {/* ── Header ── */}
         <div className="email-modal__header">
           <div>
             <h3 className="email-modal__title">Enviar cotización por email</h3>
@@ -226,10 +217,8 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
           </button>
         </div>
 
-        {/* ── Body ── */}
         <div className="email-modal__body">
 
-          {/* Para */}
           <div className="email-modal__field">
             <label className="email-modal__label">
               Para <span className="email-modal__required">*</span>
@@ -244,7 +233,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
             />
           </div>
 
-          {/* Asunto */}
           <div className="email-modal__field">
             <label className="email-modal__label">Asunto</label>
             <input
@@ -255,7 +243,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
             />
           </div>
 
-          {/* Cuerpo */}
           <div className="email-modal__field">
             <label className="email-modal__label">Mensaje</label>
             <textarea
@@ -289,10 +276,9 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
 
             {mostrarFirma && (
               <div className="email-modal__firma-wrapper">
-                {/* Imagen clickeable */}
                 <div
                   className="email-modal__firma-preview email-modal__firma-preview--clickable"
-                  onClick={() => setSelectorAbierto((v) => !v)}
+                  onClick={() => firmas.length > 0 && setSelectorAbierto((v) => !v)}
                   title="Clic para cambiar firma"
                 >
                   {firmaLoading ? (
@@ -311,16 +297,39 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                         <span>Cambiar firma</span>
                       </div>
                     </>
-                  ) : firmas.length === 0 ? (
-                    <p className="email-modal__firma-error">
-                      No hay firmas disponibles. Agrega una desde el panel de configuración.
-                    </p>
                   ) : (
-                    <p className="email-modal__firma-error">No se pudo cargar la imagen.</p>
+                    <p className="email-modal__firma-error">
+                      No hay firmas disponibles. Agrega una con el botón de abajo.
+                    </p>
                   )}
                 </div>
 
-                {/* Selector de firmas */}
+                {/* ── Botón agregar firma — SIEMPRE visible ── */}
+                <button
+                  type="button"
+                  className="email-modal__firma-agregar"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={subiendoFirma}
+                  style={{ marginTop: 8 }}
+                >
+                  {subiendoFirma ? (
+                    <span className="email-modal__spinner email-modal__spinner--sm" />
+                  ) : (
+                    <span className="email-modal__firma-agregar-icon">+</span>
+                  )}
+                  <span>{subiendoFirma ? 'Subiendo...' : 'Agregar firma'}</span>
+                </button>
+
+                {/* ── Input siempre en el DOM ── */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  style={{ display: 'none' }}
+                  onChange={handleNuevaFirma}
+                />
+
+                {/* ── Selector de firmas ── */}
                 {selectorAbierto && firmas.length > 0 && (
                   <div className="email-modal__firma-selector">
                     <p className="email-modal__firma-selector-title">Selecciona una firma</p>
@@ -352,16 +361,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                           <button
                             type="button"
                             onClick={(e) => handleEliminarFirma(e, firma.id)}
-                            style={{
-                              marginLeft: 4,
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: 'var(--color-text-muted)',  // gris por defecto
-                              flexShrink: 0,
-                              padding: '4px',
-                              transition: 'color 0.15s ease'
-                            }}
+                            style={{ marginLeft: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', flexShrink: 0, padding: '4px', transition: 'color 0.15s ease' }}
                             title="Eliminar firma"
                             onMouseEnter={(e) => e.currentTarget.style.color = '#e74c3c'}
                             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
@@ -376,41 +376,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                         </div>
                       ))}
 
-                      {confirmarEliminar && (
-                        <div className="email-modal__firma-confirm">
-                          <span className="email-modal__firma-confirm-text">¿Eliminar esta firma?</span>
-                          <div className="email-modal__firma-confirm-btns">
-                            <button type="button" className="email-modal__firma-confirm-cancel" onClick={() => setConfirmarEliminar(null)}>
-                              Cancelar
-                            </button>
-                            <button type="button" className="email-modal__firma-confirm-ok" onClick={confirmarYEliminar}>
-                              Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Botón agregar nueva firma */}
-                      <button
-                        type="button"
-                        className="email-modal__firma-agregar"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={subiendoFirma}
-                      >
-                        {subiendoFirma ? (
-                          <span className="email-modal__spinner email-modal__spinner--sm" />
-                        ) : (
-                          <span className="email-modal__firma-agregar-icon">+</span>
-                        )}
-                        <span>{subiendoFirma ? 'Subiendo...' : 'Agregar firma'}</span>
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png"
-                        style={{ display: 'none' }}
-                        onChange={handleNuevaFirma}
-                      />
                     </div>
                   </div>
                 )}
@@ -496,7 +461,6 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
           </div>
         </div>
 
-        {/* ── Footer ── */}
         <div className="email-modal__footer">
           <button className="email-modal__cancel-btn" onClick={onClose} disabled={loading}>
             Cancelar
