@@ -151,8 +151,8 @@ export default function HistorialTable({
       {!loading && historial.length === 0 && (
         <EmptyState
           icon="📋"
-          title="Sin cotizaciones"
-          desc="No hay cotizaciones que coincidan con los filtros aplicados."
+          title="Sin cotizaciones hoy"
+          desc="No hay cotizaciones para hoy. Usa los filtros para buscar en otras fechas."
         />
       )}
 

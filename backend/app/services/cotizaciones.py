@@ -9,8 +9,9 @@ from app.models.productos_multimedia import ProductosMultimedia
 from app.schemas.cotizaciones import CotizacionCreate
 from app.services.clientes import ClientesService
 from typing import Optional
-from datetime import date
 from app.models.clientes import Clientes
+from datetime import date
+
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,7 @@ class CotizacionesService:
 
         return CotizacionesService.obtener_por_id(db, cotizacion.id)
 
-    # Listar
+    #Listar
     @staticmethod
     def listar(
         db: Session,
@@ -151,6 +152,12 @@ class CotizacionesService:
         fecha_inicio: Optional[date] = None,
         fecha_fin: Optional[date] = None,
     ) -> list[Cotizaciones]:
+
+        # Si no hay filtros de fecha, mostrar solo las de hoy
+        if not fecha_inicio and not fecha_fin and not cliente and not consecutivo and not estado:
+            fecha_inicio = date.today()
+            fecha_fin = date.today()
+
         query = (
             select(Cotizaciones)
             .options(
