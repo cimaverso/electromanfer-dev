@@ -3,6 +3,7 @@ import { useProductosInternos } from '../../hooks/useProductosInternos'
 import { useCotizacionDraft } from '../../hooks/useCotizacionDraft'
 import { useToast } from '../../hooks/useToast'
 import ProductoInternoForm from './internos/ProductoInternoForm'
+import RecursosModal from './RecursosModal'
 import SearchInput from '../common/SearchInput'
 import LoadingSpinner from '../common/LoadingSpinner'
 import EmptyState from '../common/EmptyState'
@@ -33,6 +34,7 @@ export default function ProductosInternosList() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [productoEditar, setProductoEditar] = useState(null)
   const [confirmEliminar, setConfirmEliminar] = useState(null)
+  const [recursoActivo, setRecursoActivo] = useState(null) // { cod_ref, nom_ref }
 
   const prevCount = useRef(0)
   const { selectedProducts } = useCotizacionDraft()
@@ -63,7 +65,7 @@ export default function ProductosInternosList() {
 
   const handleGuardar = async (payload) => {
     if (productoEditar) {
-      const result = await actualizar(productoEditar.cod_ref, payload)
+      const result = await actualizar(productoEditar.id, payload)
       if (result.success) {
         showToast('Producto actualizado', 'success')
         setModalAbierto(false)
@@ -81,8 +83,8 @@ export default function ProductosInternosList() {
     }
   }
 
-  const handleEliminar = async (cod_ref) => {
-    const result = await eliminar(cod_ref)
+  const handleEliminar = async (id) => {
+    const result = await eliminar(id)
     if (result.success) {
       showToast('Producto eliminado', 'success')
     } else {
@@ -93,10 +95,10 @@ export default function ProductosInternosList() {
 
   const handleAgregar = (producto) => {
     addProduct({
-      cod_ref: producto.cod_ref,
-      nom_ref: producto.nom_ref,
-      tipo: producto.tipo || 'GENERAL',
-      saldo: producto.saldo || 0,
+      cod_ref:   producto.cod_ref,
+      nom_ref:   producto.nom_ref,
+      tipo:      producto.tipo || 'GENERAL',
+      saldo:     producto.saldo || 0,
       valor_web: producto.valor_web || 0,
     })
   }
@@ -184,8 +186,8 @@ export default function ProductosInternosList() {
                       <td className="pi-list__cod">{p.cod_ref}</td>
                       <td className="pi-list__nom">{p.nom_ref}</td>
                       <td>
-                        {p.nom_tip ? (
-                          <span className="pi-list__badge">{p.nom_tip}</span>
+                        {p.tipo ? (
+                          <span className="pi-list__badge">{p.tipo}</span>
                         ) : '—'}
                       </td>
                       <td>{p.saldo ?? 0}</td>
@@ -198,6 +200,17 @@ export default function ProductosInternosList() {
                             onClick={() => handleAbrirEditar(p)}
                           >
                             ✎
+                          </button>
+                          <button
+                            className="pi-list__action-btn pi-list__action-btn--recursos"
+                            title="Recursos (imágenes / PDFs)"
+                            onClick={() => setRecursoActivo({ cod_ref: p.cod_ref, nom_ref: p.nom_ref })}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+                              <rect x="3" y="3" width="18" height="18" rx="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
                           </button>
                           <button
                             className="pi-list__action-btn pi-list__action-btn--delete"
@@ -223,6 +236,15 @@ export default function ProductosInternosList() {
           </>
         )}
       </div>
+
+      {/* ─── Modal recursos ─── */}
+      {recursoActivo && (
+        <RecursosModal
+          codRef={recursoActivo.cod_ref}
+          nomRef={recursoActivo.nom_ref}
+          onClose={() => setRecursoActivo(null)}
+        />
+      )}
 
       {/* ─── Modal crear/editar ─── */}
       {modalAbierto && (
@@ -251,7 +273,7 @@ export default function ProductosInternosList() {
               </button>
               <button
                 className="pi-list__btn-danger"
-                onClick={() => handleEliminar(confirmEliminar.cod_ref)}
+                onClick={() => handleEliminar(confirmEliminar.id)}
               >
                 Sí, eliminar
               </button>
