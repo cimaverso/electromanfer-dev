@@ -4,6 +4,7 @@ import { useCotizacionDraft } from '../../hooks/useCotizacionDraft'
 import { useToast } from '../../hooks/useToast'
 import ProductoInternoForm from './internos/ProductoInternoForm'
 import RecursosModal from './RecursosModal'
+import { contarRecursos } from '../../api/recursosApi'
 import SearchInput from '../common/SearchInput'
 import LoadingSpinner from '../common/LoadingSpinner'
 import EmptyState from '../common/EmptyState'
@@ -34,7 +35,18 @@ export default function ProductosInternosList() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [productoEditar, setProductoEditar] = useState(null)
   const [confirmEliminar, setConfirmEliminar] = useState(null)
-  const [recursoActivo, setRecursoActivo] = useState(null) // { cod_ref, nom_ref }
+  const [recursoActivo, setRecursoActivo] = useState(null)
+  const [contadores, setContadores] = useState({})
+
+  useEffect(() => {
+    if (!resultados.length) return
+    resultados.forEach(async (p) => {
+      try {
+        const counts = await contarRecursos(p.cod_ref)
+        setContadores((prev) => ({ ...prev, [p.cod_ref]: counts }))
+      } catch { /* silencioso */ }
+    })
+  }, [resultados])
 
   const prevCount = useRef(0)
   const { selectedProducts } = useCotizacionDraft()
@@ -202,8 +214,12 @@ export default function ProductosInternosList() {
                             ✎
                           </button>
                           <button
-                            className="pi-list__action-btn pi-list__action-btn--recursos"
-                            title="Recursos (imágenes / PDFs)"
+                            className={`pi-list__action-btn pi-list__action-btn--recursos ${((contadores[p.cod_ref]?.imagenes ?? 0) + (contadores[p.cod_ref]?.pdfs ?? 0)) > 0 ? 'pi-list__action-btn--recursos-active' : ''}`}
+                            title={
+                              ((contadores[p.cod_ref]?.imagenes ?? 0) + (contadores[p.cod_ref]?.pdfs ?? 0)) > 0
+                                ? `${contadores[p.cod_ref]?.imagenes ?? 0} img · ${contadores[p.cod_ref]?.pdfs ?? 0} PDF`
+                                : 'Sin recursos — clic para agregar'
+                            }
                             onClick={() => setRecursoActivo({ cod_ref: p.cod_ref, nom_ref: p.nom_ref })}
                           >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
@@ -242,7 +258,14 @@ export default function ProductosInternosList() {
         <RecursosModal
           codRef={recursoActivo.cod_ref}
           nomRef={recursoActivo.nom_ref}
-          onClose={() => setRecursoActivo(null)}
+          onClose={() => {
+            contarRecursos(recursoActivo.cod_ref)
+              .then((counts) =>
+                setContadores((prev) => ({ ...prev, [recursoActivo.cod_ref]: counts }))
+              )
+              .catch(() => {})
+            setRecursoActivo(null)
+          }}
         />
       )}
 
