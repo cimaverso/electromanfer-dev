@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import EmptyState from '../common/EmptyState'
 import LoadingSpinner from '../common/LoadingSpinner'
 import './HistorialTable.css'
 import { useAuth } from '../../hooks/useAuth'
+
 
 function formatCOP(value) {
   if (!value && value !== 0) return '—'
@@ -50,9 +51,18 @@ export default function HistorialTable({
   const { user } = useAuth()
   const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
 
+  const debounceRef = useRef(null)
+
   const handleFiltro = (field, value) => {
     const nuevos = { ...filtros, [field]: value }
     setFiltros(nuevos)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      const limpio = Object.fromEntries(
+        Object.entries(nuevos).filter(([, v]) => v !== '')
+      )
+      onFiltrar(limpio)
+    }, 500)
   }
 
   const handleBuscar = () => {
@@ -74,6 +84,13 @@ export default function HistorialTable({
     setFiltros(vacios)
     onFiltrar({ fecha_inicio: hoyColombia, fecha_fin: hoyColombia })
   }
+
+  useEffect(() => {
+    const limpio = Object.fromEntries(
+      Object.entries(filtros).filter(([, v]) => v !== '')
+    )
+    onFiltrar(limpio)
+  }, [])
 
   return (
     <div className="hist-table">
@@ -137,9 +154,6 @@ export default function HistorialTable({
         </div>
 
         <div className="hist-table__filtro-actions">
-          <button className="hist-table__filtro-btn" onClick={handleBuscar}>
-            Buscar
-          </button>
           <button
             className="hist-table__filtro-btn hist-table__filtro-btn--ghost"
             onClick={handleLimpiar}
