@@ -36,7 +36,6 @@ class CotizacionesService:
         return f"{prefijo}{numero:04d}"
 
     # Cálculos
-
     @staticmethod
     def _calcular_item(item) -> dict:
         subtotal  = round(item.valor_web * item.cantidad, 2)
@@ -60,7 +59,6 @@ class CotizacionesService:
             .limit(1)
         ).scalar_one_or_none()
     
-
     @staticmethod
     def _imagenes(db: Session, cod_ref: str) -> Optional[list]:
         resultados = db.execute(
@@ -191,3 +189,23 @@ class CotizacionesService:
             )
             .where(Cotizaciones.id == cotizacion_id)
         ).unique().scalar_one_or_none()
+    
+    # Cambiar estado
+    @staticmethod
+    def cambiar_estado(db: Session, cotizacion_id: int, nuevo_estado: str) -> Cotizaciones:
+        estados_validos = ["generada", "enviada_email", "enviada_whatsapp", "enviada_ambos", "efectiva", "anulada"]
+        
+        cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
+        if not cotizacion:
+            return None
+        
+        if cotizacion.estado == "efectiva":
+            raise ValueError("Una cotización efectiva no puede cambiar de estado")
+        
+        if nuevo_estado not in estados_validos:
+            raise ValueError(f"Estado inválido. Válidos: {estados_validos}")
+        
+        cotizacion.estado = nuevo_estado
+        db.commit()
+        
+        return CotizacionesService.obtener_por_id(db, cotizacion_id)

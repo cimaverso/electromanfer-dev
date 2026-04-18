@@ -40,6 +40,9 @@ class CotizacionCreate(BaseModel):
     notas: Optional[str] = None
     observaciones_pdf: Optional[str] = None
 
+class CambiarEstadoSchema(BaseModel):
+    estado: str
+
 
 class CotizacionResponse(BaseModel):
     id: int

@@ -4,7 +4,7 @@ from app.core.db import get_db
 from typing import Optional
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
-from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse
+from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema
 from app.schemas.envios import EnviarEmailSchema, EnviarWhatsappSchema
 from app.services.email import enviar_cotizacion_email
 from app.schemas.auth import TokenData
@@ -108,3 +108,18 @@ def enviar_whatsapp(
     db.commit()
 
     return {"ok": True, "whatsapp_url": url}
+
+@router.patch("/{cotizacion_id}/estado")
+def cambiar_estado(
+    cotizacion_id: int,
+    data: CambiarEstadoSchema,
+    db: Session = Depends(get_db),
+    _: TokenData = Depends(require_auth)
+):
+    try:
+        cotizacion = CotizacionesService.cambiar_estado(db, cotizacion_id, data.estado)
+        if not cotizacion:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+        return {"ok": True, "estado": cotizacion.estado}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
