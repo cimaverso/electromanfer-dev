@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRecursos } from '../../hooks/useRecursos'
 import './RecursosModal.css'
 import { useAuth } from '../../hooks/useAuth'
+
+// ── Tipos aceptados por tab ───────────────────────────────────────────────────
+const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const TIPOS_PDF    = ['application/pdf']
 
 // ── Ícono imagen ──────────────────────────────────────────────────────────────
 const IconImagen = () => (
@@ -56,9 +60,14 @@ const IconStar = () => (
 )
 
 export default function RecursosModal({ codRef, nomRef, onClose }) {
-  const [tab, setTab] = useState('imagenes') // 'imagenes' | 'pdfs'
+  const [tab, setTab] = useState('imagenes')
   const inputImagenRef = useRef(null)
-  const inputPdfRef = useRef(null)
+  const inputPdfRef    = useRef(null)
+
+  // ── Estado drag & drop ────────────────────────────────────────────────────
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragError,  setDragError]  = useState(null)
+  const dragCounter = useRef(0) // contador para evitar flicker al pasar sobre hijos
 
   const {
     imagenes,
@@ -78,32 +87,103 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
   const { user } = useAuth()
   const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
 
-  // Carga recursos al montar
-  useEffect(() => {
-    cargar()
-  }, [cargar])
+  useEffect(() => { cargar() }, [cargar])
 
-  // Cierra con Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // ── Handlers drag & drop ──────────────────────────────────────────────────
+  const handleDragEnter = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current += 1
+    if (dragCounter.current === 1) {
+      setIsDragging(true)
+      setDragError(null)
+    }
+  }, [])
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current -= 1
+    if (dragCounter.current === 0) setIsDragging(false)
+  }, [])
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  const handleDrop = useCallback(async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current = 0
+    setIsDragging(false)
+
+    const archivo = e.dataTransfer.files?.[0]
+    if (!archivo) return
+
+    const tiposPermitidos = tab === 'imagenes' ? TIPOS_IMAGEN : TIPOS_PDF
+    if (!tiposPermitidos.includes(archivo.type)) {
+      const esperado = tab === 'imagenes' ? 'imagen (JPG, PNG, WEBP, GIF)' : 'PDF'
+      setDragError(`Archivo no válido. Se esperaba un ${esperado}.`)
+      return
+    }
+
+    setDragError(null)
+    await subir(archivo, tab === 'imagenes' ? 'imagen' : 'pdf')
+  }, [tab, subir])
+
+  // ── Upload desde input ────────────────────────────────────────────────────
   const handleUpload = async (e, tipo) => {
     const archivo = e.target.files?.[0]
     if (!archivo) return
-    e.target.value = '' // reset input para permitir subir el mismo archivo de nuevo
+    e.target.value = ''
     await subir(archivo, tipo)
   }
 
   const listaActual = tab === 'imagenes' ? imagenes : pdfs
-  const tipo = tab === 'imagenes' ? 'imagen' : 'pdf'
-  const selCount = listaActual.filter((r) => r.seleccionada).length
+  const tipo        = tab === 'imagenes' ? 'imagen' : 'pdf'
+  const selCount    = listaActual.filter((r) => r.seleccionada).length
 
   return (
-    <div className="recursos-modal__overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="recursos-modal" role="dialog" aria-modal="true" aria-label={`Recursos de ${nomRef}`}>
+    <div
+      className="recursos-modal__overlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className={`recursos-modal ${isDragging ? 'recursos-modal--dragging' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Recursos de ${nomRef}`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+
+        {/* ── Overlay de arrastre ── */}
+        {isDragging && (
+          <div className="recursos-modal__drop-overlay">
+            <div className="recursos-modal__drop-content">
+              <IconUpload />
+              <span>
+                Suelta para subir{' '}
+                {tab === 'imagenes' ? 'la imagen' : 'el PDF'}
+              </span>
+              <span className="recursos-modal__drop-hint">
+                {tab === 'imagenes'
+                  ? 'JPG, PNG, WEBP o GIF'
+                  : 'Solo archivos PDF'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className="recursos-modal__header">
@@ -123,7 +203,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
         <div className="recursos-modal__tabs">
           <button
             className={`recursos-modal__tab ${tab === 'imagenes' ? 'recursos-modal__tab--active' : ''}`}
-            onClick={() => { setTab('imagenes'); setError(null) }}
+            onClick={() => { setTab('imagenes'); setError(null); setDragError(null) }}
           >
             <span className="recursos-modal__tab-icon"><IconImagen /></span>
             Imágenes
@@ -131,7 +211,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
           </button>
           <button
             className={`recursos-modal__tab ${tab === 'pdfs' ? 'recursos-modal__tab--active' : ''}`}
-            onClick={() => { setTab('pdfs'); setError(null) }}
+            onClick={() => { setTab('pdfs'); setError(null); setDragError(null) }}
           >
             <span className="recursos-modal__tab-icon"><IconPdf /></span>
             Fichas PDF
@@ -139,7 +219,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
           </button>
         </div>
 
-        {/* ── Barra de acciones ── */}
+        {/* ── Toolbar ── */}
         <div className="recursos-modal__toolbar">
           <p className="recursos-modal__sel-info">
             <span className={selCount >= MAX_SELECCION ? 'recursos-modal__sel-info--max' : ''}>
@@ -154,15 +234,10 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
             onClick={() => tab === 'imagenes' ? inputImagenRef.current?.click() : inputPdfRef.current?.click()}
             disabled={uploading}
           >
-            {uploading ? (
-              <span className="recursos-modal__spinner" />
-            ) : (
-              <IconUpload />
-            )}
+            {uploading ? <span className="recursos-modal__spinner" /> : <IconUpload />}
             {uploading ? 'Subiendo...' : `Agregar ${tab === 'imagenes' ? 'imagen' : 'PDF'}`}
           </button>
 
-          {/* Inputs ocultos */}
           <input
             ref={inputImagenRef}
             type="file"
@@ -179,7 +254,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
           />
         </div>
 
-        {/* ── Error ── */}
+        {/* ── Error de API ── */}
         {error && (
           <div className="recursos-modal__error">
             <span>⚠ {error}</span>
@@ -187,7 +262,15 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
           </div>
         )}
 
-        {/* ── Contenido ── */}
+        {/* ── Error de drag & drop ── */}
+        {dragError && (
+          <div className="recursos-modal__error recursos-modal__error--drag">
+            <span>⚠ {dragError}</span>
+            <button onClick={() => setDragError(null)}>✕</button>
+          </div>
+        )}
+
+        {/* ── Cuerpo ── */}
         <div className="recursos-modal__body">
           {loading ? (
             <div className="recursos-modal__loading">
@@ -195,13 +278,14 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
               <span>Cargando recursos...</span>
             </div>
           ) : listaActual.length === 0 ? (
+            // Estado vacío — también es zona de drop visible
             <div className="recursos-modal__empty">
               <span className="recursos-modal__empty-icon">
                 {tab === 'imagenes' ? <IconImagen /> : <IconPdf />}
               </span>
               <p>No hay {tab === 'imagenes' ? 'imágenes' : 'fichas PDF'} para este producto.</p>
               <p className="recursos-modal__empty-hint">
-                Haz clic en "Agregar {tab === 'imagenes' ? 'imagen' : 'PDF'}" para subir el primero.
+                Arrastra un archivo aquí o haz clic en "Agregar {tab === 'imagenes' ? 'imagen' : 'PDF'}".
               </p>
             </div>
           ) : (
@@ -211,7 +295,6 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
                   key={recurso.id}
                   className={`recursos-modal__item ${recurso.seleccionada ? 'recursos-modal__item--selected' : ''}`}
                 >
-                  {/* ── Thumbnail / preview ── */}
                   {tab === 'imagenes' ? (
                     <div className="recursos-modal__thumb">
                       <img
@@ -232,14 +315,11 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
                     </a>
                   )}
 
-                  {/* ── Nombre ── */}
                   <p className="recursos-modal__item-name" title={recurso.nombre}>
                     {recurso.nombre}
                   </p>
 
-                  {/* ── Acciones ── */}
                   <div className="recursos-modal__item-actions">
-                    {/* Principal (solo imágenes) */}
                     {tab === 'imagenes' && (
                       <button
                         className={`recursos-modal__star-btn ${recurso.principal ? 'recursos-modal__star-btn--on' : ''}`}
@@ -250,7 +330,6 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
                       </button>
                     )}
 
-                    {/* Checkbox selección para cotización */}
                     <button
                       className={`recursos-modal__check-btn ${recurso.seleccionada ? 'recursos-modal__check-btn--on' : ''}`}
                       onClick={() => toggleSel(recurso.id, tipo)}
@@ -259,7 +338,6 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
                       <IconCheck />
                     </button>
 
-                    {/* Eliminar */}
                     {esAdmin && (
                       <button
                         className="recursos-modal__delete-btn"
@@ -271,7 +349,6 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
                     )}
                   </div>
 
-                  {/* Badge de selección */}
                   {recurso.seleccionada && (
                     <span className="recursos-modal__selected-badge">✓ En cotización</span>
                   )}

@@ -10,6 +10,8 @@ const initialState = {
   notas: '',
   observacionesPdf: '',
   condicionesComerciales: '',
+  // ── Edición ──────────────────────────────────────────────────────────────
+  editandoId: null,        // id de la cotización que se está editando (null = nueva)
 }
 
 function draftReducer(state, action) {
@@ -47,7 +49,6 @@ function draftReducer(state, action) {
       }
 
     case 'UPDATE_QUANTITY': {
-      // FIX: payload usa codRef (camelCase) — consistente con el dispatch
       const cantidad = Math.max(1, parseInt(action.payload.cantidad, 10) || 1)
       return {
         ...state,
@@ -73,6 +74,43 @@ function draftReducer(state, action) {
 
     case 'CLEAR_DRAFT':
       return { ...initialState }
+
+    // ── Carga una cotización existente para editar ────────────────────────
+    case 'LOAD_FROM_HISTORIAL': {
+      const cot = action.payload
+
+      // Mapear items del backend al shape de selectedProducts
+      const selectedProducts = (cot.cotizaciones_items || []).map((item) => ({
+        cod_ref:   item.cod_ref,
+        nom_ref:   item.nom_ref,
+        cod_tip:   item.cod_tip   || null,
+        nom_tip:   item.nom_tip   || null,
+        valor_web: item.valor_web ?? item.precio_unitario ?? 0,
+        cantidad:  item.cantidad  ?? 1,
+      }))
+
+      // Mapear cliente: el backend devuelve cot.clientes (objeto completo)
+      const clienteDraft = cot.clientes
+        ? {
+            nombre_razon_social: cot.clientes.nombre_razon_social || '',
+            nit_cedula:          cot.clientes.nit_cedula          || '',
+            email:               cot.clientes.email               || '',
+            telefono:            cot.clientes.telefono            || '',
+            ciudad:              cot.clientes.ciudad              || '',
+            direccion:           cot.clientes.direccion           || '',
+          }
+        : null
+
+      return {
+        ...state,
+        selectedProducts,
+        clienteDraft,
+        notas:                 cot.notas                 || '',
+        observacionesPdf:      cot.observaciones_pdf     || '',
+        condicionesComerciales: cot.condiciones_comerciales || '',
+        editandoId:            cot.id,
+      }
+    }
 
     default:
       return state
@@ -114,6 +152,11 @@ export function CotizacionDraftProvider({ children }) {
     dispatch({ type: 'CLEAR_DRAFT' })
   }, [])
 
+  // Carga una cotización del historial en el draft para edición
+  const loadFromHistorial = useCallback((cotizacion) => {
+    dispatch({ type: 'LOAD_FROM_HISTORIAL', payload: cotizacion })
+  }, [])
+
   const getSubtotal = useCallback(() => {
     return state.selectedProducts.reduce(
       (acc, p) => acc + (p.valor_web || 0) * p.cantidad,
@@ -139,11 +182,12 @@ export function CotizacionDraftProvider({ children }) {
   )
 
   const value = {
-    selectedProducts: state.selectedProducts,
-    clienteDraft: state.clienteDraft,
-    notas: state.notas,
-    observacionesPdf: state.observacionesPdf,
+    selectedProducts:       state.selectedProducts,
+    clienteDraft:           state.clienteDraft,
+    notas:                  state.notas,
+    observacionesPdf:       state.observacionesPdf,
     condicionesComerciales: state.condicionesComerciales,
+    editandoId:             state.editandoId,
     addProduct,
     removeProduct,
     updateQuantity,
@@ -152,6 +196,7 @@ export function CotizacionDraftProvider({ children }) {
     setObservacionesPdf,
     setCondicionesComerciales,
     clearDraft,
+    loadFromHistorial,
     getSubtotal,
     getIva,
     getTotal,

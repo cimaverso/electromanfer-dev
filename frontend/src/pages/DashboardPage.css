@@ -291,3 +291,46 @@
     align-items: flex-start;
   }
 }
+
+/* ─── Agregar al final de CotizacionesPage.css ─── */
+
+/* Banner que aparece cuando se está editando una cotización existente */
+.cotizaciones-page__edit-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background-color: rgba(140, 166, 83, 0.1);
+  border: 1px solid rgba(140, 166, 83, 0.3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+  margin-bottom: var(--space-3);
+}
+
+.cotizaciones-page__edit-banner-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.cotizaciones-page__edit-banner span:nth-child(2) {
+  flex: 1;
+}
+
+.cotizaciones-page__edit-banner-cancel {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cotizaciones-page__edit-banner-cancel:hover {
+  border-color: var(--color-danger, #e53e3e);
+  color: var(--color-danger, #e53e3e);
+}

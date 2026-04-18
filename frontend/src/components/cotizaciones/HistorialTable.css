@@ -151,6 +151,33 @@
   cursor: pointer;
 }
 
+.hist-table__accion-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.hist-table__accion-btn:hover {
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+/* Lápiz con color primario para distinguirlo */
+.hist-table__accion-btn--edit:hover {
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+}
+
+/* Check efectiva — verde primario siempre visible */
+.hist-table__accion-btn--efectiva {
+  color: var(--color-primary);
+}
+
+.hist-table__accion-btn--efectiva:hover {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+  filter: brightness(1.1);
+}
+
 .hist-table__notas {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -161,14 +188,19 @@
   white-space: nowrap;
 }
 
-.hist-table__accion-btn svg {
-  width: 15px;
-  height: 15px;
+/* ─── Badges adicionales ─── */
+/* u-badge--warning: estado editada */
+.u-badge--warning {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
 }
 
-.hist-table__accion-btn:hover {
-  background-color: var(--color-surface-2);
-  color: var(--color-text);
+/* u-badge--primary: estado efectiva */
+.u-badge--primary {
+  background-color: var(--color-primary-soft, rgba(140, 166, 83, 0.15));
+  color: var(--color-primary);
+  border: 1px solid rgba(140, 166, 83, 0.3);
 }
 
 /* ─── Responsive ─── */

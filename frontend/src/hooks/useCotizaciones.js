@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
 import {
   crearCotizacion,
+  actualizarCotizacion,
+  cambiarEstadoCotizacion,
   listarCotizaciones,
   getCotizacion,
   enviarEmail,
@@ -15,7 +17,7 @@ export function useCotizaciones() {
   const [loadingEnvio, setLoadingEnvio] = useState(false)
   const [error, setError] = useState(null)
 
-  // ─── Crear cotización oficial ─────────────────────────────────────────────
+  // ─── Crear cotización nueva ───────────────────────────────────────────────
   const crear = useCallback(async (payload) => {
     setLoadingCrear(true)
     setError(null)
@@ -24,10 +26,32 @@ export function useCotizaciones() {
       setCotizacionActual(data)
       return { success: true, data }
     } catch (err) {
-      const msg =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Error al generar la cotización. Intenta de nuevo.'
+      const detail = err.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
+        : detail || err.response?.data?.message || 'Error al generar la cotización.'
+      setError(msg)
+      return { success: false, error: msg }
+    } finally {
+      setLoadingCrear(false)
+    }
+  }, [])
+
+  // ─── Editar cotización existente (PUT) ────────────────────────────────────
+  // PENDIENTE: requiere PUT /cotizaciones/:id en backend.
+  // Cuando el backend lo entregue, este hook ya está listo.
+  const editar = useCallback(async (id, payload) => {
+    setLoadingCrear(true)
+    setError(null)
+    try {
+      const data = await actualizarCotizacion(id, payload)
+      setCotizacionActual(data)
+      return { success: true, data }
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
+        : detail || err.response?.data?.message || 'Error al actualizar la cotización.'
       setError(msg)
       return { success: false, error: msg }
     } finally {
@@ -50,7 +74,7 @@ export function useCotizaciones() {
     }
   }, [])
 
-  // ─── Ver detalle de una cotización del historial ──────────────────────────
+  // ─── Ver detalle ──────────────────────────────────────────────────────────
   const verCotizacion = useCallback(async (id) => {
     try {
       const data = await getCotizacion(id)
@@ -59,6 +83,23 @@ export function useCotizaciones() {
     } catch {
       setError('No se pudo cargar el detalle de la cotización.')
       return null
+    }
+  }, [])
+
+  // ─── Marcar como efectiva ─────────────────────────────────────────────────
+  // PENDIENTE: requiere PATCH /cotizaciones/:id/estado en backend.
+  const marcarEfectiva = useCallback(async (id) => {
+    setError(null)
+    try {
+      await cambiarEstadoCotizacion(id, 'efectiva')
+      return { success: true }
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
+        : detail || 'Error al cambiar el estado.'
+      setError(msg)
+      return { success: false, error: msg }
     }
   }, [])
 
@@ -105,6 +146,8 @@ export function useCotizaciones() {
     loadingEnvio,
     error,
     crear,
+    editar,
+    marcarEfectiva,
     cargarHistorial,
     verCotizacion,
     handleEnviarEmail,

@@ -4,7 +4,6 @@ import LoadingSpinner from '../common/LoadingSpinner'
 import './HistorialTable.css'
 import { useAuth } from '../../hooks/useAuth'
 
-
 function formatCOP(value) {
   if (!value && value !== 0) return '—'
   return new Intl.NumberFormat('es-CO', {
@@ -15,11 +14,13 @@ function formatCOP(value) {
 }
 
 const ESTADO_CONFIG = {
-  generada: { label: 'Generada', cls: 'u-badge u-badge--info' },
-  enviada_email: { label: 'Email enviado', cls: 'u-badge u-badge--success' },
-  enviada_whatsapp: { label: 'WhatsApp', cls: 'u-badge u-badge--success' },
-  enviada_ambos: { label: 'Enviada', cls: 'u-badge u-badge--success' },
-  anulada: { label: 'Anulada', cls: 'u-badge u-badge--danger' },
+  generada:          { label: 'Generada',      cls: 'u-badge u-badge--info' },
+  enviada_email:     { label: 'Email enviado', cls: 'u-badge u-badge--success' },
+  enviada_whatsapp:  { label: 'WhatsApp',      cls: 'u-badge u-badge--success' },
+  enviada_ambos:     { label: 'Enviada',       cls: 'u-badge u-badge--success' },
+  editada:           { label: 'Editada',       cls: 'u-badge u-badge--warning' },
+  efectiva:          { label: 'Efectiva',      cls: 'u-badge u-badge--primary' },
+  anulada:           { label: 'Anulada',       cls: 'u-badge u-badge--danger' },
 }
 
 function EstadoBadge({ estado }) {
@@ -27,17 +28,35 @@ function EstadoBadge({ estado }) {
   return <span className={cfg.cls}>{cfg.label}</span>
 }
 
+// ── Ícono check (marcar efectiva) ────────────────────────────────────────────
+function IconoCheck() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
+// ── Ícono lápiz ──────────────────────────────────────────────────────────────
+function IconoEditar() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
 export default function HistorialTable({
   historial = [],
   loading,
   onFiltrar,
   onVerDetalle,
-  onDescargar, // Nota: onDescargar no se está usando en el componente, deberíamos evaluar si quitarlo o implementarlo
+  onDescargar,
   onReenviar,
+  onEditar,
+  onMarcarEfectiva,  // (cotizacion_id) => void — solo para enviada_email / enviada_whatsapp
 }) {
-
-
-  // Fecha de hoy en Colombia
   const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
 
   const [filtros, setFiltros] = useState({
@@ -50,7 +69,6 @@ export default function HistorialTable({
 
   const { user } = useAuth()
   const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
-
   const debounceRef = useRef(null)
 
   const handleFiltro = (field, value) => {
@@ -63,14 +81,6 @@ export default function HistorialTable({
       )
       onFiltrar(limpio)
     }, 500)
-  }
-
-  const handleBuscar = () => {
-    // Solo enviamos los filtros que tengan algún valor
-    const limpio = Object.fromEntries(
-      Object.entries(filtros).filter(([, v]) => v !== '')
-    )
-    onFiltrar(limpio)
   }
 
   const handleLimpiar = () => {
@@ -148,11 +158,12 @@ export default function HistorialTable({
               <option value="enviada_email">Email enviado</option>
               <option value="enviada_whatsapp">WhatsApp</option>
               <option value="enviada_ambos">Enviada</option>
+              <option value="editada">Editada</option>
+              <option value="efectiva">Efectiva</option>
               <option value="anulada">Anulada</option>
             </select>
           </div>
         </div>
-
         <div className="hist-table__filtro-actions">
           <button
             className="hist-table__filtro-btn hist-table__filtro-btn--ghost"
@@ -179,7 +190,6 @@ export default function HistorialTable({
           <table className="hist-table__table">
             <thead>
               <tr>
-                {/* 6 Columnas declaradas */}
                 <th>Consecutivo</th>
                 <th>Cliente</th>
                 <th>Notas</th>
@@ -193,54 +203,40 @@ export default function HistorialTable({
             <tbody>
               {historial.map((cot) => (
                 <tr key={cot.id}>
-                  {/* Celda 1 */}
                   <td>
-                    <span className="hist-table__consecutivo">
-                      {cot.consecutivo}
-                    </span>
+                    <span className="hist-table__consecutivo">{cot.consecutivo}</span>
                   </td>
-                  {/* Celda 2 */}
                   <td>
                     <span className="hist-table__cliente">
                       {cot.clientes?.nombre_razon_social || '—'}
                     </span>
                   </td>
                   <td>
-                    <span className="hist-table__notas">
-                      {cot.notas || '—'}
-                    </span>
+                    <span className="hist-table__notas">{cot.notas || '—'}</span>
                   </td>
-                  {/* Celda 3 */}
                   <td className="u-text-right">
-                    <span className="hist-table__total">
-                      {formatCOP(cot.total)}
-                    </span>
+                    <span className="hist-table__total">{formatCOP(cot.total)}</span>
                   </td>
-                  {/* Celda 4 */}
                   <td>
                     <EstadoBadge estado={cot.estado} />
                   </td>
-
                   {esAdmin && (
                     <td>
-                      <span className="hist-table__notas">
-                        {cot.usuario_nombre || '—'}
-                      </span>
+                      <span className="hist-table__notas">{cot.usuario_nombre || '—'}</span>
                     </td>
                   )}
-                  {/* Celda 5: Fecha correctamente contenida */}
                   <td className="u-text-muted">
                     {cot.created_at
                       ? new Date(cot.created_at).toLocaleDateString('es-CO', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
                       : '—'}
                   </td>
-                  {/* Celda 6 */}
                   <td>
                     <div className="hist-table__acciones">
+                      {/* Ver detalle */}
                       <button
                         className="hist-table__accion-btn"
                         onClick={() => onVerDetalle(cot.id)}
@@ -251,6 +247,28 @@ export default function HistorialTable({
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
+
+                      {/* Marcar efectiva — solo si está enviada */}
+                      {onMarcarEfectiva && (cot.estado === 'enviada_email' || cot.estado === 'enviada_whatsapp') && (
+                        <button
+                          className="hist-table__accion-btn hist-table__accion-btn--efectiva"
+                          onClick={() => onMarcarEfectiva(cot.id)}
+                          title="Marcar como efectiva"
+                        >
+                          <IconoCheck />
+                        </button>
+                      )}
+                      {onEditar && (
+                        <button
+                          className="hist-table__accion-btn hist-table__accion-btn--edit"
+                          onClick={() => onEditar(cot)}
+                          title="Editar cotización"
+                        >
+                          <IconoEditar />
+                        </button>
+                      )}
+
+                      {/* Descargar PDF */}
                       {cot.pdf_url && (
                         <a
                           href={cot.pdf_url}
@@ -266,6 +284,8 @@ export default function HistorialTable({
                           </svg>
                         </a>
                       )}
+
+                      {/* Reenviar */}
                       <button
                         className="hist-table__accion-btn"
                         onClick={() => onReenviar(cot)}

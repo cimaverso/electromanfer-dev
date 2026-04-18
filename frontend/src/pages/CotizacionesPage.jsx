@@ -16,8 +16,8 @@ import './CotizacionesPage.css'
 
 const TABS_BASE = [
   { id: 'productos', label: 'Productos seleccionados' },
-  { id: 'preview', label: 'Vista previa / PDF' },
-  { id: 'fichas', label: 'Fichas técnicas' },
+  { id: 'preview',   label: 'Vista previa / PDF' },
+  { id: 'fichas',    label: 'Fichas técnicas' },
   { id: 'historial', label: 'Historial' },
 ]
 
@@ -31,7 +31,9 @@ export default function CotizacionesPage() {
     clienteDraft,
     notas,
     observacionesPdf,
+    editandoId,
     clearDraft,
+    loadFromHistorial,
   } = useCotizacionDraft()
 
   const {
@@ -41,6 +43,8 @@ export default function CotizacionesPage() {
     loadingEnvio,
     historial,
     crear,
+    editar,
+    marcarEfectiva,
     cargarHistorial,
     handleEnviarEmail,
     handleEnviarWhatsapp,
@@ -59,6 +63,22 @@ export default function CotizacionesPage() {
     cargarHistorial(filtrosHoy)
   }, [cargarHistorial])
 
+  // ─── Payload compartido entre crear y editar ──────────────────────────────
+  const buildPayload = () => ({
+    cliente: clienteDraft,
+    notas,
+    observaciones_pdf: observacionesPdf,
+    items: selectedProducts.map((p) => ({
+      cod_ref:   p.cod_ref,
+      nom_ref:   p.nom_ref,
+      cod_tip:   p.cod_tip  || null,
+      nom_tip:   p.nom_tip  || null,
+      cantidad:  p.cantidad,
+      valor_web: p.valor_web,
+    })),
+  })
+
+  // ─── Generar (crear o editar según editandoId) ────────────────────────────
   const handleGenerar = async () => {
     if (!clienteDraft?.nombre_razon_social?.trim()) {
       showToast('Completa la razón social del cliente', 'warning')
@@ -69,22 +89,26 @@ export default function CotizacionesPage() {
       return
     }
 
-    const payload = {
-      cliente: clienteDraft,
-      notas,
-      observaciones_pdf: observacionesPdf,
-      items: selectedProducts.map((p) => ({
-        cod_ref: p.cod_ref,
-        nom_ref: p.nom_ref,
-        cod_tip: p.cod_tip || null,
-        nom_tip: p.nom_tip || null,
-        cantidad: p.cantidad,
-        valor_web: p.valor_web,
-      })),
+    const payload = buildPayload()
+
+    // Modo edición
+    if (editandoId) {
+      const result = await editar(editandoId, payload)
+      if (result.success) {
+        showToast(`Cotización ${result.data.consecutivo} actualizada`, 'success')
+        setTabActivo('preview')
+        setTimeout(() => {
+          clearDraft()
+          cargarHistorial()
+        }, 50)
+      } else {
+        showToast(result.error || 'Error al actualizar la cotización', 'error')
+      }
+      return
     }
 
+    // Modo creación
     const result = await crear(payload)
-
     if (result.success) {
       showToast(`Cotización ${result.data.consecutivo} generada`, 'success')
       setTabActivo('preview')
@@ -95,6 +119,35 @@ export default function CotizacionesPage() {
     } else {
       showToast(result.error || 'Error al generar la cotización', 'error')
     }
+  }
+
+  // ─── Marcar efectiva ─────────────────────────────────────────────────────
+  const handleMarcarEfectiva = async (id) => {
+    const result = await marcarEfectiva(id)
+    if (result.success) {
+      showToast('Cotización marcada como efectiva', 'success')
+      cargarHistorial()
+    } else {
+      // Endpoint pendiente de backend — aviso claro al usuario
+      showToast(result.error || 'Endpoint pendiente de implementación en backend', 'warning')
+    }
+  }
+
+  // ─── Editar desde historial ───────────────────────────────────────────────
+  const handleEditarDesdeHistorial = async (cot) => {
+    // Si el objeto ya trae los items cargados, usarlo directo
+    // Si no (lista resumida), hacer fetch del detalle completo
+    let cotCompleta = cot
+    if (!cot.cotizaciones_items || cot.cotizaciones_items.length === 0) {
+      cotCompleta = await verCotizacion(cot.id)
+      if (!cotCompleta) {
+        showToast('No se pudo cargar la cotización para editar', 'error')
+        return
+      }
+    }
+    loadFromHistorial(cotCompleta)
+    setTabActivo('productos')
+    showToast(`Editando cotización ${cotCompleta.consecutivo}`, 'info')
   }
 
   const handleEmail = async (id, payload) => {
@@ -132,8 +185,25 @@ export default function CotizacionesPage() {
   // Productos de la cotización actual para fichas
   const itemsCotizacion = cotizacionActual?.cotizaciones_items || selectedProducts
 
+  // Label del botón generar según modo
+  const labelBotonGenerar = editandoId ? 'Volver a generar' : 'Generar cotización'
+
   return (
     <div className="cotizaciones-page">
+
+      {/* Banner de modo edición */}
+      {editandoId && (
+        <div className="cotizaciones-page__edit-banner">
+          <span className="cotizaciones-page__edit-banner-icon">✏️</span>
+          <span>Editando cotización — los cambios reemplazarán la versión anterior</span>
+          <button
+            className="cotizaciones-page__edit-banner-cancel"
+            onClick={() => { clearDraft(); showToast('Edición cancelada', 'info') }}
+          >
+            Cancelar edición
+          </button>
+        </div>
+      )}
 
       <div className="cotizaciones-page__tabs-wrapper">
         <CotizacionTabs
@@ -167,7 +237,11 @@ export default function CotizacionesPage() {
           </div>
 
           <div className="cotizaciones-page__sidebar">
-            <CotizacionResumen onGenerar={handleGenerar} loading={loadingCrear} />
+            <CotizacionResumen
+              onGenerar={handleGenerar}
+              loading={loadingCrear}
+              labelBoton={labelBotonGenerar}
+            />
           </div>
         </div>
       )}
@@ -182,7 +256,7 @@ export default function CotizacionesPage() {
             {cotizacionActual && (
               <button
                 className="cotizaciones-page__nueva-btn"
-                onClick={() => { limpiarCotizacionActual(); setTabActivo('productos') }}
+                onClick={() => { limpiarCotizacionActual(); clearDraft(); setTabActivo('productos') }}
               >
                 + Nueva cotización
               </button>
@@ -240,6 +314,8 @@ export default function CotizacionesPage() {
               }}
               onDescargar={(cot) => cot.pdf_url && window.open(cot.pdf_url, '_blank')}
               onReenviar={() => setTabActivo('preview')}
+              onEditar={handleEditarDesdeHistorial}
+              onMarcarEfectiva={handleMarcarEfectiva}
             />
           </div>
         </div>
