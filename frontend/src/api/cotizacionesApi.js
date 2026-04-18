@@ -30,7 +30,7 @@ export async function getCotizacion(id) {
  * Cuando el backend lo entregue, esta función ya está lista.
  */
 export async function actualizarCotizacion(id, payload) {
-  const response = await axiosClient.put(`/cotizaciones/${id}`, payload)
+  const response = await axiosClient.patch(`/cotizaciones/${id}`, payload)
   return response.data
 }
 

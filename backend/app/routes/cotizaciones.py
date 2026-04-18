@@ -123,3 +123,18 @@ def cambiar_estado(
         return {"ok": True, "estado": cotizacion.estado}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@router.patch("/{cotizacion_id}", response_model=CotizacionResponse)
+def editar_cotizacion(
+    cotizacion_id: int,
+    data: CotizacionCreate,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth)
+):
+    try:
+        cotizacion = CotizacionesService.editar(db, cotizacion_id, data, usuario_id=token.user_id)
+        if not cotizacion:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+        return cotizacion
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

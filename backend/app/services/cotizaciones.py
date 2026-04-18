@@ -209,3 +209,61 @@ class CotizacionesService:
         db.commit()
         
         return CotizacionesService.obtener_por_id(db, cotizacion_id)
+    
+    # Editar
+    @staticmethod
+    def editar(db: Session, cotizacion_id: int, data: CotizacionCreate, usuario_id: int) -> Cotizaciones:
+        cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
+        if not cotizacion:
+            return None
+        
+        if cotizacion.estado in ["anulada", "efectiva"]:
+            raise ValueError("No se puede editar una cotización anulada o efectiva")
+
+        # Actualizar cliente
+        cliente = ClientesService.obtener_o_crear(db, data.cliente)
+        cotizacion.cliente_id = cliente.id
+        cotizacion.notas = data.notas
+        cotizacion.observaciones_pdf = data.observaciones_pdf
+        cotizacion.estado = "editada"
+        cotizacion.usuario_id = usuario_id
+
+        # Eliminar items anteriores
+        db.query(CotizacionesItem).filter(
+            CotizacionesItem.cotizacion_id == cotizacion_id
+        ).delete()
+
+        # Agregar nuevos items
+        subtotal_total = descuento_total = iva_total = total_total = 0.0
+
+        for item in data.items:
+            calc = CotizacionesService._calcular_item(item)
+            subtotal_total  += calc["subtotal"]
+            descuento_total += round(item.descuento_unitario * item.cantidad, 2)
+            iva_total       += calc["iva"]
+            total_total     += calc["total"]
+
+            db.add(CotizacionesItem(
+                cotizacion_id      = cotizacion_id,
+                cod_ref            = item.cod_ref,
+                nom_ref            = item.nom_ref,
+                cod_tip            = item.cod_tip,
+                nom_tip            = item.nom_tip,
+                cantidad           = item.cantidad,
+                precio_unitario    = item.valor_web,
+                descuento_unitario = item.descuento_unitario,
+                subtotal           = calc["subtotal"],
+                iva                = calc["iva"],
+                total              = calc["total"],
+                imagen_url    = CotizacionesService._imagen_principal(db, item.cod_ref),
+                imagenes_urls = CotizacionesService._imagenes(db, item.cod_ref),
+                fichas_urls   = CotizacionesService._fichas(db, item.cod_ref),
+            ))
+
+        cotizacion.subtotal  = round(subtotal_total, 2)
+        cotizacion.descuento = round(descuento_total, 2)
+        cotizacion.iva       = round(iva_total, 2)
+        cotizacion.total     = round(total_total, 2)
+
+        db.commit()
+        return CotizacionesService.obtener_por_id(db, cotizacion_id)
