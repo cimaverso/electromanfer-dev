@@ -1,17 +1,15 @@
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel
 from typing import Optional
 from app.core.config import settings
 
 class FirmaOut(BaseModel):
     id: int
     nombre: str
-    descripcion: Optional[str] = None
-    archivo: str
+    url: str
     usuario_id: Optional[int] = None
 
-    @computed_field
     @property
-    def url(self) -> str:
-        return f"{settings.API_BASE_URL}/media/firmas/{self.archivo}"
+    def url_absoluta(self) -> str:
+        return f"{settings.API_BASE_URL}{self.url}"
 
     model_config = {"from_attributes": True}
