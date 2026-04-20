@@ -105,6 +105,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const todasImagenes = []
       const todosPdfs = []
       items.forEach((item) => {
+        console.log('imagenes_urls del item:', item.imagenes_urls)
         ; (item.imagenes_urls || []).forEach((recurso, i) => {
           const url = typeof recurso === 'string' ? recurso : recurso.url
           const nombre = recurso.nombre || url.split('/').pop()
@@ -122,15 +123,13 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       setAdjPdfs(todosPdfs.map((p) => p.id))
       setRecursosLoading(false)
 
-      
+
       // 3. PDF como base64
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
         const imagenesPorCodRef = {}
         todasImagenes.forEach((img) => {
           if (!imagenesPorCodRef[img.cod_ref]) {
-            const url = img.url.startsWith('http') ? img.url : `${API_BASE}${img.url}`
-            imagenesPorCodRef[img.cod_ref] = url
+            imagenesPorCodRef[img.cod_ref] = img.url
           }
         })
         const blobUrl = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
