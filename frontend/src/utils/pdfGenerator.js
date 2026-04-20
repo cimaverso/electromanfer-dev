@@ -18,11 +18,14 @@ function formatFecha(isoString) {
   })
 }
 
-function getImgFormat(b64) {
-  if (!b64) return 'PNG'
-  if (b64.startsWith('data:image/jpeg')) return 'JPEG'
-  if (b64.startsWith('data:image/webp')) return 'WEBP'
-  return 'PNG'
+function safeAddImage(doc, b64, x, y, w, h) {
+  if (!b64) return
+  try {
+    const fmt = b64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
+    doc.addImage(b64, fmt, x, y, w, h)
+  } catch (e) {
+    console.warn('addImage falló:', e.message)
+  }
 }
 
 async function cargarImagenBase64(url) {
@@ -108,7 +111,7 @@ export async function generarPdfCotizacion(
   const dibujarEncabezadoPie = (numeroCot, fecha) => {
     // Imagen encabezado
     if (encabezadoB64) {
-      doc.addImage(encabezadoB64, getImgFormat(encabezadoB64), 0, 0, PAGE_W, H_ENCABEZADO)
+      safeAddImage(doc, encabezadoB64, 0, 0, PAGE_W, H_ENCABEZADO)
     } else {
       doc.setFillColor(...VERDE)
       doc.rect(0, 0, PAGE_W, H_ENCABEZADO, 'F')
@@ -145,7 +148,7 @@ export async function generarPdfCotizacion(
 
     // Imagen pie
     if (pieB64) {
-      doc.addImage(pieB64, getImgFormat(pieB64), 0, Y_PIE, PAGE_W, H_PIE)
+      safeAddImage(doc, pieB64, 0, Y_PIE, PAGE_W, H_PIE)
     } else {
       doc.setFillColor(...VERDE)
       doc.rect(0, Y_PIE, PAGE_W, H_PIE, 'F')
@@ -257,7 +260,7 @@ export async function generarPdfCotizacion(
     if (imgUrl) {
       const imgB64 = await cargarImagenBase64(imgUrl)
       if (imgB64) {
-        doc.addImage(imgB64, getImgFormat(imgB64), COL.img.x, y + 1, 12, 12)
+        safeAddImage(doc, imgB64, COL.img.x, y + 1, 12, 12)
       } else {
         dibujarPlaceholder(doc, COL.img.x, y, GRIS_CLARO, GRIS)
       }
