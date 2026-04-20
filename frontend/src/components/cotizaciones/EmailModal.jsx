@@ -8,6 +8,11 @@ function cargarBase64(url) {
   return new Promise((resolve) => {
     if (!url) return resolve(null)
     if (url.startsWith('data:')) return resolve(url)
+
+    // Construir URL absoluta
+    const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
+    const urlAbsoluta = url.startsWith('http') ? url : `${API_BASE}${url}`
+
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
@@ -18,7 +23,7 @@ function cargarBase64(url) {
       resolve(canvas.toDataURL('image/png'))
     }
     img.onerror = () => resolve(null)
-    img.src = url
+    img.src = urlAbsoluta
   })
 }
 
