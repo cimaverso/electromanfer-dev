@@ -122,12 +122,15 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       setAdjPdfs(todosPdfs.map((p) => p.id))
       setRecursosLoading(false)
 
+      
       // 3. PDF como base64
       try {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
         const imagenesPorCodRef = {}
         todasImagenes.forEach((img) => {
           if (!imagenesPorCodRef[img.cod_ref]) {
-            imagenesPorCodRef[img.cod_ref] = img.url
+            const url = img.url.startsWith('http') ? img.url : `${API_BASE}${img.url}`
+            imagenesPorCodRef[img.cod_ref] = url
           }
         })
         const blobUrl = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
