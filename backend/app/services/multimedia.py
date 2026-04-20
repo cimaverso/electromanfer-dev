@@ -8,7 +8,6 @@ from app.models.productos_multimedia import ProductosMultimedia
 from app.schemas.multimedia import ArchivoResponse, MultimediaResponse
 from app.core.config import settings
 
-MEDIA_BASE = settings.MEDIA_BASE
 ALLOWED_IMAGES = {"image/jpeg", "image/png"}
 ALLOWED_PDFS = {"application/pdf"}
 MAX_SIZE = 10 * 1024 * 1024
@@ -26,9 +25,9 @@ class MultimediaService:
     @staticmethod
     def _get_folder(cod_ref: str, tipo: str) -> str:
         subfolder = "imagenes" if tipo == "imagen" else "fichas"
-        folder = os.path.join(MEDIA_BASE, subfolder, cod_ref)
-        os.makedirs(folder, exist_ok=True)
-        return folder
+        path = os.path.join(settings.MEDIA_BASE, subfolder, cod_ref)
+        os.makedirs(path, exist_ok=True)
+        return path
 
     @staticmethod
     def listar(db: Session, cod_ref: str) -> MultimediaResponse:
@@ -55,9 +54,7 @@ class MultimediaService:
 
         with open(os.path.join(folder, filename), "wb") as f:
             f.write(contents)
-        url = f"/media/imagenes/{cod_ref}/{filename}"
 
-        # Si no hay ninguna principal, esta será la principal
         stmt_principal = select(ProductosMultimedia).where(
             ProductosMultimedia.producto_id == producto.id,
             ProductosMultimedia.tipo == "imagen",
@@ -65,28 +62,25 @@ class MultimediaService:
         )
         hay_principal = db.execute(stmt_principal).scalar_one_or_none()
 
-
         registro = ProductosMultimedia(
             producto_id=producto.id,
             tipo="imagen",
             titulo=file.filename,
-            url=url,
+            url=f"/media/imagenes/{cod_ref}/{filename}",
             principal=hay_principal is None
         )
         db.add(registro)
         db.commit()
         db.refresh(registro)
         return registro
-    
+
     @staticmethod
     def marcar_principal(db: Session, archivo_id: int) -> ArchivoResponse:
-        # Busca el archivo
         stmt = select(ProductosMultimedia).where(ProductosMultimedia.id == archivo_id)
         archivo = db.execute(stmt).scalar_one_or_none()
         if not archivo:
             raise HTTPException(status_code=404, detail="Archivo no encontrado.")
-        
-        # Quita principal de todas las imágenes del producto
+
         stmt_reset = select(ProductosMultimedia).where(
             ProductosMultimedia.producto_id == archivo.producto_id,
             ProductosMultimedia.tipo == "imagen"
@@ -94,13 +88,11 @@ class MultimediaService:
         todas = db.execute(stmt_reset).scalars().all()
         for img in todas:
             img.principal = False
-        
-        # Marca la seleccionada como principal
+
         archivo.principal = True
         db.commit()
         db.refresh(archivo)
         return archivo
-    
 
     @staticmethod
     def toggle_seleccionada(db: Session, archivo_id: int, seleccionada: bool) -> ArchivoResponse:
@@ -123,16 +115,16 @@ class MultimediaService:
         producto = MultimediaService._get_producto(db, cod_ref)
         filename = f"{uuid.uuid4().hex}.pdf"
         folder = MultimediaService._get_folder(cod_ref, "pdf")
+
         with open(os.path.join(folder, filename), "wb") as f:
             f.write(contents)
-        url = f"/media/fichas/{cod_ref}/{filename}"
+
         registro = ProductosMultimedia(
             producto_id=producto.id,
             tipo="ficha_tecnica",
             titulo=file.filename,
-            url=url,
+            url=f"/media/fichas/{cod_ref}/{filename}",
             principal=False,
-        
         )
         db.add(registro)
         db.commit()
@@ -145,9 +137,13 @@ class MultimediaService:
         archivo = db.execute(stmt).scalar_one_or_none()
         if not archivo:
             raise HTTPException(status_code=404, detail="Archivo no encontrado.")
-        filepath = os.path.join(MEDIA_BASE, archivo.url.lstrip("/media/"))
+        
+        ruta_relativa = archivo.url.removeprefix("/media/")
+        filepath = os.path.join(settings.MEDIA_BASE, ruta_relativa)
+        
         if os.path.exists(filepath):
             os.remove(filepath)
+        
         db.delete(archivo)
         db.commit()
         return {"ok": True}
