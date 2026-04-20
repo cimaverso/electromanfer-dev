@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
+const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || ''
 console.log('API_BASE PDFGENERATOR:', API_BASE)
 
 function formatCOP(value) {
