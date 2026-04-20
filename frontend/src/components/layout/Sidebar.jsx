@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import './Sidebar.css'
@@ -42,7 +42,29 @@ const NAV_ITEMS = [
   },
 ]
 
-// Evento custom para sincronizar estado sin polling
+// Módulos próximamente — desactivados visualmente
+const NAV_ITEMS_PROXIMOS = [
+  {
+    label: 'WhatsApp',
+    tooltip: 'Próximamente — módulo de mensajería',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Envíos',
+    tooltip: 'Próximamente — historial de envíos',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+        <polyline points="22,6 12,13 2,6" />
+      </svg>
+    ),
+  },
+]
+
 const SIDEBAR_EVENT = 'sidebar:toggle'
 
 export default function Sidebar() {
@@ -61,7 +83,6 @@ export default function Sidebar() {
     setCollapsed((prev) => {
       const next = !prev
       localStorage.setItem('sidebar_collapsed', String(next))
-      // Dispara evento custom para que MainLayout reaccione instantáneamente
       window.dispatchEvent(new CustomEvent(SIDEBAR_EVENT, { detail: { collapsed: next } }))
       return next
     })
@@ -78,30 +99,24 @@ export default function Sidebar() {
       {/* ── Logo ── */}
       <div className="sidebar__logo">
         {collapsed ? (
-          /* Colapsado: solo el ícono/inicial del logo */
           <img
             src="/logo_electromanfer.svg"
             alt="Electromanfer"
             className="sidebar__logo-img sidebar__logo-img--collapsed"
             onError={(e) => {
               e.currentTarget.style.display = 'none'
-              e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.display = 'flex')
             }}
           />
         ) : (
-          /* Expandido: logo completo con letras */
           <img
             src="/logo_completo.png"
             alt="Electromanfer"
             className="sidebar__logo-img"
             onError={(e) => {
-              // Fallback: texto si la imagen no carga
               e.currentTarget.style.display = 'none'
             }}
           />
         )}
-
-        {/* Fallback texto (si ambas imágenes fallan) */}
         {!collapsed && (
           <div className="sidebar__logo-text" style={{ display: 'none' }}>
             <span className="sidebar__logo-name">ELECTROMANFER</span>
@@ -113,6 +128,8 @@ export default function Sidebar() {
       {/* ── Navegación ── */}
       <nav className="sidebar__nav">
         <ul className="sidebar__nav-list">
+
+          {/* Ítems activos */}
           {NAV_ITEMS.map((item) => (
             <li key={item.path} className="sidebar__nav-item">
               <NavLink
@@ -131,6 +148,31 @@ export default function Sidebar() {
               </NavLink>
             </li>
           ))}
+
+          {/* Separador próximamente */}
+          <li className="sidebar__nav-separator" />
+
+          {/* Ítems próximamente — no navegables */}
+          {NAV_ITEMS_PROXIMOS.map((item) => (
+            <li key={item.label} className="sidebar__nav-item">
+              <span
+                className="sidebar__nav-link sidebar__nav-link--disabled"
+                title={item.tooltip}
+              >
+                <span className="sidebar__nav-icon">{item.icon}</span>
+                {!collapsed && (
+                  <>
+                    <span className="sidebar__nav-label">{item.label}</span>
+                    <span className="sidebar__nav-badge">Pronto</span>
+                  </>
+                )}
+                {collapsed && (
+                  <span className="sidebar__tooltip">{item.tooltip}</span>
+                )}
+              </span>
+            </li>
+          ))}
+
         </ul>
       </nav>
 

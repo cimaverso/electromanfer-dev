@@ -38,8 +38,6 @@ export function useCotizaciones() {
   }, [])
 
   // ─── Editar cotización existente (PUT) ────────────────────────────────────
-  // PENDIENTE: requiere PUT /cotizaciones/:id en backend.
-  // Cuando el backend lo entregue, este hook ya está listo.
   const editar = useCallback(async (id, payload) => {
     setLoadingCrear(true)
     setError(null)
@@ -87,7 +85,6 @@ export function useCotizaciones() {
   }, [])
 
   // ─── Marcar como efectiva ─────────────────────────────────────────────────
-  // PENDIENTE: requiere PATCH /cotizaciones/:id/estado en backend.
   const marcarEfectiva = useCallback(async (id) => {
     setError(null)
     try {
@@ -98,6 +95,22 @@ export function useCotizaciones() {
       const msg = Array.isArray(detail)
         ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
         : detail || 'Error al cambiar el estado.'
+      setError(msg)
+      return { success: false, error: msg }
+    }
+  }, [])
+
+  // ─── Anular cotización ────────────────────────────────────────────────────
+  const anularCotizacion = useCallback(async (id) => {
+    setError(null)
+    try {
+      await cambiarEstadoCotizacion(id, 'anulada')
+      return { success: true }
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
+        : detail || 'Error al anular la cotización.'
       setError(msg)
       return { success: false, error: msg }
     }
@@ -148,6 +161,7 @@ export function useCotizaciones() {
     crear,
     editar,
     marcarEfectiva,
+    anularCotizacion,
     cargarHistorial,
     verCotizacion,
     handleEnviarEmail,
@@ -155,3 +169,8 @@ export function useCotizaciones() {
     limpiarCotizacionActual,
   }
 }
+
+// módulo cotizaciones v2
+// módulo cotizaciones v2
+// módulo cotizaciones v2
+
