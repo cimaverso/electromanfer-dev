@@ -4,11 +4,12 @@ services:
     container_name: electromanfer_db
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER_ELECTROMANFER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD_ELECTROMANFER}
-      POSTGRES_DB: ${DB_NAME_ELECTROMANFER}
+      POSTGRES_USER: electromanfer
+      POSTGRES_PASSWORD: mi_password_seguro_2026
+      POSTGRES_DB: electromanfer_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ./backend
@@ -16,14 +17,13 @@ services:
     restart: always
     env_file:
       - .env
-    environment:
-      - DATABASE_URL=postgresql+psycopg://${DB_USER_ELECTROMANFER}:${DB_PASSWORD_ELECTROMANFER}@db:5432/${DB_NAME_ELECTROMANFER}
     volumes:
       - media_imagenes:/app/media/imagenes
       - media_fichas:/app/media/fichas
       - media_firmas:/app/media/firmas
     depends_on:
       - db
+
   frontend:
     build:
       context: ./frontend
@@ -35,6 +35,7 @@ services:
       - frontend_build:/usr/share/nginx/html
     depends_on:
       - backend
+
   nginx:
     image: nginx:alpine
     container_name: electromanfer_nginx
@@ -47,14 +48,15 @@ services:
       - frontend_build:/usr/share/nginx/html
       - media_imagenes:/usr/share/nginx/media/imagenes
       - media_fichas:/usr/share/nginx/media/fichas
-      - media_firmas:/usr/share/nginx/media/firmas      
+      - media_firmas:/usr/share/nginx/media/firmas
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
+
 volumes:
   postgres_data:
   media_imagenes:
   media_fichas:
-  media_firmas:  
+  media_firmas:
   frontend_build:
