@@ -60,7 +60,9 @@ class FirmasService:
         if not firma:
             raise HTTPException(404, "Firma no encontrada")
 
-        path = os.path.join(settings.MEDIA_BASE, firma.url.lstrip("/media/"))
+        ruta_relativa = firma.url.removeprefix("/media/")
+        path = os.path.join(settings.MEDIA_BASE, ruta_relativa)
+        
         db.delete(firma)
         db.commit()
 
