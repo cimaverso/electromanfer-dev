@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
+console.log('API_BASE PDFGENERATOR:', API_BASE)
 
 function formatCOP(value) {
   return new Intl.NumberFormat('es-CO', {
@@ -31,6 +32,7 @@ function safeAddImage(doc, b64, x, y, w, h) {
 async function cargarImagenBase64(url) {
   if (!url) return null
   if (url.startsWith('data:')) return url
+  console.log('cargarImagenBase64 url:', url)
 
   const urlAbsoluta = url.startsWith('http')
     ? url
@@ -39,7 +41,7 @@ async function cargarImagenBase64(url) {
       : `${window.location.origin}${url}`
 
   try {
-    const response = await fetch(urlAbsoluta, { mode: 'cors' })
+    const response = await fetch(urlAbsoluta, { mode: 'cors', cache: 'no-store' })
     if (!response.ok) return null
     const blob = await response.blob()
     return new Promise((resolve) => {
@@ -52,6 +54,7 @@ async function cargarImagenBase64(url) {
     return null
   }
 }
+
 function dibujarPlaceholder(doc, x, y, grisClaro, gris) {
   doc.setFillColor(...grisClaro)
   doc.rect(x, y + 1, 12, 12, 'F')
