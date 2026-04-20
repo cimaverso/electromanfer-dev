@@ -124,7 +124,13 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
 
       // 3. PDF como base64
       try {
-        const blob = await generarPdfCotizacion(cotizacion, [], [], false)
+        const imagenesPorCodRef = {}
+        todasImagenes.forEach((img) => {
+          if (!imagenesPorCodRef[img.cod_ref]) {
+            imagenesPorCodRef[img.cod_ref] = img.url
+          }
+        })
+        const blob = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
           .then((blobUrl) => fetch(blobUrl).then((r) => r.blob()))
         pdfB64Ref.current = await blobToBase64(blob)
       } catch { /* el backend puede generarlo */ }
@@ -179,7 +185,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       destino: destino.trim(),
       asunto,
       cuerpo,
-      firma_base64: firmaB64,
+      firma_url: firmaSeleccionada?.url || null,
       firma_id: firmaSeleccionada?.id || null,
       pdf_base64: pdfB64Ref.current,
       adjuntos_imagenes: imagenesAdj,
