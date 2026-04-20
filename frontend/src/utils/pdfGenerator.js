@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf'
 
-
-const API_BASE = ''
+const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
 
 function formatCOP(value) {
   return new Intl.NumberFormat('es-CO', {

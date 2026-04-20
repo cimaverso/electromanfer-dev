@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { listarFirmas, subirFirma } from '../../api/firmasApi'
+import { listarFirmas, subirFirma, eliminarFirma } from '../../api/firmasApi'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
 import './EmailModal.css'
 
@@ -105,12 +105,16 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const todasImagenes = []
       const todosPdfs = []
       items.forEach((item) => {
-        ;(item.imagenes_urls || []).forEach((url, i) => {
-          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
+        ; (item.imagenes_urls || []).forEach((recurso, i) => {
+          const url = typeof recurso === 'string' ? recurso : recurso.url
+          const nombre = recurso.nombre || url.split('/').pop()
+          todasImagenes.push({ id: `${item.cod_ref}-img-${i}`, nombre, url, cod_ref: item.cod_ref })
         })
-        ;(item.fichas_urls || []).forEach((url, i) => {
-          todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre: url.split('/').pop(), url, cod_ref: item.cod_ref })
-        })
+          ; (item.fichas_urls || []).forEach((recurso, i) => {
+            const url = typeof recurso === 'string' ? recurso : recurso.url
+            const nombre = recurso.nombre || url.split('/').pop()
+            todosPdfs.push({ id: `${item.cod_ref}-pdf-${i}`, nombre, url, cod_ref: item.cod_ref })
+          })
       })
       setImagenes(todasImagenes)
       setPdfs(todosPdfs)
@@ -149,7 +153,8 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     }
   }
 
-  const handleSeleccionarFirma = async (firma) => {    setFirmaSeleccionada(firma)
+  const handleSeleccionarFirma = async (firma) => {
+    setFirmaSeleccionada(firma)
     setSelectorAbierto(false)
     setFirmaLoading(true)
     const b64 = await cargarBase64(firma.url)
@@ -183,6 +188,20 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
   }
 
   const cargando = firmaLoading || recursosLoading
+
+
+  const handleEliminarFirma = async (firmaId) => {
+    try {
+      await eliminarFirma(firmaId)
+      setFirmas((prev) => prev.filter((f) => f.id !== firmaId))
+      if (firmaSeleccionada?.id === firmaId) {
+        setFirmaSeleccionada(null)
+        setFirmaB64(null)
+      }
+    } catch {
+      // silencioso
+    }
+  }
 
   return (
     <div
@@ -290,10 +309,32 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                         <span>Cambiar firma</span>
                       </div>
                     </>
+
                   ) : firmas.length === 0 ? (
-                    <p className="email-modal__firma-error">
-                      No hay firmas disponibles. Agrega una desde el panel de configuración.
-                    </p>
+                    <div className="email-modal__firma-placeholder">
+                      <p className="email-modal__firma-error">
+                        No hay firmas disponibles.
+                      </p>
+                      <button
+                        type="button"
+                        className="email-modal__firma-agregar"
+                        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}
+                        disabled={subiendoFirma}
+                      >
+                        {subiendoFirma
+                          ? <span className="email-modal__spinner email-modal__spinner--sm" />
+                          : <span className="email-modal__firma-agregar-icon">+</span>
+                        }
+                        <span>{subiendoFirma ? 'Subiendo...' : 'Agregar firma'}</span>
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        style={{ display: 'none' }}
+                        onChange={handleNuevaFirma}
+                      />
+                    </div>
                   ) : (
                     <p className="email-modal__firma-error">No se pudo cargar la imagen.</p>
                   )}
@@ -305,32 +346,42 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                     <p className="email-modal__firma-selector-title">Selecciona una firma</p>
                     <div className="email-modal__firma-opciones">
                       {firmas.map((firma) => (
-                        <button
-                          key={firma.id}
-                          type="button"
-                          className={`email-modal__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'email-modal__firma-opcion--active' : ''}`}
-                          onClick={() => handleSeleccionarFirma(firma)}
-                        >
-                          <img
-                            src={firma.url}
-                            alt={firma.nombre}
-                            className="email-modal__firma-opcion-img"
-                            onError={(e) => { e.target.style.display = 'none' }}
-                          />
-                          <div className="email-modal__firma-opcion-info">
-                            <span className="email-modal__firma-opcion-nombre">{firma.nombre}</span>
-                            {firma.descripcion && (
-                              <span className="email-modal__firma-opcion-desc">{firma.descripcion}</span>
+                        <div key={firma.id} className="email-modal__firma-opcion-wrapper">
+                          <button
+                            type="button"
+                            className={`email-modal__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'email-modal__firma-opcion--active' : ''}`}
+                            onClick={() => handleSeleccionarFirma(firma)}
+                          >
+                            <img
+                              src={firma.url}
+                              alt={firma.nombre}
+                              className="email-modal__firma-opcion-img"
+                              onError={(e) => { e.target.style.display = 'none' }}
+                            />
+                            <div className="email-modal__firma-opcion-info">
+                              <span className="email-modal__firma-opcion-nombre">{firma.nombre}</span>
+                            </div>
+                            {firmaSeleccionada?.id === firma.id && (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--color-primary)', flexShrink: 0 }}>
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
                             )}
-                          </div>
-                          {firmaSeleccionada?.id === firma.id && (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--color-primary)', flexShrink: 0 }}>
-                              <polyline points="20 6 9 17 4 12" />
+                          </button>
+                          <button
+                            type="button"
+                            className="email-modal__firma-eliminar"
+                            onClick={(e) => { e.stopPropagation(); handleEliminarFirma(firma.id) }}
+                            title="Eliminar firma"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4h6v2" />
                             </svg>
-                          )}
-                        </button>
+                          </button>
+                        </div>
                       ))}
-
                       {/* Botón agregar nueva firma */}
                       <button
                         type="button"
