@@ -257,8 +257,10 @@ export async function generarPdfCotizacion(
     // Imagen producto — placeholder hasta que backend entregue URLs
     // Imagen producto
     const imgUrl = imagenesPorCodRef[item.cod_ref]
+    console.log('imgUrl para', item.cod_ref, ':', imgUrl)
     if (imgUrl) {
       const imgB64 = await cargarImagenBase64(imgUrl)
+      console.log('imgB64:', imgB64 ? imgB64.substring(0, 50) : 'null')
       if (imgB64) {
         safeAddImage(doc, imgB64, COL.img.x, y + 1, 12, 12)
       } else {
