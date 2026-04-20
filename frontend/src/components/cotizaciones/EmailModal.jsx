@@ -130,12 +130,16 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
             imagenesPorCodRef[img.cod_ref] = img.url
           }
         })
-        const blob = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
-          .then((blobUrl) => fetch(blobUrl).then((r) => r.blob()))
-        pdfB64Ref.current = await blobToBase64(blob)
+        const blobUrl = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
+        console.log('blobUrl generado:', blobUrl)
+        if (blobUrl) {
+          const response = await fetch(blobUrl)
+          const blob = await response.blob()
+          pdfB64Ref.current = await blobToBase64(blob)
+          console.log('PDF listo, tamaño:', pdfB64Ref.current?.length)
+        }
       } catch (e) {
-        console.log('Error generando PDF', e)
-
+        console.error('Error generando PDF:', e)
       }
     }
 
