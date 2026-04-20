@@ -133,7 +133,10 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
         const blob = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
           .then((blobUrl) => fetch(blobUrl).then((r) => r.blob()))
         pdfB64Ref.current = await blobToBase64(blob)
-      } catch { /* el backend puede generarlo */ }
+      } catch (e) {
+        console.log('Error generando PDF', e)
+
+      }
     }
 
     cargarTodo()
