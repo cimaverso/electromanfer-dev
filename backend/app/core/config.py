@@ -1,7 +1,8 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class Settings(BaseSettings):
-    # Busca el .env en el directorio desde donde ejecutes el comando
     model_config = SettingsConfigDict(
         env_file="../.env",
         env_file_encoding="utf-8",
@@ -16,13 +17,11 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str = ""
     BREVO_SENDER_EMAIL: str = ""
     BREVO_SENDER_NAME: str = ""
-    API_BASE_URL: str = ""
-    LOGO_URL: str = ""
-    FIRMA_URL: str = ""
     GMAIL_USER: str = ""
     GMAIL_APP_PASSWORD: str = ""
-    MEDIA_BASE: str = "/app/media"
+    API_BASE_URL: str = ""
+    LOGO_URL: str = ""
+    MEDIA_BASE: str = os.path.join(BASE_DIR, "media")
 
 
 settings = Settings()
-    

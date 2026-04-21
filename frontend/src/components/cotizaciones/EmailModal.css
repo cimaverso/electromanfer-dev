@@ -576,3 +576,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+.email-modal__firma-opcion-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.email-modal__firma-opcion-wrapper .email-modal__firma-opcion {
+  flex: 1;
+}
+
+.email-modal__firma-eliminar {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--color-danger, #e53e3e);
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.email-modal__firma-eliminar:hover {
+  opacity: 1;
+  background: rgba(229, 62, 62, 0.1);
+}

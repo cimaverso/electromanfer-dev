@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
 from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema
-from app.schemas.envios import EnviarEmailSchema, EnviarWhatsappSchema
+from app.schemas.envios import EnviarEmailSchema
 from app.services.email import enviar_cotizacion_email
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
@@ -59,6 +59,9 @@ def enviar_email(
     db: Session = Depends(get_db),
     token: TokenData = Depends(require_auth)
 ):
+    print(f">>> adjuntos_imagenes: {data.adjuntos_imagenes}")
+    print(f">>> adjuntos_pdfs: {data.adjuntos_pdfs}")
+    print(f">>> firma_url: {data.firma_url}")
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
@@ -90,24 +93,6 @@ def enviar_email(
 
     return {"ok": True, "mensaje": "Correo enviado correctamente"}
 
-@router.post("/{cotizacion_id}/enviar-whatsapp")
-def enviar_whatsapp(
-    cotizacion_id: int,
-    data: EnviarWhatsappSchema,
-    db: Session = Depends(get_db),
-    _: TokenData = Depends(require_auth)
-):
-    cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
-    if not cotizacion:
-        raise HTTPException(status_code=404, detail="Cotización no encontrada")
-
-    telefono = ''.join(filter(str.isdigit, data.telefono))
-    url = f"https://wa.me/{telefono}?text={data.mensaje}"
-
-    cotizacion.estado = "enviada_whatsapp"
-    db.commit()
-
-    return {"ok": True, "whatsapp_url": url}
 
 @router.patch("/{cotizacion_id}/estado")
 def cambiar_estado(

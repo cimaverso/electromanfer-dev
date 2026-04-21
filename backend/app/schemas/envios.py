@@ -6,6 +6,7 @@ class EnviarEmailSchema(BaseModel):
     asunto: str
     cuerpo: str
     firma_url: Optional[str] = None
+    firma_id: Optional[int] = None
     pdf_base64: Optional[str] = None
     adjuntos_imagenes: Optional[list] = None
     adjuntos_pdfs: Optional[list] = None

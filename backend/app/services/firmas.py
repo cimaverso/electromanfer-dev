@@ -4,41 +4,36 @@ import shutil
 import uuid
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import select
 from app.models.firmas import Firmas
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-FIRMAS_DIR = os.path.join(settings.MEDIA_BASE, "firmas")
 ALLOWED_TYPES = {"image/jpeg", "image/png"}
-MAX_FIRMAS = 10
-
-os.makedirs(FIRMAS_DIR, exist_ok=True)
 
 
 class FirmasService:
 
     @staticmethod
-    def listar(db: Session, usuario_id: int = None) -> list[Firmas]:
+    def _firmas_dir() -> str:
+        path = os.path.join(settings.MEDIA_BASE, "firmas")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    @staticmethod
+    def listar(db: Session) -> list[Firmas]:
         stmt = select(Firmas).order_by(Firmas.id)
-        if usuario_id:
-            stmt = stmt.where(Firmas.usuario_id == usuario_id)
         return db.execute(stmt).scalars().all()
 
     @staticmethod
-    def subir(nombre: str, descripcion: str | None, archivo: UploadFile, db: Session) -> Firmas:
-        total = db.execute(select(func.count()).select_from(Firmas)).scalar()
-
-        if total >= MAX_FIRMAS:
-            raise HTTPException(400, f"Máximo {MAX_FIRMAS} firmas permitidas")
-
+    def subir(nombre: str, archivo: UploadFile, db: Session) -> Firmas:
         if archivo.content_type not in ALLOWED_TYPES:
             raise HTTPException(400, "Solo se permiten imágenes JPEG o PNG")
 
         ext = "jpeg" if archivo.content_type == "image/jpeg" else "png"
-        filename = f"firma_{uuid.uuid4().hex[:8]}.{ext}"
-        dest = os.path.join(FIRMAS_DIR, filename)
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        dest = os.path.join(FirmasService._firmas_dir(), filename)
 
         try:
             with open(dest, "wb") as f:
@@ -47,7 +42,10 @@ class FirmasService:
             logger.error(f"Error guardando firma: {e}")
             raise HTTPException(500, "Error al guardar el archivo")
 
-        firma = Firmas(nombre=nombre, descripcion=descripcion, archivo=filename)
+        firma = Firmas(
+            nombre=nombre,
+            url=f"/media/firmas/{filename}"
+        )
         db.add(firma)
         db.commit()
         db.refresh(firma)
@@ -62,12 +60,14 @@ class FirmasService:
         if not firma:
             raise HTTPException(404, "Firma no encontrada")
 
+        ruta_relativa = firma.url.removeprefix("/media/")
+        path = os.path.join(settings.MEDIA_BASE, ruta_relativa)
+        
         db.delete(firma)
         db.commit()
 
-        path = os.path.join(FIRMAS_DIR, firma.archivo)
         if os.path.exists(path):
             os.remove(path)
 
-        logger.info(f"Firma eliminada: {firma.archivo}")
+        logger.info(f"Firma eliminada: {firma.url}")
         return {"success": True}

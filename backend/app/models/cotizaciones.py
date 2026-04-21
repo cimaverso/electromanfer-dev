@@ -8,8 +8,7 @@ if TYPE_CHECKING:
     from backend.app.models.usuarios import Usuarios
     from backend.app.models.clientes import Clientes
     from backend.app.models.cotizaciones_item import CotizacionesItem
-    from backend.app.models.cotizaciones_envio import CotizacionesEnvio
-
+    
 class Cotizaciones(Base):
     __tablename__ = "cotizaciones"
 
@@ -108,8 +107,4 @@ class Cotizaciones(Base):
         cascade="all, delete-orphan"
     )
 
-    cotizaciones_envios: Mapped[list["CotizacionesEnvio"]] = relationship(
-        "CotizacionesEnvio", 
-        back_populates="cotizaciones",
-        cascade="all, delete-orphan"
-    )
+    
