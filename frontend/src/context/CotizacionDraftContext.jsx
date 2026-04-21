@@ -5,13 +5,14 @@ export const CotizacionDraftContext = createContext(null)
 const IVA = 0.19
 
 const initialState = {
-  selectedProducts: [],    // [{ ...producto, cantidad: number }]
+  selectedProducts: [],    // [{ ...producto, cantidad: number, valor_web: number }]
   clienteDraft: null,
   notas: '',
   observacionesPdf: '',
   condicionesComerciales: '',
   // ── Edición ──────────────────────────────────────────────────────────────
-  editandoId: null,        // id de la cotización que se está editando (null = nueva)
+  editandoId:           null,   // id numérico de la cotización en edición
+  editandoConsecutivo:  null,   // ej. "COT-2024-0042" — para mostrar en UI
 }
 
 function draftReducer(state, action) {
@@ -60,6 +61,19 @@ function draftReducer(state, action) {
       }
     }
 
+    // ── Edición de precio por producto ───────────────────────────────────
+    case 'UPDATE_PRICE': {
+      const precio = Math.max(0, parseFloat(action.payload.precio) || 0)
+      return {
+        ...state,
+        selectedProducts: state.selectedProducts.map((p) =>
+          p.cod_ref === action.payload.codRef
+            ? { ...p, valor_web: precio }
+            : p
+        ),
+      }
+    }
+
     case 'SET_CLIENTE_DRAFT':
       return { ...state, clienteDraft: action.payload }
 
@@ -79,7 +93,6 @@ function draftReducer(state, action) {
     case 'LOAD_FROM_HISTORIAL': {
       const cot = action.payload
 
-      // Mapear items del backend al shape de selectedProducts
       const selectedProducts = (cot.cotizaciones_items || []).map((item) => ({
         cod_ref:   item.cod_ref,
         nom_ref:   item.nom_ref,
@@ -89,7 +102,6 @@ function draftReducer(state, action) {
         cantidad:  item.cantidad  ?? 1,
       }))
 
-      // Mapear cliente: el backend devuelve cot.clientes (objeto completo)
       const clienteDraft = cot.clientes
         ? {
             nombre_razon_social: cot.clientes.nombre_razon_social || '',
@@ -105,10 +117,11 @@ function draftReducer(state, action) {
         ...state,
         selectedProducts,
         clienteDraft,
-        notas:                 cot.notas                 || '',
-        observacionesPdf:      cot.observaciones_pdf     || '',
-        condicionesComerciales: cot.condiciones_comerciales || '',
-        editandoId:            cot.id,
+        notas:                  cot.notas                    || '',
+        observacionesPdf:       cot.observaciones_pdf        || '',
+        condicionesComerciales: cot.condiciones_comerciales  || '',
+        editandoId:             cot.id,
+        editandoConsecutivo:    cot.consecutivo              || null,
       }
     }
 
@@ -132,6 +145,10 @@ export function CotizacionDraftProvider({ children }) {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { codRef, cantidad } })
   }, [])
 
+  const updatePrice = useCallback((codRef, precio) => {
+    dispatch({ type: 'UPDATE_PRICE', payload: { codRef, precio } })
+  }, [])
+
   const setClienteDraft = useCallback((cliente) => {
     dispatch({ type: 'SET_CLIENTE_DRAFT', payload: cliente })
   }, [])
@@ -152,7 +169,6 @@ export function CotizacionDraftProvider({ children }) {
     dispatch({ type: 'CLEAR_DRAFT' })
   }, [])
 
-  // Carga una cotización del historial en el draft para edición
   const loadFromHistorial = useCallback((cotizacion) => {
     dispatch({ type: 'LOAD_FROM_HISTORIAL', payload: cotizacion })
   }, [])
@@ -188,9 +204,11 @@ export function CotizacionDraftProvider({ children }) {
     observacionesPdf:       state.observacionesPdf,
     condicionesComerciales: state.condicionesComerciales,
     editandoId:             state.editandoId,
+    editandoConsecutivo:    state.editandoConsecutivo,
     addProduct,
     removeProduct,
     updateQuantity,
+    updatePrice,
     setClienteDraft,
     setNotas,
     setObservacionesPdf,
