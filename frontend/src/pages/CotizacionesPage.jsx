@@ -32,6 +32,7 @@ export default function CotizacionesPage() {
     notas,
     observacionesPdf,
     editandoId,
+    editandoConsecutivo,
     clearDraft,
     loadFromHistorial,
   } = useCotizacionDraft()
@@ -91,7 +92,6 @@ export default function CotizacionesPage() {
 
     const payload = buildPayload()
 
-    // Modo edición
     if (editandoId) {
       const result = await editar(editandoId, payload)
       if (result.success) {
@@ -107,7 +107,6 @@ export default function CotizacionesPage() {
       return
     }
 
-    // Modo creación
     const result = await crear(payload)
     if (result.success) {
       showToast(`Cotización ${result.data.consecutivo} generada`, 'success')
@@ -121,22 +120,19 @@ export default function CotizacionesPage() {
     }
   }
 
-  // ─── Marcar efectiva ─────────────────────────────────────────────────────
+  // ─── Marcar efectiva ──────────────────────────────────────────────────────
   const handleMarcarEfectiva = async (id) => {
     const result = await marcarEfectiva(id)
     if (result.success) {
       showToast('Cotización marcada como efectiva', 'success')
       cargarHistorial()
     } else {
-      // Endpoint pendiente de backend — aviso claro al usuario
       showToast(result.error || 'Endpoint pendiente de implementación en backend', 'warning')
     }
   }
 
   // ─── Editar desde historial ───────────────────────────────────────────────
   const handleEditarDesdeHistorial = async (cot) => {
-    // Si el objeto ya trae los items cargados, usarlo directo
-    // Si no (lista resumida), hacer fetch del detalle completo
     let cotCompleta = cot
     if (!cot.cotizaciones_items || cot.cotizaciones_items.length === 0) {
       cotCompleta = await verCotizacion(cot.id)
@@ -176,26 +172,26 @@ export default function CotizacionesPage() {
     if (id === 'historial') cargarHistorial(filtrosHoy)
   }
 
-  // Tabs con badges
   const tabs = TABS_BASE.map((t) => ({
     ...t,
     badge: t.id === 'productos' ? selectedProducts.length || undefined : undefined,
   }))
 
-  // Productos de la cotización actual para fichas
   const itemsCotizacion = cotizacionActual?.cotizaciones_items || selectedProducts
-
-  // Label del botón generar según modo
   const labelBotonGenerar = editandoId ? 'Volver a generar' : 'Generar cotización'
 
   return (
     <div className="cotizaciones-page">
 
-      {/* Banner de modo edición */}
+      {/* ── Banner de modo edición ── */}
       {editandoId && (
         <div className="cotizaciones-page__edit-banner">
           <span className="cotizaciones-page__edit-banner-icon">✏️</span>
-          <span>Editando cotización — los cambios reemplazarán la versión anterior</span>
+          <span>
+            Editando{' '}
+            <strong>{editandoConsecutivo || `#${editandoId}`}</strong>
+            {' '}— los cambios reemplazarán la versión anterior
+          </span>
           <button
             className="cotizaciones-page__edit-banner-cancel"
             onClick={() => { clearDraft(); showToast('Edición cancelada', 'info') }}
@@ -219,7 +215,11 @@ export default function CotizacionesPage() {
           <div className="cotizaciones-page__main">
             <div className="cotizaciones-page__card">
               <div className="cotizaciones-page__card-header">
-                <h3 className="cotizaciones-page__card-title">Productos en esta cotización</h3>
+                <h3 className="cotizaciones-page__card-title">
+                  {editandoId
+                    ? `Productos — ${editandoConsecutivo || `#${editandoId}`}`
+                    : 'Productos en esta cotización'}
+                </h3>
               </div>
               <div className="cotizaciones-page__card-body">
                 <CotizacionTable onIrAProductos={() => navigate('/productos')} />
@@ -330,4 +330,3 @@ export default function CotizacionesPage() {
     </div>
   )
 }
-

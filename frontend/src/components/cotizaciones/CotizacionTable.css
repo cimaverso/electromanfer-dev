@@ -149,3 +149,35 @@
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+
+/* ── Agregar al final de CotizacionTable.css ─────────────────────────────── */
+
+.cot-table__precio-cell {
+  min-width: 130px;
+}
+
+.cot-table__precio-input {
+  width: 100%;
+  text-align: right;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--color-text-primary);
+  font-size: inherit;
+  font-family: inherit;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cot-table__precio-input:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-raised, rgba(255,255,255,0.04));
+}
+
+.cot-table__precio-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface-raised, rgba(255,255,255,0.06));
+  cursor: text;
+}

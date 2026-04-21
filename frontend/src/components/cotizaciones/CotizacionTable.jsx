@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useCotizacionDraft } from '../../hooks/useCotizacionDraft'
 import EmptyState from '../common/EmptyState'
 import './CotizacionTable.css'
@@ -11,8 +12,53 @@ function formatCOP(value) {
   }).format(value)
 }
 
+// Input de precio con estado local para edición fluida.
+// Confirma al backend (updatePrice) solo en onBlur para no disparar
+// recálculos en cada keystroke.
+function PrecioInput({ codRef, valorWeb, updatePrice }) {
+  const [rawValue, setRawValue] = useState(String(valorWeb || 0))
+  const [editing, setEditing] = useState(false)
+
+  const handleFocus = (e) => {
+    setEditing(true)
+    e.target.select()
+  }
+
+  const handleChange = (e) => {
+    // Permitir solo dígitos y punto decimal
+    const val = e.target.value.replace(/[^0-9.]/g, '')
+    setRawValue(val)
+  }
+
+  const handleBlur = () => {
+    setEditing(false)
+    const parsed = parseFloat(rawValue) || 0
+    setRawValue(String(parsed))
+    updatePrice(codRef, parsed)
+  }
+
+  // Mientras no está en foco, mostrar formateado
+  return (
+    <input
+      type="text"
+      className="cot-table__precio-input"
+      value={editing ? rawValue : formatCOP(parseFloat(rawValue) || 0)}
+      onFocus={handleFocus}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      aria-label="Precio unitario"
+      title="Clic para editar precio"
+    />
+  )
+}
+
 export default function CotizacionTable({ onIrAProductos }) {
-  const { selectedProducts = [], updateQuantity, removeProduct } = useCotizacionDraft()
+  const {
+    selectedProducts = [],
+    updateQuantity,
+    updatePrice,
+    removeProduct,
+  } = useCotizacionDraft()
 
   if (selectedProducts.length === 0) {
     return (
@@ -58,8 +104,12 @@ export default function CotizacionTable({ onIrAProductos }) {
                     <span className="cot-table__tipo">{p.nom_tip}</span>
                   )}
                 </td>
-                <td className="u-text-right">
-                  <span className="cot-table__precio">{formatCOP(p.valor_web)}</span>
+                <td className="u-text-right cot-table__precio-cell">
+                  <PrecioInput
+                    codRef={p.cod_ref}
+                    valorWeb={p.valor_web}
+                    updatePrice={updatePrice}
+                  />
                 </td>
                 <td>
                   <div className="cot-table__qty">
