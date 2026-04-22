@@ -10,7 +10,10 @@ from app.core.config import settings
 
 ALLOWED_IMAGES = {"image/jpeg", "image/png"}
 ALLOWED_PDFS = {"application/pdf"}
-MAX_SIZE = 10 * 1024 * 1024
+
+
+MAX_SIZE_IMAGE = 15 * 1024 * 1024  # 10MB
+MAX_SIZE_PDF = 30 * 1024 * 1024    # 30MB
 
 class MultimediaService:
 
@@ -45,7 +48,7 @@ class MultimediaService:
         if file.content_type not in ALLOWED_IMAGES:
             raise HTTPException(status_code=400, detail="Formato no permitido.")
         contents = await file.read()
-        if len(contents) > MAX_SIZE:
+        if len(contents) > MAX_SIZE_IMAGE:
             raise HTTPException(status_code=400, detail="Archivo muy grande. Máximo 10MB.")
         producto = MultimediaService._get_producto(db, cod_ref)
         ext = file.filename.split(".")[-1].lower()
@@ -110,7 +113,7 @@ class MultimediaService:
         if file.content_type not in ALLOWED_PDFS:
             raise HTTPException(status_code=400, detail="Solo se permiten PDFs.")
         contents = await file.read()
-        if len(contents) > MAX_SIZE:
+        if len(contents) > MAX_SIZE_PDF:
             raise HTTPException(status_code=400, detail="Archivo muy grande. Máximo 10MB.")
         producto = MultimediaService._get_producto(db, cod_ref)
         filename = f"{uuid.uuid4().hex}.pdf"
