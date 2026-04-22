@@ -17,7 +17,7 @@ class ProductosService:
         stmt = select(Productos)
 
         if q:
-            termino = f"%{q.lower()}%"
+            termino = f"{q.lower()}%"
             stmt = stmt.where(
                 or_(
                     Productos.nom_ref.ilike(termino),
@@ -107,7 +107,7 @@ class ProductosService:
     def listar_internos(db: Session, q: str = "") -> list[Productos]:
         stmt = select(Productos).where(Productos.origen == 'interno')
         if q:
-            termino = f"%{q.lower()}%"
+            termino = f"{q.lower()}%"
             stmt = stmt.where(
                 or_(
                     Productos.nom_ref.ilike(termino),
