@@ -6,6 +6,7 @@ from app.core.db import get_db
 from app.schemas.usuarios import (
     UsuariosCreate,
     UsuariosRead,
+    UsuariosChangePassword,
     UsuariosUpdateAdmin
 )
 from app.services.usuarios import UsuariosService
@@ -60,3 +61,15 @@ def actualizar_usuario(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return usuario
+
+@router.patch("/{usuario_id}/cambiar-clave")
+def cambiar_clave(
+    usuario_id: int,
+    data: UsuariosChangePassword,
+    db: Session = Depends(get_db),
+    _: TokenData = Depends(require_admin)
+):
+    user, error = UsuariosService.cambiar_clave(usuario_id, data.clave_nueva, db)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return {"ok": True}

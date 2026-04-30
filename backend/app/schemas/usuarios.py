@@ -13,6 +13,10 @@ class UsuariosBase(BaseModel):
     nombre_completo: str = Field(..., max_length=100)
     cedula_ciudadania: Optional[str] = Field(None, max_length=12)
 
+# Cambiar contraseña
+class UsuariosChangePassword(BaseModel):
+    clave_nueva: str = Field(..., min_length=6, max_length=255)
+
 # Lectura 
 class UsuariosRead(UsuariosBase):
     id: int

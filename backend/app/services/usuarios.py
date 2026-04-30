@@ -99,3 +99,13 @@ class UsuariosService:
     @staticmethod
     def verificar_clave(clave_plana: str, clave_hash: str) -> bool:
         return pwd_context.verify(clave_plana, clave_hash)
+    
+    # Cambiar contraseña 
+    @staticmethod
+    def cambiar_clave(usuario_id: int, clave_nueva: str, db: Session):
+        user = UsuariosService.buscar_por_id(db, usuario_id)
+        if not user:
+            return None, "Usuario no encontrado"
+        user.clave = pwd_context.hash(clave_nueva)
+        db.commit()
+        return user, None
