@@ -50,7 +50,7 @@ def marcar_principal(
 
 
 @router.patch("/{archivo_id}/seleccionada", response_model=ArchivoResponse)
-def toggle_seleccionada(
+def actualizar_seleccionada(
     archivo_id: int,
     payload: SeleccionadaPayload,
     db: Session = Depends(get_db),
