@@ -6,19 +6,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [authError, setAuthError] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Al montar, intenta restaurar sesión desde localStorage
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem('access_token')
       const storedUser = localStorage.getItem('user')
-
       if (storedToken && storedUser) {
         setToken(storedToken)
         setUser(JSON.parse(storedUser))
       }
     } catch {
-      // Si hay datos corruptos en localStorage, los limpia
       localStorage.removeItem('access_token')
       localStorage.removeItem('user')
     } finally {
@@ -26,7 +25,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Llamado desde useAuth tras recibir respuesta exitosa del backend
   const login = useCallback((accessToken, userData) => {
     localStorage.setItem('access_token', accessToken)
     localStorage.setItem('user', JSON.stringify(userData))
@@ -41,11 +39,18 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  const clearAuthError = useCallback(() => setAuthError(null), [])
+
   const value = {
     user,
     token,
     isAuthenticated: !!token,
     isLoading,
+    authError,
+    setAuthError,
+    isSubmitting,
+    setIsSubmitting,
+    clearAuthError,
     login,
     logout,
   }

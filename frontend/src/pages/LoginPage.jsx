@@ -12,10 +12,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !authError) {
       navigate('/dashboard', { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuthenticated, authError, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,12 +27,10 @@ export default function LoginPage() {
   }
 
   const handleEmailChange = (e) => {
-    clearAuthError()
     setEmail(e.target.value)
   }
 
   const handlePasswordChange = (e) => {
-    clearAuthError()
     setPassword(e.target.value)
   }
 
