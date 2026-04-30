@@ -17,6 +17,7 @@ export default function CotizacionResumen({ onGenerar, loading }) {
     getSubtotal,
     getIva,
     getTotal,
+    editandoId,
   } = useCotizacionDraft()
 
   const tieneProductos = selectedProducts.length > 0
@@ -80,7 +81,10 @@ export default function CotizacionResumen({ onGenerar, loading }) {
         disabled={!puedeGenerar}
         onClick={onGenerar}
       >
-        {loading ? 'Generando cotización...' : 'Generar cotización'}
+        {loading
+          ? (editandoId ? 'Guardando cambios...' : 'Generando cotización...')
+          : (editandoId ? 'Guardar cambios' : 'Generar cotización')
+        }
       </PrimaryButton>
     </div>
   )

@@ -252,7 +252,6 @@ export default function CotizacionesPage() {
             <CotizacionResumen
               onGenerar={handleGenerar}
               loading={loadingCrear}
-              labelBoton={labelBotonGenerar}
             />
           </div>
         </div>

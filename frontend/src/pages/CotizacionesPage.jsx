@@ -190,7 +190,7 @@ export default function CotizacionesPage() {
           <span>
             Editando{' '}
             <strong>{editandoConsecutivo || `#${editandoId}`}</strong>
-            {' '}— los cambios reemplazarán la versión anterior
+            {' '}
           </span>
           <button
             className="cotizaciones-page__edit-banner-cancel"
@@ -217,7 +217,7 @@ export default function CotizacionesPage() {
               <div className="cotizaciones-page__card-header">
                 <h3 className="cotizaciones-page__card-title">
                   {editandoId
-                    ? `Productos — ${editandoConsecutivo || `#${editandoId}`}`
+                    ? `${editandoConsecutivo || `#${editandoId}`}`
                     : 'Productos en esta cotización'}
                 </h3>
               </div>
