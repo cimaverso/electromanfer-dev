@@ -84,9 +84,9 @@ Una vez el backend esté corriendo, puedes acceder a la documentación interacti
 ---
 
 ## 📈 Roadmap / Próximas Mejoras
-- [ ] Implementación de recordatorios automáticos de seguimiento.
-- [ ] Módulo de análisis predictivo de ventas.
-- [ ] App móvil para vendedores en campo.
+- [ ] Integración de moculo de seguimiento para envío de paquterí.
+- [ ] Módulo de WhatsApp integrado en la aplicación.
+- [ ] Módulo de correo integrado en la aplicación.
 
 ---
 **Desarrollado para Electromanfer LTDA.**
