@@ -35,19 +35,12 @@ export function useBuzon() {
   }, [])
 
   // ─── Abrir hilo ───────────────────────────────────────────────────────────
-  const abrirHilo = useCallback(async (hiloId) => {
+  const abrirHilo = useCallback(async (hiloId, bandeja = 'inbox') => {
     setLoadingHilo(true)
     setError(null)
     try {
-      const data = await getHilo(hiloId)
+      const data = await getHilo(hiloId, bandeja)
       setHiloActivo(data)
-      // Marcar como leído sin bloquear UI
-      if (!data.leido) {
-        marcarLeido(hiloId).catch(() => {})
-        setHilos((prev) =>
-          prev.map((h) => (h.id === hiloId ? { ...h, leido: true } : h))
-        )
-      }
       return data
     } catch {
       setError('No se pudo cargar el hilo.')

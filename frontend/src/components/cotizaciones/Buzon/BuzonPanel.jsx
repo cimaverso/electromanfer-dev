@@ -143,14 +143,22 @@ function MensajeBurbuja({ mensaje }) {
   return (
     <div className={`buzon-msg ${enviado ? 'buzon-msg--enviado' : 'buzon-msg--recibido'}`}>
       <div className="buzon-msg__header">
-        <Avatar
-          nombre={mensaje.remitente}
-          tipo={enviado ? 'asesor' : 'cliente'}
-        />
+        <Avatar nombre={mensaje.remitente} tipo={enviado ? 'asesor' : 'cliente'} />
         <span className="buzon-msg__nombre">{mensaje.remitente}</span>
         <span className="buzon-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
-      <div className="buzon-msg__cuerpo">{mensaje.cuerpo}</div>
+
+      {mensaje.cuerpo_html ? (
+        <iframe
+          srcDoc={mensaje.cuerpo_html}
+          className="buzon-msg__iframe"
+          sandbox="allow-same-origin"
+          title="correo"
+        />
+      ) : (
+        <div className="buzon-msg__cuerpo">{mensaje.cuerpo}</div>
+      )}
+
       {mensaje.adjuntos?.map((adj, i) => (
         <div key={i} className="buzon-msg__adjunto">
           <div className="buzon-msg__adjunto-icon">PDF</div>
@@ -378,7 +386,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   // y usar directamente hilosReales / hiloActivoReal
   const [hilosMock, setHilosMock] = useState(MOCK_HILOS)
   const [hiloActivoMock, setHiloActivoMock] = useState(null)
-  const usandoMock = true // Cambiar a false cuando el backend esté listo
+  const usandoMock = false // Cambiar a false cuando el backend esté listo
 
   const hilos = usandoMock ? hilosMock : hilosReales
   const hiloActivo = usandoMock ? hiloActivoMock : hiloActivoReal
@@ -413,16 +421,8 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   }, [adjuntoPendiente])
 
   const handleAbrirHilo = (hilo) => {
-    if (usandoMock) {
-      setHilosMock((prev) =>
-        prev.map((h) => (h.id === hilo.id ? { ...h, leido: true } : h))
-      )
-      setHiloActivoMock(hilo)
-    } else {
-      abrirHilo(hilo.id)
-    }
+    abrirHilo(hilo.id, bandejaActiva)
   }
-
   const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion }) => {
     if (blobUrl && nombreArchivo) {
       setAdjuntoReply({ blobUrl, nombreArchivo })
@@ -636,7 +636,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
               onNuevaCotizacion={() => setModalCotizacion(true)}
-              onAdjuntarCotizacion={() => {}}
+              onAdjuntarCotizacion={() => { }}
             />
           </>
         )}
