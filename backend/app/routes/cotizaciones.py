@@ -59,9 +59,7 @@ def enviar_email(
     db: Session = Depends(get_db),
     token: TokenData = Depends(require_auth)
 ):
-    print(f">>> adjuntos_imagenes: {data.adjuntos_imagenes}")
-    print(f">>> adjuntos_pdfs: {data.adjuntos_pdfs}")
-    print(f">>> firma_url: {data.firma_url}")
+
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
@@ -82,13 +80,16 @@ def enviar_email(
         firma_url=data.firma_url,
         consecutivo=cotizacion.consecutivo,
         adjuntos_urls=adjuntos_urls,
+        in_reply_to=data.in_reply_to,
     )
 
+    # Después:
     if not enviado:
         raise HTTPException(status_code=500, detail="Error al enviar el correo")
 
     cotizacion.estado = "enviada_email"
     cotizacion.usuario_id = token.user_id
+    cotizacion.email_thread_id = enviado 
     db.commit()
 
     return {"ok": True, "mensaje": "Correo enviado correctamente"}

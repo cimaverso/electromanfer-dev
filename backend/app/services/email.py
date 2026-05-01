@@ -2,6 +2,7 @@ import smtplib
 import base64
 import logging
 import httpx
+import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -22,7 +23,6 @@ def _url_a_base64(url: str):
     except Exception as e:
         logger.error(f"Error descargando {url}: {e}")
     return None
-
 
 def _construir_html(cuerpo: str, consecutivo: str, con_firma: bool = False) -> str:
     cuerpo_html = cuerpo.replace('\n', '<br>')
@@ -95,7 +95,6 @@ def _construir_html(cuerpo: str, consecutivo: str, con_firma: bool = False) -> s
     </html>
     """
 
-
 def enviar_cotizacion_email(
     destino: str,
     asunto: str,
@@ -105,7 +104,9 @@ def enviar_cotizacion_email(
     adjuntos_urls: list = None,
     firma_url: str = None,
     consecutivo: str = "",
-) -> bool:
+    in_reply_to: str = None,
+
+) -> None:
     try:
         # Descargar firma
         firma_data = None
@@ -117,7 +118,13 @@ def enviar_cotizacion_email(
         msg = MIMEMultipart('related')
         msg['From'] = f"{settings.BREVO_SENDER_NAME} <{settings.GMAIL_USER}>"
         msg['To'] = destino
+        message_id = f"<{uuid.uuid4()}@electromanfer.com>"
+        msg['Message-ID'] = message_id
         msg['Subject'] = asunto
+
+        if in_reply_to:
+          msg['In-Reply-To'] = in_reply_to
+          msg['References'] = in_reply_to
 
         html_content = _construir_html(cuerpo, consecutivo, con_firma=firma_data is not None)
         msg_alt = MIMEMultipart('alternative')
@@ -159,8 +166,8 @@ def enviar_cotizacion_email(
             smtp.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
             smtp.sendmail(settings.GMAIL_USER, destino, msg.as_string())
 
-        return True
+        return message_id
 
     except Exception as e:
         logger.error(f"Error enviando email via Gmail: {e}")
-        return False
+        return None

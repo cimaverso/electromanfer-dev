@@ -10,6 +10,7 @@ class EnviarEmailSchema(BaseModel):
     pdf_base64: Optional[str] = None
     adjuntos_imagenes: Optional[list] = None
     adjuntos_pdfs: Optional[list] = None
+    in_reply_to: Optional[str] = None
 
 class EnviarWhatsappSchema(BaseModel):
     telefono: str

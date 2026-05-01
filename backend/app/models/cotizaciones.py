@@ -82,6 +82,11 @@ class Cotizaciones(Base):
         DateTime, 
         nullable=True
     )
+
+    email_thread_id: Mapped[Optional[str]] = mapped_column(  # agrega esto
+        String(255), 
+        nullable=True
+    )
     
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 

@@ -139,6 +139,7 @@ def get_email_by_id(email_id: str, bandeja: str = "inbox") -> dict:
     remitente = decode_str(msg.get("From", ""))
     destinatario = decode_str(msg.get("To", ""))
     asunto = decode_str(msg.get("Subject", ""))
+    message_id = msg.get("Message-ID", "")
     fecha_raw = msg.get("Date", "")
 
     try:
@@ -187,8 +188,8 @@ def get_email_by_id(email_id: str, bandeja: str = "inbox") -> dict:
         "cuerpo": cuerpo_plain,
         "cuerpo_html": cuerpo_html,
         "adjuntos": adjuntos,
+        "message_id": message_id,
     }
-
 
 def marcar_leido(email_id: str) -> dict:
     mail = imaplib.IMAP4_SSL("imap.gmail.com")

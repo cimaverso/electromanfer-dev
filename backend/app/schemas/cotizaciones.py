@@ -56,6 +56,7 @@ class CotizacionResponse(BaseModel):
     observaciones_pdf: Optional[str] = None
     pdf_url: Optional[str] = None
     fecha_envio: Optional[datetime] = None
+    email_thread_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     cliente_id: Optional[int] = None
