@@ -21,7 +21,7 @@ function correoAHilo(correo, bandeja) {
 
   return {
     id: correo.id,
-    leido: true,
+    leido: correo.leido ?? true,
     remitente: nombre || emailAddr,
     email_remitente: emailAddr,
     asunto: correo.asunto || '(Sin asunto)',
@@ -76,7 +76,8 @@ export async function getHilo(hiloId, bandeja = 'inbox') {
 }
 
 export async function marcarLeido(hiloId) {
-  return { ok: true }
+  const response = await axiosClient.patch(`/emails/${hiloId}/leido`)
+  return response.data
 }
 
 export async function responderHilo(hiloId, payload) {

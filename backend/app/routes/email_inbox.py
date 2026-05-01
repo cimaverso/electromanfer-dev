@@ -25,3 +25,11 @@ def get_email(email_id: str, bandeja: str = "inbox"):
         return get_email_by_id(email_id, bandeja)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.patch("/{email_id}/leido")
+def leido(email_id: str):
+    try:
+        from app.services.email_inbox import marcar_leido
+        return marcar_leido(email_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

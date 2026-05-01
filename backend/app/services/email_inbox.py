@@ -19,7 +19,6 @@ def decode_str(value):
             parts.append(part)
     return "".join(parts)
 
-
 def _limpiar_preview(texto: str) -> str:
     # Quitar bloques de CSS/style
     texto = re.sub(r'\{[^}]+\}', '', texto)  # agrega esta línea
@@ -43,8 +42,13 @@ def get_inbox(limit: int = 20) -> list[dict]:
     for uid in ids:
         _, msg_data = mail.fetch(uid, "(RFC822)")
         raw = msg_data[0][1]
-        msg = email.message_from_bytes(raw)
 
+        # Obtener flags para saber si está leído
+        _, flags_data = mail.fetch(uid, "(FLAGS)")
+        flags = flags_data[0].decode() if flags_data[0] else ""
+        leido = "\\Seen" in flags
+
+        msg = email.message_from_bytes(raw)
         remitente = decode_str(msg.get("From", ""))
         asunto = decode_str(msg.get("Subject", ""))
         fecha_raw = msg.get("Date", "")
@@ -69,11 +73,11 @@ def get_inbox(limit: int = 20) -> list[dict]:
             "asunto": asunto,
             "fecha": fecha,
             "preview": _limpiar_preview(cuerpo),
+            "leido": leido,
         })
 
     mail.logout()
     return correos
-
 
 def get_sent(limit: int = 20) -> list[dict]:
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
@@ -118,7 +122,6 @@ def get_sent(limit: int = 20) -> list[dict]:
 
     mail.logout()
     return correos
-
 
 def get_email_by_id(email_id: str, bandeja: str = "inbox") -> dict:
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
@@ -185,3 +188,12 @@ def get_email_by_id(email_id: str, bandeja: str = "inbox") -> dict:
         "cuerpo_html": cuerpo_html,
         "adjuntos": adjuntos,
     }
+
+
+def marcar_leido(email_id: str) -> dict:
+    mail = imaplib.IMAP4_SSL("imap.gmail.com")
+    mail.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
+    mail.select("inbox")
+    mail.store(email_id.encode(), '+FLAGS', '\\Seen')
+    mail.logout()
+    return { "ok": True }
