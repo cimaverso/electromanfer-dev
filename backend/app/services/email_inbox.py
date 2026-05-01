@@ -40,7 +40,7 @@ def get_inbox(limit: int = 20) -> list[dict]:
 
     correos = []
     for uid in ids:
-        _, msg_data = mail.fetch(uid, "(RFC822)")
+        _, msg_data = mail.fetch(uid, "(BODY.PEEK[])")
         raw = msg_data[0][1]
 
         # Obtener flags para saber si está leído
