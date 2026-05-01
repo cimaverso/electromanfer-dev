@@ -20,6 +20,11 @@ export default function PdfPreview({
   loadingEnvio,
   imagenesDisponibles = [],
   pdfsDisponibles = [],
+  // ── Buzón ────────────────────────────────────────────────────────────────
+  // buzonHiloOrigen: { hiloId, remitente, emailRemitente, asunto } | null
+  // onAdjuntarAHilo: (blobUrl) => void — abre el buzón con el PDF adjunto
+  buzonHiloOrigen = null,
+  onAdjuntarAHilo = null,
 }) {
   const [blobUrl, setBlobUrl] = useState(null)
   const [generando, setGenerando] = useState(false)
@@ -28,7 +33,6 @@ export default function PdfPreview({
   const [telefonoWa, setTelefonoWa] = useState('')
   const blobUrlRef = useRef(null)
 
-  // Genera el PDF como blob al montar o cuando cambia la cotización
   useEffect(() => {
     if (!cotizacion) return
 
@@ -79,7 +83,6 @@ export default function PdfPreview({
     }
   }, [cotizacion])
 
-  // Sincroniza teléfono WA con cliente
   useEffect(() => {
     setTelefonoWa(cotizacion?.cliente?.telefono || '')
   }, [cotizacion])
@@ -95,7 +98,6 @@ export default function PdfPreview({
     )
   }
 
-  // ── Descarga reutilizando el blob ya generado ─────────────────────────────
   const handleDescargarPdf = () => {
     if (!blobUrl) return
     const a = document.createElement('a')
@@ -117,6 +119,13 @@ export default function PdfPreview({
       mensaje: `Hola, te compartimos la cotización *${cotizacion.consecutivo}* generada por ELECTROMANFER LTDA.\n\nQuedamos atentos.`,
     })
     setMostrarWaForm(false)
+  }
+
+  // ── Adjuntar al hilo del buzón ────────────────────────────────────────────
+  const handleAdjuntarAHilo = () => {
+    if (!blobUrl || !onAdjuntarAHilo) return
+    // Pasa el blobUrl para que BuzonPanel lo pre-adjunte en la barra de respuesta
+    onAdjuntarAHilo({ blobUrl, nombreArchivo: `${cotizacion.consecutivo}.pdf` })
   }
 
   return (
@@ -142,6 +151,7 @@ export default function PdfPreview({
           </div>
 
           <div className="pdf-preview__toolbar-actions">
+
             {/* Descargar */}
             <button
               className="pdf-preview__action-btn pdf-preview__action-btn--primary"
@@ -168,6 +178,21 @@ export default function PdfPreview({
               Email
             </button>
 
+            {/* Adjuntar a hilo — solo visible cuando hay contexto de buzón */}
+            {buzonHiloOrigen && onAdjuntarAHilo && (
+              <button
+                className="pdf-preview__action-btn pdf-preview__action-btn--hilo"
+                onClick={handleAdjuntarAHilo}
+                disabled={generando || !blobUrl}
+                title={`Adjuntar al hilo de ${buzonHiloOrigen.remitente}`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                Adjuntar a hilo · {buzonHiloOrigen.remitente}
+              </button>
+            )}
+
             {/* WhatsApp */}
             <button
               className="pdf-preview__action-btn pdf-preview__action-btn--whatsapp"
@@ -178,6 +203,7 @@ export default function PdfPreview({
               </svg>
               WhatsApp
             </button>
+
           </div>
         </div>
 

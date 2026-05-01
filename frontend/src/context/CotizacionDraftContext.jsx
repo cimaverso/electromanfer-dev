@@ -5,14 +5,15 @@ export const CotizacionDraftContext = createContext(null)
 const IVA = 0.19
 
 const initialState = {
-  selectedProducts: [],    // [{ ...producto, cantidad: number, valor_web: number }]
+  selectedProducts: [],
   clienteDraft: null,
   notas: '',
   observacionesPdf: '',
   condicionesComerciales: '',
-  // ── Edición ──────────────────────────────────────────────────────────────
-  editandoId:           null,   // id numérico de la cotización en edición
-  editandoConsecutivo:  null,   // ej. "COT-2024-0042" — para mostrar en UI
+  editandoId:           null,
+  editandoConsecutivo:  null,
+  // { hiloId, remitente, emailRemitente, asunto } | null
+  buzonHiloOrigen: null,
 }
 
 function draftReducer(state, action) {
@@ -61,7 +62,6 @@ function draftReducer(state, action) {
       }
     }
 
-    // ── Edición de precio por producto ───────────────────────────────────
     case 'UPDATE_PRICE': {
       const precio = Math.max(0, parseFloat(action.payload.precio) || 0)
       return {
@@ -86,10 +86,15 @@ function draftReducer(state, action) {
     case 'SET_CONDICIONES':
       return { ...state, condicionesComerciales: action.payload }
 
+    case 'SET_BUZON_ORIGEN':
+      return { ...state, buzonHiloOrigen: action.payload }
+
+    case 'CLEAR_BUZON_ORIGEN':
+      return { ...state, buzonHiloOrigen: null }
+
     case 'CLEAR_DRAFT':
       return { ...initialState }
 
-    // ── Carga una cotización existente para editar ────────────────────────
     case 'LOAD_FROM_HISTORIAL': {
       const cot = action.payload
 
@@ -122,6 +127,7 @@ function draftReducer(state, action) {
         condicionesComerciales: cot.condiciones_comerciales  || '',
         editandoId:             cot.id,
         editandoConsecutivo:    cot.consecutivo              || null,
+        // buzonHiloOrigen se preserva: si el asesor edita desde un hilo, el contexto no se pierde
       }
     }
 
@@ -133,65 +139,29 @@ function draftReducer(state, action) {
 export function CotizacionDraftProvider({ children }) {
   const [state, dispatch] = useReducer(draftReducer, initialState)
 
-  const addProduct = useCallback((producto) => {
-    dispatch({ type: 'ADD_PRODUCT', payload: producto })
-  }, [])
+  const addProduct        = useCallback((p)   => dispatch({ type: 'ADD_PRODUCT',       payload: p }),   [])
+  const removeProduct     = useCallback((ref) => dispatch({ type: 'REMOVE_PRODUCT',    payload: ref }), [])
+  const updateQuantity    = useCallback((ref, cantidad) => dispatch({ type: 'UPDATE_QUANTITY', payload: { codRef: ref, cantidad } }), [])
+  const updatePrice       = useCallback((ref, precio)   => dispatch({ type: 'UPDATE_PRICE',    payload: { codRef: ref, precio } }),   [])
+  const setClienteDraft   = useCallback((v)   => dispatch({ type: 'SET_CLIENTE_DRAFT',  payload: v }), [])
+  const setNotas          = useCallback((v)   => dispatch({ type: 'SET_NOTAS',          payload: v }), [])
+  const setObservacionesPdf = useCallback((v) => dispatch({ type: 'SET_OBSERVACIONES_PDF', payload: v }), [])
+  const setCondicionesComerciales = useCallback((v) => dispatch({ type: 'SET_CONDICIONES', payload: v }), [])
+  const clearDraft        = useCallback(()    => dispatch({ type: 'CLEAR_DRAFT' }), [])
+  const loadFromHistorial = useCallback((cot) => dispatch({ type: 'LOAD_FROM_HISTORIAL', payload: cot }), [])
+  const setBuzonOrigen    = useCallback((hilo) => dispatch({ type: 'SET_BUZON_ORIGEN',  payload: hilo }), [])
+  const clearBuzonOrigen  = useCallback(()    => dispatch({ type: 'CLEAR_BUZON_ORIGEN' }), [])
 
-  const removeProduct = useCallback((codRef) => {
-    dispatch({ type: 'REMOVE_PRODUCT', payload: codRef })
-  }, [])
-
-  const updateQuantity = useCallback((codRef, cantidad) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { codRef, cantidad } })
-  }, [])
-
-  const updatePrice = useCallback((codRef, precio) => {
-    dispatch({ type: 'UPDATE_PRICE', payload: { codRef, precio } })
-  }, [])
-
-  const setClienteDraft = useCallback((cliente) => {
-    dispatch({ type: 'SET_CLIENTE_DRAFT', payload: cliente })
-  }, [])
-
-  const setNotas = useCallback((val) => {
-    dispatch({ type: 'SET_NOTAS', payload: val })
-  }, [])
-
-  const setObservacionesPdf = useCallback((val) => {
-    dispatch({ type: 'SET_OBSERVACIONES_PDF', payload: val })
-  }, [])
-
-  const setCondicionesComerciales = useCallback((val) => {
-    dispatch({ type: 'SET_CONDICIONES', payload: val })
-  }, [])
-
-  const clearDraft = useCallback(() => {
-    dispatch({ type: 'CLEAR_DRAFT' })
-  }, [])
-
-  const loadFromHistorial = useCallback((cotizacion) => {
-    dispatch({ type: 'LOAD_FROM_HISTORIAL', payload: cotizacion })
-  }, [])
-
-  const getSubtotal = useCallback(() => {
-    return state.selectedProducts.reduce(
-      (acc, p) => acc + (p.valor_web || 0) * p.cantidad,
-      0
-    )
-  }, [state.selectedProducts])
-
-  const getIva = useCallback(() => {
-    return getSubtotal() * IVA
-  }, [getSubtotal])
-
-  const getTotal = useCallback(() => {
-    return getSubtotal() + getIva()
-  }, [getSubtotal, getIva])
-
-  const getTotalItems = useCallback(() => {
-    return state.selectedProducts.reduce((acc, p) => acc + p.cantidad, 0)
-  }, [state.selectedProducts])
-
+  const getSubtotal = useCallback(() =>
+    state.selectedProducts.reduce((acc, p) => acc + (p.valor_web || 0) * p.cantidad, 0),
+    [state.selectedProducts]
+  )
+  const getIva   = useCallback(() => getSubtotal() * IVA, [getSubtotal])
+  const getTotal = useCallback(() => getSubtotal() + getIva(), [getSubtotal, getIva])
+  const getTotalItems = useCallback(() =>
+    state.selectedProducts.reduce((acc, p) => acc + p.cantidad, 0),
+    [state.selectedProducts]
+  )
   const isProductoAgregado = useCallback(
     (codRef) => state.selectedProducts.some((p) => p.cod_ref === codRef),
     [state.selectedProducts]
@@ -205,21 +175,11 @@ export function CotizacionDraftProvider({ children }) {
     condicionesComerciales: state.condicionesComerciales,
     editandoId:             state.editandoId,
     editandoConsecutivo:    state.editandoConsecutivo,
-    addProduct,
-    removeProduct,
-    updateQuantity,
-    updatePrice,
-    setClienteDraft,
-    setNotas,
-    setObservacionesPdf,
-    setCondicionesComerciales,
-    clearDraft,
-    loadFromHistorial,
-    getSubtotal,
-    getIva,
-    getTotal,
-    getTotalItems,
-    isProductoAgregado,
+    buzonHiloOrigen:        state.buzonHiloOrigen,
+    addProduct, removeProduct, updateQuantity, updatePrice,
+    setClienteDraft, setNotas, setObservacionesPdf, setCondicionesComerciales,
+    clearDraft, loadFromHistorial, setBuzonOrigen, clearBuzonOrigen,
+    getSubtotal, getIva, getTotal, getTotalItems, isProductoAgregado,
   }
 
   return (

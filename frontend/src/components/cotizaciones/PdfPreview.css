@@ -274,3 +274,23 @@
 @keyframes pdf-spin {
   to { transform: rotate(360deg) }
 }
+
+/* ─── Agregar al final de PdfPreview.css ───────────────────────────────────── */
+
+/* Botón adjuntar a hilo del buzón */
+.pdf-preview__action-btn--hilo {
+  background-color: var(--color-info-soft);
+  border-color: var(--color-info);
+  color: var(--color-info);
+  font-weight: var(--font-weight-medium);
+}
+
+.pdf-preview__action-btn--hilo:hover:not(:disabled) {
+  background-color: var(--color-info);
+  color: var(--color-white);
+}
+
+.pdf-preview__action-btn--hilo:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

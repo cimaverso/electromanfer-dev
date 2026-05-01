@@ -11,6 +11,7 @@ import CotizacionResumen from '../components/cotizaciones/CotizacionResumen'
 import PdfPreview from '../components/cotizaciones/PdfPreview'
 import FichasPanel from '../components/cotizaciones/FichasPanel'
 import HistorialTable from '../components/cotizaciones/HistorialTable'
+import BuzonPanel from '../components/cotizaciones/Buzon/BuzonPanel'
 import Toast from '../components/common/Toast'
 import './CotizacionesPage.css'
 
@@ -19,6 +20,7 @@ const TABS_BASE = [
   { id: 'preview',   label: 'Vista previa / PDF' },
   { id: 'fichas',    label: 'Fichas técnicas' },
   { id: 'historial', label: 'Historial' },
+  { id: 'buzon',     label: 'Buzón' },
 ]
 
 export default function CotizacionesPage() {
@@ -32,8 +34,12 @@ export default function CotizacionesPage() {
     notas,
     observacionesPdf,
     editandoId,
+    editandoConsecutivo,
+    buzonHiloOrigen,
     clearDraft,
     loadFromHistorial,
+    setBuzonOrigen,
+    clearBuzonOrigen,
   } = useCotizacionDraft()
 
   const {
@@ -45,7 +51,6 @@ export default function CotizacionesPage() {
     crear,
     editar,
     marcarEfectiva,
-    anularCotizacion,
     cargarHistorial,
     handleEnviarEmail,
     handleEnviarWhatsapp,
@@ -56,6 +61,11 @@ export default function CotizacionesPage() {
   const [tabActivo, setTabActivo] = useState(
     selectedProducts.length > 0 ? 'productos' : 'historial'
   )
+
+  // Cuando se vuelve al Buzón desde Preview, este id indica qué hilo abrir
+  const [hiloInicialBuzon, setHiloInicialBuzon] = useState(null)
+  // PDF pre-adjunto al volver al hilo desde Preview
+  const [adjuntoPendiente, setAdjuntoPendiente] = useState(null)
 
   const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
   const filtrosHoy = { fecha_inicio: hoyColombia, fecha_fin: hoyColombia }
@@ -79,7 +89,7 @@ export default function CotizacionesPage() {
     })),
   })
 
-  // ─── Generar (crear o editar según editandoId) ────────────────────────────
+  // ─── Generar ──────────────────────────────────────────────────────────────
   const handleGenerar = async () => {
     if (!clienteDraft?.nombre_razon_social?.trim()) {
       showToast('Completa la razón social del cliente', 'warning')
@@ -92,63 +102,41 @@ export default function CotizacionesPage() {
 
     const payload = buildPayload()
 
-    // Modo edición
     if (editandoId) {
       const result = await editar(editandoId, payload)
       if (result.success) {
         showToast(`Cotización ${result.data.consecutivo} actualizada`, 'success')
         setTabActivo('preview')
-        setTimeout(() => {
-          clearDraft()
-          cargarHistorial()
-        }, 50)
+        setTimeout(() => { clearDraft(); cargarHistorial() }, 50)
       } else {
         showToast(result.error || 'Error al actualizar la cotización', 'error')
       }
       return
     }
 
-    // Modo creación
     const result = await crear(payload)
     if (result.success) {
       showToast(`Cotización ${result.data.consecutivo} generada`, 'success')
       setTabActivo('preview')
-      setTimeout(() => {
-        clearDraft()
-        cargarHistorial()
-      }, 50)
+      setTimeout(() => { clearDraft(); cargarHistorial() }, 50)
     } else {
       showToast(result.error || 'Error al generar la cotización', 'error')
     }
   }
 
-  // ─── Marcar efectiva ─────────────────────────────────────────────────────
+  // ─── Marcar efectiva ──────────────────────────────────────────────────────
   const handleMarcarEfectiva = async (id) => {
     const result = await marcarEfectiva(id)
     if (result.success) {
       showToast('Cotización marcada como efectiva', 'success')
       cargarHistorial()
     } else {
-      // Endpoint pendiente de backend — aviso claro al usuario
       showToast(result.error || 'Endpoint pendiente de implementación en backend', 'warning')
     }
   }
 
   // ─── Editar desde historial ───────────────────────────────────────────────
-  // ─── Anular cotización ──────────────────────────────────────────────────────
-  const handleAnular = async (id) => {
-    const result = await anularCotizacion(id)
-    if (result.success) {
-      showToast('Cotización anulada', 'success')
-      cargarHistorial()
-    } else {
-      showToast(result.error || 'Endpoint pendiente de implementación en backend', 'warning')
-    }
-  }
-
   const handleEditarDesdeHistorial = async (cot) => {
-    // Si el objeto ya trae los items cargados, usarlo directo
-    // Si no (lista resumida), hacer fetch del detalle completo
     let cotCompleta = cot
     if (!cot.cotizaciones_items || cot.cotizaciones_items.length === 0) {
       cotCompleta = await verCotizacion(cot.id)
@@ -183,36 +171,80 @@ export default function CotizacionesPage() {
     }
   }
 
+  // ─── Adjuntar PDF al hilo y volver al Buzón ─────────────────────────────
+  const handleAdjuntarAHilo = ({ blobUrl, nombreArchivo }) => {
+    // Guardamos el adjunto pendiente para que BuzonPanel lo pre-cargue
+    setAdjuntoPendiente({ blobUrl, nombreArchivo })
+    setHiloInicialBuzon(buzonHiloOrigen)
+    clearBuzonOrigen()
+    setTabActivo('buzon')
+  }
+
   const handleTabChange = (id) => {
     setTabActivo(id)
     if (id === 'historial') cargarHistorial(filtrosHoy)
+    // Al salir del buzón manualmente, limpiar el hilo inicial
+    if (id !== 'buzon') setHiloInicialBuzon(null)
   }
 
-  // Tabs con badges
+  // ─── Generar cotización desde Buzón ──────────────────────────────────────
+  // hilo: { hiloId, remitente, emailRemitente, asunto }
+  const handleGenerarDesdeBuzon = (hilo) => {
+    setBuzonOrigen(hilo)
+    setTabActivo('productos')
+  }
+
+  // ─── Volver al hilo desde Preview ────────────────────────────────────────
+  const handleVolverAlHilo = () => {
+    setHiloInicialBuzon(buzonHiloOrigen)
+    clearBuzonOrigen()
+    setTabActivo('buzon')
+  }
+
   const tabs = TABS_BASE.map((t) => ({
     ...t,
     badge: t.id === 'productos' ? selectedProducts.length || undefined : undefined,
   }))
 
-  // Productos de la cotización actual para fichas
   const itemsCotizacion = cotizacionActual?.cotizaciones_items || selectedProducts
-
-  // Label del botón generar según modo
   const labelBotonGenerar = editandoId ? 'Volver a generar' : 'Generar cotización'
 
   return (
     <div className="cotizaciones-page">
 
-      {/* Banner de modo edición */}
+      {/* ── Banner edición ── */}
       {editandoId && (
         <div className="cotizaciones-page__edit-banner">
           <span className="cotizaciones-page__edit-banner-icon">✏️</span>
-          <span>Editando cotización — los cambios reemplazarán la versión anterior</span>
+          <span>
+            Editando{' '}
+            <strong>{editandoConsecutivo || `#${editandoId}`}</strong>
+            {' '}— los cambios reemplazarán la versión anterior
+          </span>
           <button
             className="cotizaciones-page__edit-banner-cancel"
             onClick={() => { clearDraft(); showToast('Edición cancelada', 'info') }}
           >
             Cancelar edición
+          </button>
+        </div>
+      )}
+
+      {/* ── Banner contexto buzón — visible mientras el asesor arma la cotización ── */}
+      {buzonHiloOrigen && !editandoId && (
+        <div className="cotizaciones-page__buzon-banner">
+          <span>✉️</span>
+          <span>
+            Cotización para{' '}
+            <strong>{buzonHiloOrigen.remitente}</strong>
+            {' · '}
+            <em>{buzonHiloOrigen.asunto}</em>
+          </span>
+          <button
+            className="cotizaciones-page__edit-banner-cancel"
+            onClick={() => { clearBuzonOrigen(); showToast('Hilo desvinculado', 'info') }}
+          >
+            Desvincular
           </button>
         </div>
       )}
@@ -231,7 +263,11 @@ export default function CotizacionesPage() {
           <div className="cotizaciones-page__main">
             <div className="cotizaciones-page__card">
               <div className="cotizaciones-page__card-header">
-                <h3 className="cotizaciones-page__card-title">Productos en esta cotización</h3>
+                <h3 className="cotizaciones-page__card-title">
+                  {editandoId
+                    ? `Productos — ${editandoConsecutivo || `#${editandoId}`}`
+                    : 'Productos en esta cotización'}
+                </h3>
               </div>
               <div className="cotizaciones-page__card-body">
                 <CotizacionTable onIrAProductos={() => navigate('/productos')} />
@@ -264,14 +300,30 @@ export default function CotizacionesPage() {
             <h3 className="cotizaciones-page__card-title">
               {cotizacionActual ? 'Cotización generada' : 'Vista previa'}
             </h3>
-            {cotizacionActual && (
-              <button
-                className="cotizaciones-page__nueva-btn"
-                onClick={() => { limpiarCotizacionActual(); clearDraft(); setTabActivo('productos') }}
-              >
-                + Nueva cotización
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* Botón de retorno al hilo — solo cuando viene del buzón y ya hay cotización */}
+              {buzonHiloOrigen && cotizacionActual && (
+                <button
+                  className="cotizaciones-page__buzon-volver-btn"
+                  onClick={handleVolverAlHilo}
+                >
+                  ✉️ Responder a {buzonHiloOrigen.remitente}
+                </button>
+              )}
+              {cotizacionActual && (
+                <button
+                  className="cotizaciones-page__nueva-btn"
+                  onClick={() => {
+                    limpiarCotizacionActual()
+                    clearDraft()
+                    clearBuzonOrigen()
+                    setTabActivo('productos')
+                  }}
+                >
+                  + Nueva cotización
+                </button>
+              )}
+            </div>
           </div>
           <div className="cotizaciones-page__card-body">
             <PdfPreview
@@ -279,6 +331,8 @@ export default function CotizacionesPage() {
               onEnviarEmail={handleEmail}
               onEnviarWhatsapp={handleWhatsapp}
               loadingEnvio={loadingEnvio}
+              buzonHiloOrigen={buzonHiloOrigen}
+              onAdjuntarAHilo={buzonHiloOrigen ? handleAdjuntarAHilo : null}
             />
           </div>
         </div>
@@ -327,10 +381,19 @@ export default function CotizacionesPage() {
               onReenviar={() => setTabActivo('preview')}
               onEditar={handleEditarDesdeHistorial}
               onMarcarEfectiva={handleMarcarEfectiva}
-              onAnular={handleAnular}
             />
           </div>
         </div>
+      )}
+
+      {/* ── Tab: Buzón ── */}
+      {tabActivo === 'buzon' && (
+        <BuzonPanel
+          hiloInicialId={hiloInicialBuzon?.hiloId || null}
+          adjuntoPendiente={adjuntoPendiente}
+          onAdjuntoMontado={() => setAdjuntoPendiente(null)}
+          onGenerarCotizacion={handleGenerarDesdeBuzon}
+        />
       )}
 
       <Toast
@@ -342,4 +405,3 @@ export default function CotizacionesPage() {
     </div>
   )
 }
-
