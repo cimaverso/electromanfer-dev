@@ -34,7 +34,7 @@ function correoAHilo(correo, bandeja) {
 export async function listarHilos(bandeja = 'inbox', filtros = {}) {
   const endpoint = bandeja === 'inbox' ? '/emails/inbox' : '/emails/sent'
   const response = await axiosClient.get(endpoint, {
-    params: { limit: filtros.limit || 20 },
+    params: { limit: filtros.limit || 10 },
   })
   const correos = Array.isArray(response.data) ? response.data : []
   return correos.map((c) => correoAHilo(c, bandeja))
