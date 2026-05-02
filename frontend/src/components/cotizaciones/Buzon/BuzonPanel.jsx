@@ -151,9 +151,9 @@ function MensajeBurbuja({ mensaje }) {
         <span className="buzon-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
 
-      {(enviado && mensaje.cuerpo_html) || (!enviado && mensaje.cuerpo_html && !mensaje.cuerpo) ? (
+      {mensaje.cuerpo_html ? (
         <iframe
-          srcDoc={`<style>body,html{background:transparent!important;margin:0;padding:0}</style>${mensaje.cuerpo_html}`}
+          srcDoc={mensaje.cuerpo_html}
           className="buzon-msg__iframe"
           sandbox="allow-same-origin"
           title="correo"

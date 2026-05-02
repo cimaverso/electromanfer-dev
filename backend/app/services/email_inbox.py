@@ -207,7 +207,7 @@ def get_hilo(message_id: str) -> list[dict]:
                 "asunto": decode_str(msg.get("Subject", "")),
                 "fecha": _parsear_fecha(msg.get("Date", "")),
                 "cuerpo": _limpiar_cuerpo(cuerpo_plain),
-                "cuerpo_html": cuerpo_html,
+                "cuerpo_html": cuerpo_html if not (direccion == "recibido" and msg.get("In-Reply-To", "").strip()) else "",
                 "adjuntos": adjuntos,
                 "message_id": msg.get("Message-ID", "").strip(),
                 "direccion": direccion,
