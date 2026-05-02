@@ -357,6 +357,7 @@
 /* ─── Burbujas de mensaje ──────────────────────────────────────────────────── */
 .buzon-msg {
   max-width: 80%;
+  width: 80%; 
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -398,6 +399,8 @@
 .buzon-msg__cuerpo {
   color: var(--color-text-soft);
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .buzon-msg__adjunto {
@@ -760,14 +763,23 @@
   background: var(--color-danger-soft);
 }
 
-
 .buzon-msg__iframe {
   width: 100%;
   min-height: 300px;
   max-height: 500px;
   border: none;
   border-radius: var(--radius-sm);
-  background: white;
+  background: transparent;
   overflow-y: auto;
 }
+
+.buzon-hilo-item__count {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-3);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  margin-left: var(--space-1);
+}
+
 

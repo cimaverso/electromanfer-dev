@@ -21,16 +21,53 @@ function correoAHilo(correo, bandeja) {
 
   return {
     id: correo.id,
-    leido: correo.leido ?? true,
+    leido: esEnviado ? true : (correo.leido ?? true),
     remitente: nombre || emailAddr,
     email_remitente: emailAddr,
     asunto: correo.asunto || '(Sin asunto)',
     preview: correo.preview || '',
     fecha: correo.fecha,
     cotizacion_consecutivo: cotMatch ? cotMatch[0] : null,
+    mensajes_count: correo.mensajes_count || 1,
+    hilo_message_id: correo.hilo_root_id || correo.message_id || '',
     mensajes: [],
   }
 }
+
+export async function getHilo(hiloMessageId, bandeja = 'inbox') {
+  const response = await axiosClient.get(`/emails/hilo/${encodeURIComponent(hiloMessageId)}`)
+  const mensajes = response.data
+  if (!mensajes || mensajes.length === 0) return null
+
+  const primero = mensajes[0]
+  const esEnviado = bandeja === 'sent'
+  const campoPersona = esEnviado ? primero.destinatario : primero.remitente
+  const nombre = limpiarNombre(campoPersona)
+  const emailAddr = extraerEmail(campoPersona)
+  const cotMatch = primero.asunto?.match(/COT-\d{4}-\d{4}/)
+
+  return {
+    id: hiloMessageId,
+    leido: true,
+    remitente: nombre || emailAddr,
+    email_remitente: emailAddr,
+    asunto: primero.asunto || '(Sin asunto)',
+    fecha: primero.fecha,
+    cotizacion_consecutivo: cotMatch ? cotMatch[0] : null,
+    message_id: hiloMessageId,
+    mensajes: mensajes.map((m) => ({
+      id: m.id,
+      direccion: m.direccion,
+      remitente: limpiarNombre(m.remitente),
+      email: extraerEmail(m.remitente),
+      cuerpo: m.cuerpo || '',
+      cuerpo_html: m.cuerpo_html || '',
+      fecha: m.fecha,
+      adjuntos: m.adjuntos || [],
+    })),
+  }
+}
+
 export async function listarHilos(bandeja = 'inbox', filtros = {}) {
   const endpoint = bandeja === 'inbox' ? '/emails/inbox' : '/emails/sent'
   const response = await axiosClient.get(endpoint, {
@@ -38,41 +75,6 @@ export async function listarHilos(bandeja = 'inbox', filtros = {}) {
   })
   const correos = Array.isArray(response.data) ? response.data : []
   return correos.map((c) => correoAHilo(c, bandeja))
-}
-
-export async function getHilo(hiloId, bandeja = 'inbox') {
-  const response = await axiosClient.get(`/emails/${hiloId}`, {
-    params: { bandeja },
-  })
-  const correo = response.data
-  const esEnviado = bandeja === 'sent'
-  const campoPersona = esEnviado ? correo.destinatario : correo.remitente
-  const nombre = limpiarNombre(campoPersona)
-  const emailAddr = extraerEmail(campoPersona)
-  const cotMatch = correo.asunto?.match(/COT-\d{4}-\d{4}/)
-
-  return {
-    id: correo.id,
-    leido: true,
-    remitente: nombre || emailAddr,
-    email_remitente: emailAddr,
-    asunto: correo.asunto || '(Sin asunto)',
-    preview: correo.preview || '',
-    fecha: correo.fecha,
-    cotizacion_consecutivo: cotMatch ? cotMatch[0] : null,
-    mensajes: [
-      {
-        id: `msg-${correo.id}`,
-        direccion: esEnviado ? 'enviado' : 'recibido',
-        remitente: nombre || emailAddr,
-        email: emailAddr,
-        cuerpo: correo.cuerpo || '',
-        cuerpo_html: correo.cuerpo_html || '',
-        fecha: correo.fecha,
-        adjuntos: correo.adjuntos || [],
-      },
-    ],
-  }
 }
 
 export async function marcarLeido(hiloId) {

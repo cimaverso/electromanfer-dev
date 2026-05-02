@@ -127,6 +127,9 @@ function HiloItem({ hilo, activo, onClick }) {
       {!hilo.leido && <span className="buzon-hilo-item__dot" />}
       <div className="buzon-hilo-item__row">
         <span className="buzon-hilo-item__remitente">{hilo.remitente}</span>
+        {hilo.mensajes_count > 1 && (
+          <span className="buzon-hilo-item__count">{hilo.mensajes_count}</span>
+        )}
         <span className="buzon-hilo-item__fecha">{formatFecha(hilo.fecha)}</span>
       </div>
       <div className="buzon-hilo-item__asunto">{hilo.asunto}</div>
@@ -148,9 +151,9 @@ function MensajeBurbuja({ mensaje }) {
         <span className="buzon-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
 
-      {mensaje.cuerpo_html ? (
+      {(enviado && mensaje.cuerpo_html) || (!enviado && mensaje.cuerpo_html && !mensaje.cuerpo) ? (
         <iframe
-          srcDoc={mensaje.cuerpo_html}
+          srcDoc={`<style>body,html{background:transparent!important;margin:0;padding:0}</style>${mensaje.cuerpo_html}`}
           className="buzon-msg__iframe"
           sandbox="allow-same-origin"
           title="correo"
@@ -421,7 +424,8 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   }, [adjuntoPendiente])
 
   const handleAbrirHilo = (hilo) => {
-    abrirHilo(hilo.id, bandejaActiva)
+    console.log('hilo_message_id:', hilo.hilo_message_id)
+    abrirHilo(hilo.hilo_message_id || hilo.id, bandejaActiva)
   }
   const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion }) => {
     if (blobUrl && nombreArchivo) {
