@@ -105,7 +105,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const todasImagenes = []
       const todosPdfs = []
       items.forEach((item) => {
-        console.log('imagenes_urls del item:', item.imagenes_urls)
+        
         ; (item.imagenes_urls || []).forEach((recurso, i) => {
           const url = typeof recurso === 'string' ? recurso : recurso.url
           const nombre = recurso.nombre || url.split('/').pop()
@@ -133,12 +133,12 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
           }
         })
         const blobUrl = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
-        console.log('blobUrl generado:', blobUrl)
+        
         if (blobUrl) {
           const response = await fetch(blobUrl)
           const blob = await response.blob()
           pdfB64Ref.current = await blobToBase64(blob)
-          console.log('PDF listo, tamaño:', pdfB64Ref.current?.length)
+          
         }
       } catch (e) {
         console.error('Error generando PDF:', e)

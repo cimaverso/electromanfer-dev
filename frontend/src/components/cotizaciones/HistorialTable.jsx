@@ -114,7 +114,7 @@ export default function HistorialTable({
     onFiltrar(limpio)
   }, [])
 
-  console.log('onAnular:', onAnular)
+
 
   return (
     <div className="hist-table">

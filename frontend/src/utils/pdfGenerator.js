@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || ''
-console.log('API_BASE PDFGENERATOR:', API_BASE)
+
 
 function formatCOP(value) {
   return new Intl.NumberFormat('es-CO', {
@@ -31,7 +31,6 @@ function safeAddImage(doc, b64, x, y, w, h) {
 async function cargarImagenBase64(url) {
   if (!url) return null
   if (url.startsWith('data:')) return url
-  console.log('cargarImagenBase64 url:', url)
 
   const urlAbsoluta = url.startsWith('http')
     ? url
@@ -259,10 +258,8 @@ export async function generarPdfCotizacion(
     // Imagen producto — placeholder hasta que backend entregue URLs
     // Imagen producto
     const imgUrl = imagenesPorCodRef[item.cod_ref]
-    console.log('imgUrl para', item.cod_ref, ':', imgUrl)
     if (imgUrl) {
       const imgB64 = await cargarImagenBase64(imgUrl)
-      console.log('imgB64:', imgB64 ? imgB64.substring(0, 50) : 'null')
       if (imgB64) {
         safeAddImage(doc, imgB64, COL.img.x, y + 1, 12, 12)
       } else {

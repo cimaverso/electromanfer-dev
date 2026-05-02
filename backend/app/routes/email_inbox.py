@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido
 
+
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
 @router.get("/inbox")
@@ -30,3 +31,5 @@ def leido(email_id: str):
         return marcar_leido(email_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+

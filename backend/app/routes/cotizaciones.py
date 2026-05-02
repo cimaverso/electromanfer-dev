@@ -94,7 +94,6 @@ def enviar_email(
 
     return {"ok": True, "mensaje": "Correo enviado correctamente"}
 
-
 @router.patch("/{cotizacion_id}/estado")
 def cambiar_estado(
     cotizacion_id: int,

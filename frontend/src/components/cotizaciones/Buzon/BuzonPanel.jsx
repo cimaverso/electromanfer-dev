@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import ModalCotizacionBuzon from './ModalCotizacionBuzon'
 import { useBuzon } from '../../../hooks/useBuzon'
+import axiosClient from '../../../api/axiosClient'
 import './BuzonPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -29,8 +30,6 @@ function formatFecha(iso) {
 }
 
 // ─── Mock de datos mientras el backend no está listo ─────────────────────────
-// Reemplazar con datos reales de useBuzon cuando el backend implemente
-// GET /buzon/hilos y GET /buzon/hilos/:id
 const MOCK_HILOS = [
   {
     id: 'h1',
@@ -189,7 +188,6 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
 
   return (
     <div className="buzon-reply">
-      {/* Adjunto pre-cargado desde Preview */}
       {adjuntoPrevio && (
         <div className="buzon-reply__adjunto-preview">
           <div className="buzon-msg__adjunto-icon">PDF</div>
@@ -384,26 +382,22 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     cerrarHilo,
   } = useBuzon()
 
-  // ── Usar mock mientras el backend no esté listo ──
-  // Cuando el backend implemente los endpoints, eliminar estas líneas
-  // y usar directamente hilosReales / hiloActivoReal
   const [hilosMock, setHilosMock] = useState(MOCK_HILOS)
   const [hiloActivoMock, setHiloActivoMock] = useState(null)
-  const usandoMock = false // Cambiar a false cuando el backend esté listo
+  const usandoMock = false
 
   const hilos = usandoMock ? hilosMock : hilosReales
   const hiloActivo = usandoMock ? hiloActivoMock : hiloActivoReal
-  // ────────────────────────────────────────────────
 
   const [bandejaActiva, setBandejaActiva] = useState('inbox')
   const [modalRedactar, setModalRedactar] = useState(false)
+  const [enviando, setEnviando] = useState(false)
   const mensajesEndRef = useRef(null)
 
   useEffect(() => {
     if (!usandoMock) cargarHilos('inbox')
   }, [])
 
-  // Si se regresa desde Preview con un hilo específico, abrirlo automáticamente
   useEffect(() => {
     if (!hiloInicialId) return
     const hilo = (usandoMock ? hilosMock : hilosReales).find((h) => h.id === hiloInicialId)
@@ -414,9 +408,9 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [hiloActivo?.mensajes?.length])
 
-  // Pre-carga el PDF adjunto cuando se viene desde Preview
   const [adjuntoReply, setAdjuntoReply] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
+
   useEffect(() => {
     if (!adjuntoPendiente) return
     setAdjuntoReply(adjuntoPendiente)
@@ -424,12 +418,14 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   }, [adjuntoPendiente])
 
   const handleAbrirHilo = (hilo) => {
-    console.log('hilo_message_id:', hilo.hilo_message_id)
+    
     abrirHilo(hilo.hilo_message_id || hilo.id, bandejaActiva)
   }
-  const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion }) => {
+
+  // ── Recibe cotización generada desde ModalCotizacionBuzon ─────────────────
+  const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes = [], adjuntosPdfs = [] }) => {
     if (blobUrl && nombreArchivo) {
-      setAdjuntoReply({ blobUrl, nombreArchivo })
+      setAdjuntoReply({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes, adjuntosPdfs })
     }
     setModalCotizacion(false)
   }
@@ -444,7 +440,51 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     }
   }
 
+  // ── Enviar respuesta — con cotización o sin ella ──────────────────────────
   const handleResponder = async (texto) => {
+    // Si hay adjunto con cotización → llamar al endpoint real de enviar-email
+    if (adjuntoReply?.cotizacion?.id) {
+      setEnviando(true)
+      try {
+        // Convertir blobUrl a base64
+        const blob = await fetch(adjuntoReply.blobUrl).then((r) => r.blob())
+        const pdfBase64 = await new Promise((res, rej) => {
+          const reader = new FileReader()
+          reader.onload = () => res(reader.result) // incluye prefijo data:application/pdf;base64,...
+          reader.onerror = rej
+          reader.readAsDataURL(blob)
+        })
+
+        const destinatario = hiloActivo?.email_remitente || ''
+        const asunto = hiloActivo?.asunto
+          ? `Re: ${hiloActivo.asunto}`
+          : `Cotización ${adjuntoReply.cotizacion.consecutivo}`
+
+        await axiosClient.post(
+          `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
+          {
+            destino: destinatario,
+            asunto,
+            cuerpo: texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`,
+            pdf_base64: pdfBase64,
+            adjuntos_imagenes: adjuntoReply.adjuntosImagenes || [],
+            adjuntos_pdfs: adjuntoReply.adjuntosPdfs || [],
+            firma_url: null,
+            in_reply_to: hiloActivo?.hilo_message_id || null,
+          },
+          { timeout: 60000 }
+        )
+
+        setAdjuntoReply(null)
+      } catch (err) {
+        console.error('Error enviando cotización desde buzón:', err)
+      } finally {
+        setEnviando(false)
+      }
+      return
+    }
+
+    // Sin cotización → respuesta simple de texto
     if (usandoMock) {
       const nuevoMsg = {
         id: `m_${Date.now()}`,
@@ -600,29 +640,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               </div>
             </div>
 
-            <div className="buzon-hilo__acciones">
-              {hiloActivo.cotizacion_consecutivo && (
-                <button
-                  className="buzon-btn buzon-btn--cot"
-                  onClick={onGenerarCotizacion}
-                  type="button"
-                >
-                  <IconCotizacion />
-                  Generar cotización
-                </button>
-              )}
-              {!hiloActivo.cotizacion_consecutivo && (
-                <button
-                  className="buzon-btn buzon-btn--cot"
-                  onClick={onGenerarCotizacion}
-                  type="button"
-                >
-                  <IconCotizacion />
-                  Crear cotización para este cliente
-                </button>
-              )}
-            </div>
-
             <div className="buzon-hilo__mensajes">
               {loadingHilo ? (
                 <div className="buzon-lista__empty">Cargando mensajes...</div>
@@ -636,7 +653,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
 
             <BarraRespuesta
               onEnviar={(texto) => { handleResponder(texto); setAdjuntoReply(null) }}
-              loading={loadingEnvio}
+              loading={enviando || loadingEnvio}
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
               onNuevaCotizacion={() => setModalCotizacion(true)}

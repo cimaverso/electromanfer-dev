@@ -33,6 +33,28 @@ async function cargarImagenesParaPdf(items = []) {
   return imagenesPorCodRef
 }
 
+// ─── Helper: carga adjuntos con seleccionada:true por cada producto ───────────
+async function cargarAdjuntosSeleccionados(items = []) {
+  const adjuntosImagenes = []
+  const adjuntosPdfs = []
+  const codRefs = [...new Set(items.map((i) => i.cod_ref))]
+  await Promise.all(
+    codRefs.map(async (cod) => {
+      try {
+        const recursos = await getRecursos(cod)
+        recursos.forEach((r) => {
+          if (!r.seleccionada) return
+          if (r.tipo === 'imagen') adjuntosImagenes.push(r.url)
+          else if (r.tipo === 'pdf') adjuntosPdfs.push(r.url)
+        })
+      } catch {
+        // sin recursos para este cod_ref
+      }
+    })
+  )
+  return { adjuntosImagenes, adjuntosPdfs }
+}
+
 // ─── Modal historial ──────────────────────────────────────────────────────────
 function ModalHistorial({ onSeleccionar, onClose }) {
   const [query, setQuery] = useState('')
@@ -124,7 +146,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
 
   const { crear, editar, verCotizacion, loadingCrear } = useCotizaciones()
 
-  // Buscador de productos — mismo hook que ProductosPage
   const {
     resultados,
     loading: loadingBusqueda,
@@ -138,11 +159,10 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [errorMsg, setErrorMsg] = useState(null)
   const [generandoPdf, setGenerandoPdf] = useState(false)
-  const [tabBuscador, setTabBuscador] = useState('buscar') // 'buscar' | 'seleccionados'
+  const [tabBuscador, setTabBuscador] = useState('buscar')
 
   const hasBuscado = !loadingBusqueda && (resultados.length > 0 || errorBusqueda !== null || query.trim() !== '')
 
-  // Pre-llenar cliente con datos del remitente del hilo
   useEffect(() => {
     if (!hilo?.emailRemitente) return
     if (!clienteDraft?.email && !clienteDraft?.nombre_razon_social) {
@@ -157,13 +177,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
       })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Generar PDF con imágenes (igual que PdfPreview) ──────────────────────
-  const generarConImagenes = async (cotizacion) => {
-    const items = cotizacion.cotizaciones_items || []
-    const imagenesPorCodRef = await cargarImagenesParaPdf(items)
-    return generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
-  }
 
   // ── Crear / editar cotización ─────────────────────────────────────────────
   const handleGenerar = async () => {
@@ -200,18 +213,34 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
       return
     }
 
-    // Generar PDF con imágenes reales
     setGenerandoPdf(true)
     try {
-      const blobUrl = await generarConImagenes(result.data)
+      const items = result.data.cotizaciones_items || []
+
+      // Carga imágenes para el PDF y adjuntos seleccionados en paralelo
+      const [imagenesPorCodRef, { adjuntosImagenes, adjuntosPdfs }] = await Promise.all([
+        cargarImagenesParaPdf(items),
+        cargarAdjuntosSeleccionados(items),
+      ])
+
+      const blobUrl = await generarPdfCotizacion(result.data, [], [], false, imagenesPorCodRef)
+
       onCotizacionGenerada({
         blobUrl,
         nombreArchivo: `${result.data.consecutivo}.pdf`,
         cotizacion: result.data,
+        adjuntosImagenes,
+        adjuntosPdfs,
       })
     } catch {
       // PDF falló pero la cotización se generó — notificar igual
-      onCotizacionGenerada({ blobUrl: null, nombreArchivo: '', cotizacion: result.data })
+      onCotizacionGenerada({
+        blobUrl: null,
+        nombreArchivo: '',
+        cotizacion: result.data,
+        adjuntosImagenes: [],
+        adjuntosPdfs: [],
+      })
     } finally {
       setGenerandoPdf(false)
     }
