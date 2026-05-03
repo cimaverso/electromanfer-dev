@@ -29,7 +29,7 @@ function formatFecha(iso) {
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
 
-// ─── Mock de datos mientras el backend no está listo ─────────────────────────
+// ─── Mock de datos ────────────────────────────────────────────────────────────
 const MOCK_HILOS = [
   {
     id: 'h1',
@@ -172,6 +172,8 @@ function MensajeBurbuja({ mensaje }) {
   )
 }
 
+// ─── BarraRespuesta ───────────────────────────────────────────────────────────
+
 function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion, adjuntoPrevio = null, onQuitarAdjunto }) {
   const [texto, setTexto] = useState('')
   const textareaRef = useRef(null)
@@ -186,22 +188,62 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleEnviar()
   }
 
+  const numImagenes = adjuntoPrevio?.adjuntosImagenes?.length || 0
+  const numFichas   = adjuntoPrevio?.adjuntosPdfs?.length || 0
+
   return (
     <div className="buzon-reply">
       {adjuntoPrevio && (
-        <div className="buzon-reply__adjunto-preview">
-          <div className="buzon-msg__adjunto-icon">PDF</div>
-          <span className="buzon-reply__adjunto-nombre">{adjuntoPrevio.nombreArchivo}</span>
-          <button
-            className="buzon-reply__adjunto-quitar"
-            onClick={onQuitarAdjunto}
-            type="button"
-            title="Quitar adjunto"
-          >
-            ✕
-          </button>
+        <div className="buzon-reply__adjuntos-panel">
+          <div className="buzon-reply__adjunto-fila">
+            <div className="buzon-reply__adjunto-item">
+              <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--pdf">PDF</span>
+              <span className="buzon-reply__adjunto-nombre">{adjuntoPrevio.nombreArchivo}</span>
+            </div>
+            <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar todos los adjuntos">✕</button>
+          </div>
+
+          {numImagenes > 0 && (
+            <div className="buzon-reply__adjunto-grupo">
+              <span className="buzon-reply__adjunto-grupo-label">
+                🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''} de productos
+              </span>
+              <div className="buzon-reply__adjunto-thumbs">
+                {adjuntoPrevio.adjuntosImagenes.map((url, i) => (
+                  <img key={i} src={url} alt={`img-producto-${i + 1}`} className="buzon-reply__thumb"
+                    onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {numFichas > 0 && (
+            <div className="buzon-reply__adjunto-grupo">
+              <span className="buzon-reply__adjunto-grupo-label">
+                📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''} técnica{numFichas !== 1 ? 's' : ''}
+              </span>
+              <div className="buzon-reply__adjunto-fichas">
+                {adjuntoPrevio.adjuntosPdfs.map((url, i) => {
+                  const nombre = url.split('/').pop() || `Ficha ${i + 1}`
+                  return (
+                    <div key={i} className="buzon-reply__ficha-item">
+                      <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
+                      <span className="buzon-reply__ficha-nombre" title={nombre}>{nombre}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {numImagenes === 0 && numFichas === 0 && (
+            <span className="buzon-reply__adjunto-sin-recursos">
+              Sin imágenes ni fichas seleccionadas para este producto
+            </span>
+          )}
         </div>
       )}
+
       <textarea
         ref={textareaRef}
         className="buzon-reply__input"
@@ -211,21 +253,14 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
         onKeyDown={handleKeyDown}
         rows={3}
       />
+
       <div className="buzon-reply__footer">
         <div className="buzon-reply__acciones">
-          <button
-            className="buzon-btn buzon-btn--cot"
-            onClick={onNuevaCotizacion}
-            type="button"
-          >
+          <button className="buzon-btn buzon-btn--cot" onClick={onNuevaCotizacion} type="button">
             <IconCotizacion />
             Generar cotización
           </button>
-          <button
-            className="buzon-btn buzon-btn--ghost"
-            onClick={onAdjuntarCotizacion}
-            type="button"
-          >
+          <button className="buzon-btn buzon-btn--ghost" onClick={onAdjuntarCotizacion} type="button">
             <IconAdjuntar />
             Adjuntar cotización
           </button>
@@ -303,7 +338,19 @@ function IconSync({ spin }) {
   )
 }
 
-// ─── Modal redactar nuevo correo ──────────────────────────────────────────────
+function IconChevron({ collapsed }) {
+  return (
+    <svg
+      width="13" height="13" viewBox="0 0 16 16" fill="none"
+      stroke="currentColor" strokeWidth="1.5"
+      style={{ transition: 'transform 0.25s', transform: collapsed ? 'rotate(90deg)' : 'rotate(-90deg)' }}
+    >
+      <path d="M4 6l4 4 4-4" />
+    </svg>
+  )
+}
+
+// ─── Modal redactar ───────────────────────────────────────────────────────────
 
 function ModalRedactar({ onEnviar, onClose, loading }) {
   const [destinatario, setDestinatario] = useState('')
@@ -323,36 +370,16 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
           <button className="buzon-modal__close" onClick={onClose} type="button">✕</button>
         </div>
         <div className="buzon-modal__body">
-          <input
-            className="buzon-modal__field"
-            placeholder="Para: correo@cliente.com"
-            value={destinatario}
-            onChange={(e) => setDestinatario(e.target.value)}
-          />
-          <input
-            className="buzon-modal__field"
-            placeholder="Asunto"
-            value={asunto}
-            onChange={(e) => setAsunto(e.target.value)}
-          />
-          <textarea
-            className="buzon-modal__body-input"
-            placeholder="Escribe el mensaje..."
-            rows={8}
-            value={cuerpo}
-            onChange={(e) => setCuerpo(e.target.value)}
-          />
+          <input className="buzon-modal__field" placeholder="Para: correo@cliente.com"
+            value={destinatario} onChange={(e) => setDestinatario(e.target.value)} />
+          <input className="buzon-modal__field" placeholder="Asunto"
+            value={asunto} onChange={(e) => setAsunto(e.target.value)} />
+          <textarea className="buzon-modal__body-input" placeholder="Escribe el mensaje..."
+            rows={8} value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} />
         </div>
         <div className="buzon-modal__footer">
-          <button className="buzon-btn buzon-btn--ghost" onClick={onClose} type="button">
-            Cancelar
-          </button>
-          <button
-            className="buzon-btn buzon-btn--primary"
-            onClick={handleEnviar}
-            disabled={loading}
-            type="button"
-          >
+          <button className="buzon-btn buzon-btn--ghost" onClick={onClose} type="button">Cancelar</button>
+          <button className="buzon-btn buzon-btn--primary" onClick={handleEnviar} disabled={loading} type="button">
             {loading ? 'Enviando...' : 'Enviar'}
           </button>
         </div>
@@ -392,6 +419,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   const [bandejaActiva, setBandejaActiva] = useState('inbox')
   const [modalRedactar, setModalRedactar] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [sidebarColapsado, setSidebarColapsado] = useState(false)
   const mensajesEndRef = useRef(null)
 
   useEffect(() => {
@@ -417,12 +445,18 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     onAdjuntoMontado?.()
   }, [adjuntoPendiente])
 
+  // ── Fix selección: acepta hilo_message_id o id como clave ────────────────
+  const hiloActivoKey = hiloActivo?.hilo_message_id || hiloActivo?.id || null
+
+  const hiloEsActivo = (hilo) => {
+    if (!hiloActivoKey) return false
+    return hilo.hilo_message_id === hiloActivoKey || hilo.id === hiloActivoKey
+  }
+
   const handleAbrirHilo = (hilo) => {
-    
     abrirHilo(hilo.hilo_message_id || hilo.id, bandejaActiva)
   }
 
-  // ── Recibe cotización generada desde ModalCotizacionBuzon ─────────────────
   const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes = [], adjuntosPdfs = [] }) => {
     if (blobUrl && nombreArchivo) {
       setAdjuntoReply({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes, adjuntosPdfs })
@@ -440,17 +474,14 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     }
   }
 
-  // ── Enviar respuesta — con cotización o sin ella ──────────────────────────
   const handleResponder = async (texto) => {
-    // Si hay adjunto con cotización → llamar al endpoint real de enviar-email
     if (adjuntoReply?.cotizacion?.id) {
       setEnviando(true)
       try {
-        // Convertir blobUrl a base64
         const blob = await fetch(adjuntoReply.blobUrl).then((r) => r.blob())
         const pdfBase64 = await new Promise((res, rej) => {
           const reader = new FileReader()
-          reader.onload = () => res(reader.result) // incluye prefijo data:application/pdf;base64,...
+          reader.onload = () => res(reader.result)
           reader.onerror = rej
           reader.readAsDataURL(blob)
         })
@@ -484,7 +515,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
       return
     }
 
-    // Sin cotización → respuesta simple de texto
     if (usandoMock) {
       const nuevoMsg = {
         id: `m_${Date.now()}`,
@@ -518,14 +548,31 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     ? hilosMock.filter((h) => !h.leido).length
     : sinLeer
 
+  const gridColumns = sidebarColapsado ? '52px 340px 1fr' : '220px 340px 1fr'
+
   return (
-    <div className="buzon-root">
+    <div
+      className={`buzon-root ${sidebarColapsado ? 'buzon-root--collapsed' : ''}`}
+      style={{ gridTemplateColumns: gridColumns }}
+    >
 
       {/* ── Sidebar ── */}
-      <div className="buzon-sidebar">
+      <div className={`buzon-sidebar ${sidebarColapsado ? 'buzon-sidebar--collapsed' : ''}`}>
+
+        <button
+          className="buzon-sidebar__toggle"
+          onClick={() => setSidebarColapsado((v) => !v)}
+          type="button"
+          title={sidebarColapsado ? 'Expandir panel' : 'Colapsar panel'}
+        >
+          <IconChevron collapsed={sidebarColapsado} />
+        </button>
+
         <div className="buzon-sidebar__cuenta">
           <div className="buzon-sidebar__dot" />
-          <span className="buzon-sidebar__email">ventas@electromanfer.com</span>
+          {!sidebarColapsado && (
+            <span className="buzon-sidebar__email">ventas@electromanfer.com</span>
+          )}
         </div>
 
         <nav className="buzon-sidebar__nav">
@@ -533,11 +580,15 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             className={`buzon-nav-item ${bandejaActiva === 'inbox' ? 'buzon-nav-item--activo' : ''}`}
             onClick={() => handleCambiarBandeja('inbox')}
             type="button"
+            title="Bandeja de entrada"
           >
             <IconBandeja />
-            <span>Bandeja de entrada</span>
-            {sinLeerTotal > 0 && (
+            {!sidebarColapsado && <span>Bandeja de entrada</span>}
+            {!sidebarColapsado && sinLeerTotal > 0 && (
               <span className="buzon-nav-badge">{sinLeerTotal}</span>
+            )}
+            {sidebarColapsado && sinLeerTotal > 0 && (
+              <span className="buzon-nav-badge--dot" />
             )}
           </button>
 
@@ -545,9 +596,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             className={`buzon-nav-item ${bandejaActiva === 'sent' ? 'buzon-nav-item--activo' : ''}`}
             onClick={() => handleCambiarBandeja('sent')}
             type="button"
+            title="Enviados"
           >
             <IconEnviados />
-            <span>Enviados</span>
+            {!sidebarColapsado && <span>Enviados</span>}
           </button>
         </nav>
 
@@ -558,18 +610,20 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             className="buzon-nav-item"
             onClick={() => setModalRedactar(true)}
             type="button"
+            title="Redactar"
           >
             <IconRedactar />
-            <span>Redactar</span>
+            {!sidebarColapsado && <span>Redactar</span>}
           </button>
 
           <button
             className="buzon-nav-item buzon-nav-item--cot"
             onClick={() => setModalCotizacion(true)}
             type="button"
+            title="Nueva cotización"
           >
             <IconCotizacion />
-            <span>Nueva cotización</span>
+            {!sidebarColapsado && <span>Nueva cotización</span>}
           </button>
 
           <button
@@ -577,9 +631,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             onClick={() => !usandoMock && sincronizar()}
             disabled={loadingSync}
             type="button"
+            title="Sincronizar"
           >
             <IconSync spin={loadingSync} />
-            <span>Sincronizar</span>
+            {!sidebarColapsado && <span>Sincronizar</span>}
           </button>
         </div>
       </div>
@@ -612,7 +667,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             <HiloItem
               key={hilo.id}
               hilo={hilo}
-              activo={hiloActivo?.id === hilo.id}
+              activo={hiloEsActivo(hilo)}
               onClick={handleAbrirHilo}
             />
           ))
@@ -623,9 +678,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
       <div className="buzon-hilo">
         {!hiloActivo ? (
           <div className="buzon-hilo__vacio">
-            <div className="buzon-hilo__vacio-icon">
-              <IconBandeja />
-            </div>
+            <div className="buzon-hilo__vacio-icon"><IconBandeja /></div>
             <span>Selecciona un correo para leerlo</span>
           </div>
         ) : (
