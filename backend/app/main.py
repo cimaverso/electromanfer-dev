@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, FileResponse
 import app.models
 import os
 import mimetypes
-from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, email_inbox
+from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, email_inbox, google_auth
 from app.db.base import Base
 from app.core.db import engine
 from app.routes import usuarios
@@ -50,6 +50,7 @@ app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
 app.include_router(firmas.router, prefix="/api")
 app.include_router(email_inbox.router, prefix="/api")
+app.include_router(google_auth.router)
 
 # Servir archivos de media (solo local — en prod lo maneja Nginx)
 @app.get("/media/{file_path:path}", include_in_schema=False)

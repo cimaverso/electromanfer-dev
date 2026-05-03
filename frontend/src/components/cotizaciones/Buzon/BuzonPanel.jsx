@@ -501,7 +501,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             adjuntos_imagenes: adjuntoReply.adjuntosImagenes || [],
             adjuntos_pdfs: adjuntoReply.adjuntosPdfs || [],
             firma_url: null,
-            in_reply_to: hiloActivo?.hilo_message_id || null,
+            in_reply_to: hiloActivo?.last_message_id || hiloActivo?.message_id || null,
           },
           { timeout: 60000 }
         )

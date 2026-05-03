@@ -1,29 +1,46 @@
-import imaplib
-import email
-from email.header import decode_header
+import os
+import json
+import base64
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 from email.utils import parsedate_to_datetime
-from app.core.config import settings
+
+TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
+
+METADATA_HEADERS = ["From", "To", "Subject", "Date", "Message-ID", "In-Reply-To", "References"]
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Autenticación ────────
 
-def decode_str(value):
-    if value is None:
-        return ""
-    decoded = decode_header(value)
-    parts = []
-    for part, enc in decoded:
-        if isinstance(part, bytes):
-            parts.append(part.decode(enc or "utf-8", errors="replace"))
-        else:
-            parts.append(part)
-    return "".join(parts)
+def _get_service():
+    with open(TOKEN_PATH, "r") as f:
+        token_data = json.load(f)
 
-def _parsear_fecha(fecha_raw):
-    try:
-        return parsedate_to_datetime(fecha_raw).isoformat()
-    except Exception:
-        return fecha_raw
+    creds = Credentials(
+        token=token_data["token"],
+        refresh_token=token_data["refresh_token"],
+        token_uri=token_data["token_uri"],
+        client_id=token_data["client_id"],
+        client_secret=token_data["client_secret"],
+        scopes=token_data["scopes"],
+    )
+
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        token_data["token"] = creds.token
+        with open(TOKEN_PATH, "w") as f:
+            json.dump(token_data, f)
+
+    return build("gmail", "v1", credentials=creds)
+
+# ─── Parseo ─────
+
+def _decode_body(part):
+    data = part.get("body", {}).get("data", "")
+    if data:
+        return base64.urlsafe_b64decode(data).decode("utf-8", errors="replace")
+    return ""
 
 def _limpiar_cuerpo(texto: str) -> str:
     if not texto:
@@ -36,193 +53,191 @@ def _limpiar_cuerpo(texto: str) -> str:
             continue
         if 'escribió:' in linea_limpia or 'wrote:' in linea_limpia:
             break
-        if linea_limpia.startswith('El ') and 'escribió' in texto:
+        if linea_limpia.startswith('On ') and ('<' in linea_limpia or 'wrote:' in linea_limpia or 'PM ' in linea_limpia or 'AM ' in linea_limpia):
             break
         limpias.append(linea)
     return '\n'.join(limpias).strip()
 
-def _parsear_partes(msg):
+def _headers_dict(msg):
+    return {h["name"]: h["value"] for h in msg["payload"].get("headers", [])}
+
+def _parsear_completo(msg):
+    """Headers + cuerpo + adjuntos — para vista de hilo."""
+    headers = _headers_dict(msg)
+    label_ids = msg.get("labelIds", [])
+    in_reply_to = headers.get("In-Reply-To", "").strip()
+
     cuerpo_plain = ""
     cuerpo_html = ""
     adjuntos = []
 
-    if msg.is_multipart():
-        for part in msg.walk():
-            ct = part.get_content_type()
-            cd = str(part.get("Content-Disposition", ""))
-            if "attachment" in cd:
-                nombre = decode_str(part.get_filename() or "archivo")
-                contenido = part.get_payload(decode=True)
+    def recorrer_partes(parts):
+        nonlocal cuerpo_plain, cuerpo_html
+        for part in parts:
+            mime = part.get("mimeType", "")
+            filename = part.get("filename", "")
+            if filename and filename != "noname" and "." in filename:
+                size = part.get("body", {}).get("size", 0)
                 adjuntos.append({
-                    "nombre": nombre,
-                    "tipo": ct,
-                    "tamanio": f"{round(len(contenido) / 1024, 1)} KB",
+                    "nombre": filename,
+                    "tipo": mime,
+                    "tamanio": f"{round(size / 1024, 1)} KB",
                 })
-            elif ct == "text/plain" and not cuerpo_plain:
-                cuerpo_plain = part.get_payload(decode=True).decode("utf-8", errors="replace")
-            elif ct == "text/html" and not cuerpo_html:
-                cuerpo_html = part.get_payload(decode=True).decode("utf-8", errors="replace")
+            elif mime == "text/plain" and not cuerpo_plain:
+                cuerpo_plain = _decode_body(part)
+            elif mime == "text/html" and not cuerpo_html:
+                cuerpo_html = _decode_body(part)
+            if "parts" in part:
+                recorrer_partes(part["parts"])
+
+    payload = msg["payload"]
+    if "parts" in payload:
+        recorrer_partes(payload["parts"])
     else:
-        cuerpo_plain = msg.get_payload(decode=True).decode("utf-8", errors="replace")
+        mime = payload.get("mimeType", "")
+        if mime == "text/plain":
+            cuerpo_plain = _decode_body(payload)
+        elif mime == "text/html":
+            cuerpo_html = _decode_body(payload)
 
-    if not cuerpo_html and cuerpo_plain.strip().startswith('<'):
-        cuerpo_html = cuerpo_plain
-        cuerpo_plain = ""
+    es_enviado = "SENT" in label_ids
 
-    return cuerpo_plain, cuerpo_html, adjuntos
-
-def _agrupar_hilos(correos: list, limit: int) -> list:
-    mapa = {c["message_id"]: c for c in correos if c["message_id"]}
-    hilos = {}
-
-    for correo in correos:
-        refs = correo["references"].split() if correo["references"] else []
-        root = None
-        for ref in refs:
-            if ref in mapa:
-                root = refs[0]
-                break
-        if not root and correo["in_reply_to"]:
-            root = correo["in_reply_to"]
-        if not root:
-            root = correo["message_id"]
-        if not root:
-            continue
-
-        if root not in hilos:
-            hilos[root] = {
-                **correo,
-                "mensajes_count": 1,
-                "tiene_no_leido": not correo.get("leido", True),
-                "hilo_root_id": root,
-                "remitente": correo.get("remitente", ""),
-                "destinatario": correo.get("destinatario", ""),
-            }
-        else:
-            hilos[root]["mensajes_count"] += 1
-            if correo["fecha"] > hilos[root]["fecha"]:
-                hilos[root]["preview"] = correo.get("preview", "")
-                hilos[root]["fecha"] = correo["fecha"]
-                if correo.get("direccion") == "recibido":
-                    hilos[root]["remitente"] = correo.get("remitente", "")
-                if correo.get("direccion") == "enviado":
-                    hilos[root]["destinatario"] = correo.get("destinatario", "")
-            if not correo.get("leido", True):
-                hilos[root]["tiene_no_leido"] = True
-
-    for hilo in hilos.values():
-        hilo["leido"] = not hilo.pop("tiene_no_leido", False)
-
-    return sorted(hilos.values(), key=lambda x: x["fecha"], reverse=True)[:limit]
-
-def _fetch_headers_bandeja(conn, bandeja_imap, direccion, n):
-    conn.select(bandeja_imap)
-    _, data = conn.search(None, "ALL")
-    ids = data[0].split()
-    if not ids:
-        return []
-    ids = ids[-n:][::-1]
-
-    correos = []
-    for uid in ids:
-        _, msg_data = conn.fetch(uid, "(BODY.PEEK[HEADER] FLAGS)")
-        raw = msg_data[0][1]
-        flags_str = msg_data[0][0].decode() if isinstance(msg_data[0][0], bytes) else ""
-        msg = email.message_from_bytes(raw)
-        correos.append({
-            "id": uid.decode(),
-            "remitente": decode_str(msg.get("From", "")),
-            "destinatario": decode_str(msg.get("To", "")),
-            "asunto": decode_str(msg.get("Subject", "")),
-            "fecha": _parsear_fecha(msg.get("Date", "")),
-            "leido": "\\Seen" in flags_str if direccion == "recibido" else True,
-            "message_id": msg.get("Message-ID", "").strip(),
-            "in_reply_to": msg.get("In-Reply-To", "").strip(),
-            "references": msg.get("References", "").strip(),
-            "direccion": direccion,
-        })
-    return correos
+    return {
+        "id": msg["id"],
+        "thread_id": msg.get("threadId", ""),
+        "remitente": headers.get("From", ""),
+        "destinatario": headers.get("To", ""),
+        "asunto": headers.get("Subject", ""),
+        "fecha": headers.get("Date", ""),
+        "message_id": headers.get("Message-ID", "").strip(),
+        "in_reply_to": in_reply_to,
+        "leido": "UNREAD" not in label_ids,
+        "direccion": "enviado" if es_enviado else "recibido",
+        "cuerpo": _limpiar_cuerpo(cuerpo_plain),
+        "cuerpo_html": cuerpo_html if es_enviado else "",
+        "adjuntos": adjuntos,
+    }
 
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
+# ─── Endpoints ─────
 
 def get_inbox(limit: int = 10) -> list[dict]:
-    conn = imaplib.IMAP4_SSL("imap.gmail.com")
-    conn.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
-    recibidos = _fetch_headers_bandeja(conn, "inbox", "recibido", 15)
-    enviados = _fetch_headers_bandeja(conn, '"[Gmail]/Enviados"', "enviado", 15)
-    conn.logout()
-    todos = _agrupar_hilos(recibidos + enviados, limit * 3)
-    # Solo mostrar hilos que tienen al menos un mensaje recibido
-    return [h for h in todos if h.get("direccion") == "recibido"][:limit]
+    """Lista hilos de inbox usando threads.list — nativo y rápido."""
+    service = _get_service()
+
+    result = service.users().threads().list(
+        userId="me", labelIds=["INBOX"], maxResults=limit
+    ).execute()
+
+    threads = result.get("threads", [])
+    hilos = []
+
+    for t in threads:
+        # Solo metadata del hilo — el último mensaje define el preview
+        thread = service.users().threads().get(
+            userId="me", id=t["id"], format="metadata",
+            metadataHeaders=METADATA_HEADERS
+        ).execute()
+
+        msgs = thread.get("messages", [])
+        if not msgs:
+            continue
+
+        ultimo = msgs[-1]
+        primero = msgs[0]
+        headers_ultimo = _headers_dict(ultimo)
+        headers_primero = _headers_dict(primero)
+
+        tiene_no_leido = any("UNREAD" in m.get("labelIds", []) for m in msgs)
+        es_enviado = "SENT" in primero.get("labelIds", [])
+
+        hilos.append({
+            "id": t["id"],
+            "thread_id": t["id"],
+            "hilo_root_id": t["id"],
+            "remitente": headers_primero.get("From", "") if not es_enviado else headers_primero.get("To", ""),
+            "destinatario": headers_primero.get("To", ""),
+            "asunto": headers_primero.get("Subject", ""),
+            "fecha": headers_ultimo.get("Date", ""),
+            "message_id": headers_primero.get("Message-ID", "").strip(),
+            "leido": not tiene_no_leido,
+            "mensajes_count": len(msgs),
+            "preview": t.get("snippet", ""),
+            "direccion": "recibido",
+            "cotizacion_consecutivo": None,
+        })
+
+    return hilos
 
 def get_sent(limit: int = 10) -> list[dict]:
-    conn = imaplib.IMAP4_SSL("imap.gmail.com")
-    conn.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
-    enviados = _fetch_headers_bandeja(conn, '"[Gmail]/Enviados"', "enviado", 15)
-    recibidos = _fetch_headers_bandeja(conn, "inbox", "recibido", 15)
-    conn.logout()
-    todos = _agrupar_hilos(enviados + recibidos, limit * 3)
-    # Solo mostrar hilos que tienen al menos un mensaje enviado
-    return [h for h in todos if h.get("direccion") == "enviado"][:limit]
+    """Lista hilos de enviados."""
+    service = _get_service()
 
-def get_hilo(message_id: str) -> list[dict]:
-    conn = imaplib.IMAP4_SSL("imap.gmail.com")
-    conn.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
+    result = service.users().threads().list(
+        userId="me", labelIds=["SENT"], maxResults=limit
+    ).execute()
 
-    def buscar_en_bandeja(bandeja_imap, direccion):
-        conn.select(bandeja_imap)
-        _, data = conn.search(None, "ALL")
-        ids = data[0].split()
-        if not ids:
-            return []
-        ids = ids[-30:]
-        ids_str = b",".join(ids)
+    threads = result.get("threads", [])
+    hilos = []
 
-        _, results = conn.fetch(ids_str, "(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID REFERENCES IN-REPLY-TO)])")
+    for t in threads:
+        thread = service.users().threads().get(
+            userId="me", id=t["id"], format="metadata",
+            metadataHeaders=METADATA_HEADERS
+        ).execute()
 
-        candidatos = []
-        id_index = 0
-        for item in results:
-            if isinstance(item, tuple):
-                msg = email.message_from_bytes(item[1])
-                uid = ids[id_index].decode()
-                mid = msg.get("Message-ID", "").strip()
-                refs = msg.get("References", "").strip()
-                irt = msg.get("In-Reply-To", "").strip()
-                if mid == message_id or message_id in refs or irt == message_id:
-                    candidatos.append(uid)
-                id_index += 1
+        msgs = thread.get("messages", [])
+        if not msgs:
+            continue
 
-        mensajes = []
-        for uid in candidatos:
-            _, msg_data = conn.fetch(uid.encode(), "(RFC822)")
-            raw = msg_data[0][1]
-            msg = email.message_from_bytes(raw)
-            cuerpo_plain, cuerpo_html, adjuntos = _parsear_partes(msg)
-            mensajes.append({
-                "id": uid,
-                "remitente": decode_str(msg.get("From", "")),
-                "destinatario": decode_str(msg.get("To", "")),
-                "asunto": decode_str(msg.get("Subject", "")),
-                "fecha": _parsear_fecha(msg.get("Date", "")),
-                "cuerpo": _limpiar_cuerpo(cuerpo_plain),
-                "cuerpo_html": cuerpo_html if not (direccion == "recibido" and msg.get("In-Reply-To", "").strip()) else "",
-                "adjuntos": adjuntos,
-                "message_id": msg.get("Message-ID", "").strip(),
-                "direccion": direccion,
-            })
-        return mensajes
+        ultimo = msgs[-1]
+        primero = msgs[0]
+        headers_primero = _headers_dict(primero)
+        headers_ultimo = _headers_dict(ultimo)
 
-    recibidos = buscar_en_bandeja("inbox", "recibido")
-    enviados = buscar_en_bandeja('"[Gmail]/Enviados"', "enviado")
-    conn.logout()
-    return sorted(recibidos + enviados, key=lambda x: x["fecha"])
+        hilos.append({
+            "id": t["id"],
+            "thread_id": t["id"],
+            "hilo_root_id": t["id"],
+            "remitente": headers_primero.get("From", ""),
+            "destinatario": headers_primero.get("To", ""),
+            "asunto": headers_primero.get("Subject", ""),
+            "fecha": headers_ultimo.get("Date", ""),
+            "message_id": headers_primero.get("Message-ID", "").strip(),
+            "leido": True,
+            "mensajes_count": len(msgs),
+            "preview": t.get("snippet", ""),
+            "direccion": "enviado",
+            "cotizacion_consecutivo": None,
+        })
 
-def marcar_leido(email_id: str) -> dict:
-    conn = imaplib.IMAP4_SSL("imap.gmail.com")
-    conn.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
-    conn.select("inbox")
-    conn.store(email_id.encode(), '+FLAGS', '\\Seen')
-    conn.logout()
+    return hilos
+
+def get_hilo(thread_id: str) -> list[dict]:
+    service = _get_service()
+    thread = service.users().threads().get(
+        userId="me", id=thread_id, format="full"
+    ).execute()
+
+    mensajes = []
+    msgs = thread.get("messages", [])
+    for i, msg in enumerate(msgs):
+        parsed = _parsear_completo(msg)
+        mensajes.append(parsed)
+
+    def parse_fecha(m):
+        try:
+            return parsedate_to_datetime(m["fecha"])
+        except Exception:
+            return m["fecha"]
+
+    return sorted(mensajes, key=parse_fecha)
+
+def marcar_leido(thread_id: str) -> dict:
+    service = _get_service()
+    service.users().threads().modify(
+        userId="me",
+        id=thread_id,
+        body={"removeLabelIds": ["UNREAD"]}
+    ).execute()
     return {"ok": True}

@@ -116,7 +116,7 @@ def enviar_cotizacion_email(
                 firma_data, _ = resultado
 
         msg = MIMEMultipart('related')
-        msg['From'] = f"{settings.BREVO_SENDER_NAME} <{settings.GMAIL_USER}>"
+        msg['From'] = f"Electromanfer <{settings.GMAIL_USER}>"
         msg['To'] = destino
         message_id = f"<{uuid.uuid4()}@electromanfer.com>"
         msg['Message-ID'] = message_id
@@ -151,7 +151,7 @@ def enviar_cotizacion_email(
         # Imágenes y fichas
         if adjuntos_urls:
             for adj in adjuntos_urls:
-                url = adj.get('url', '')
+                url = adj if isinstance(adj, str) else adj.get('url', '')
                 if url:
                     resultado = _url_a_base64(url)
                     if resultado:

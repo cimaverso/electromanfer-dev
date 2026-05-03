@@ -55,6 +55,7 @@ export async function getHilo(hiloMessageId, bandeja = 'inbox') {
     fecha: primero.fecha,
     cotizacion_consecutivo: cotMatch ? cotMatch[0] : null,
     message_id: hiloMessageId,
+    last_message_id: mensajes[mensajes.length - 1]?.message_id || hiloMessageId, // ← agregar
     mensajes: mensajes.map((m) => ({
       id: m.id,
       direccion: m.direccion,

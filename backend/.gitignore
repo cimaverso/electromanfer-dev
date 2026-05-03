@@ -56,3 +56,6 @@ logs/
 
 # ── Docker (opcional, si lo usas luego) ──────────────────
 *.env.docker
+
+
+gmail_token.json
