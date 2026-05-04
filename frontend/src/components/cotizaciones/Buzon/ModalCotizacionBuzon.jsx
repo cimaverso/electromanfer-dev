@@ -44,8 +44,8 @@ async function cargarAdjuntosSeleccionados(items = []) {
         const recursos = await getRecursos(cod)
         recursos.forEach((r) => {
           if (!r.seleccionada) return
-          if (r.tipo === 'imagen') adjuntosImagenes.push(r.url)
-          else if (r.tipo === 'pdf') adjuntosPdfs.push(r.url)
+          if (r.tipo === 'imagen') adjuntosImagenes.push({ url: r.url, nombre: r.nombre || r.url.split('/').pop() })
+          else if (r.tipo === 'pdf') adjuntosPdfs.push({ url: r.url, nombre: r.nombre || r.url.split('/').pop() })
         })
       } catch {
         // sin recursos para este cod_ref
@@ -85,9 +85,9 @@ function ModalHistorial({ onSeleccionar, onClose }) {
 
   const estadoBadge = (e) => ({
     generada: { label: 'Generada', cls: 'badge--info' },
-    enviada:  { label: 'Enviada',  cls: 'badge--warning' },
+    enviada: { label: 'Enviada', cls: 'badge--warning' },
     efectiva: { label: 'Efectiva', cls: 'badge--success' },
-    anulada:  { label: 'Anulada',  cls: 'badge--danger' },
+    anulada: { label: 'Anulada', cls: 'badge--danger' },
   }[e] || { label: e, cls: '' })
 
   return (
@@ -195,11 +195,11 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
       notas: '',
       observaciones_pdf: '',
       items: selectedProducts.map((p) => ({
-        cod_ref:   p.cod_ref,
-        nom_ref:   p.nom_ref,
-        cod_tip:   p.cod_tip  || null,
-        nom_tip:   p.nom_tip  || null,
-        cantidad:  p.cantidad,
+        cod_ref: p.cod_ref,
+        nom_ref: p.nom_ref,
+        cod_tip: p.cod_tip || null,
+        nom_tip: p.nom_tip || null,
+        cantidad: p.cantidad,
         valor_web: p.valor_web,
       })),
     }

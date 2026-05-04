@@ -1002,3 +1002,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.buzon-reply__adjunto-icon--img-sm {
+  background: rgba(74, 144, 217, 0.15);
+  color: #4a90d9;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+

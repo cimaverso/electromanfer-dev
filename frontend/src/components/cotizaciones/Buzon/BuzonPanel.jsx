@@ -165,8 +165,6 @@ function MensajeBurbuja({ mensaje }) {
         <div className="buzon-msg__adjuntos">
           {mensaje.adjuntos.map((adj, i) => {
             const esImagen = adj.tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombre)
-            const esPDF = adj.tipo === 'application/pdf' || /\.pdf$/i.test(adj.nombre)
-
             return (
               <div key={i} className="buzon-msg__adjunto">
                 <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>
@@ -199,6 +197,7 @@ function MensajeBurbuja({ mensaje }) {
 function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion, adjuntoPrevio = null, onQuitarAdjunto }) {
   const [texto, setTexto] = useState('')
   const textareaRef = useRef(null)
+  const apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000'
 
   const handleEnviar = () => {
     if (!texto.trim() && !adjuntoPrevio) return
@@ -213,10 +212,22 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
   const numImagenes = adjuntoPrevio?.adjuntosImagenes?.length || 0
   const numFichas = adjuntoPrevio?.adjuntosPdfs?.length || 0
 
+  const resolverUrl = (adj) => {
+    const url = typeof adj === 'string' ? adj : adj?.url
+    if (!url) return ''
+    return url.startsWith('http') ? url : `${apiBase}${url}`
+  }
+
+  const resolverNombre = (adj) => {
+    if (typeof adj === 'string') return adj.split('/').pop() || 'archivo'
+    return adj?.nombre || adj?.url?.split('/').pop() || 'archivo'
+  }
+
   return (
     <div className="buzon-reply">
       {adjuntoPrevio && (
         <div className="buzon-reply__adjuntos-panel">
+          {/* PDF cotización */}
           <div className="buzon-reply__adjunto-fila">
             <div className="buzon-reply__adjunto-item">
               <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--pdf">PDF</span>
@@ -225,35 +236,40 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar todos los adjuntos">✕</button>
           </div>
 
+          {/* Imágenes */}
           {numImagenes > 0 && (
             <div className="buzon-reply__adjunto-grupo">
               <span className="buzon-reply__adjunto-grupo-label">
                 🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''} de productos
               </span>
-              <div className="buzon-reply__adjunto-thumbs">
-                {adjuntoPrevio.adjuntosImagenes.map((url, i) => (
-                  <img key={i} src={url} alt={`img-producto-${i + 1}`} className="buzon-reply__thumb"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }} />
+              <div className="buzon-reply__adjunto-fichas">
+                {adjuntoPrevio.adjuntosImagenes.map((adj, i) => (
+                  <div key={i} className="buzon-reply__ficha-item">
+                    <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--img-sm">IMG</span>
+                    <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>
+                      {resolverNombre(adj)}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Fichas técnicas */}
           {numFichas > 0 && (
             <div className="buzon-reply__adjunto-grupo">
               <span className="buzon-reply__adjunto-grupo-label">
                 📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''} técnica{numFichas !== 1 ? 's' : ''}
               </span>
               <div className="buzon-reply__adjunto-fichas">
-                {adjuntoPrevio.adjuntosPdfs.map((url, i) => {
-                  const nombre = url.split('/').pop() || `Ficha ${i + 1}`
-                  return (
-                    <div key={i} className="buzon-reply__ficha-item">
-                      <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
-                      <span className="buzon-reply__ficha-nombre" title={nombre}>{nombre}</span>
-                    </div>
-                  )
-                })}
+                {adjuntoPrevio.adjuntosPdfs.map((adj, i) => (
+                  <div key={i} className="buzon-reply__ficha-item">
+                    <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
+                    <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>
+                      {resolverNombre(adj)}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
