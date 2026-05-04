@@ -62,11 +62,13 @@ export function useBuzon() {
     try {
       const data = await responderHilo(hiloId, payload)
       // Agregar el mensaje nuevo al hilo activo optimistamente
-      setHiloActivo((prev) =>
-        prev
-          ? { ...prev, mensajes: [...(prev.mensajes || []), data.mensaje] }
-          : prev
-      )
+      if (data?.mensaje) {
+        setHiloActivo((prev) =>
+          prev
+            ? { ...prev, mensajes: [...(prev.mensajes || []), data.mensaje] }
+            : prev
+        )
+      }
       return { success: true, data }
     } catch (err) {
       const detail = err.response?.data?.detail

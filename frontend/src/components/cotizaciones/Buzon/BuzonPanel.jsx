@@ -568,7 +568,13 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         mensajes: [...(prev.mensajes || []), nuevoMsg],
       }))
     } else {
-      const result = await responder(hiloActivo.id, { cuerpo: texto })
+      const result = await responder(hiloActivo.id, {
+        thread_id: hiloActivo.id,
+        destino: hiloActivo.email_remitente,
+        asunto: hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)',
+        cuerpo: texto,
+        in_reply_to: hiloActivo.last_message_id || hiloActivo.message_id || null,
+      })
       if (!result.success) console.error(result.error)
     }
   }

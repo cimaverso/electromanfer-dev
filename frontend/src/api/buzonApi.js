@@ -84,7 +84,8 @@ export async function marcarLeido(hiloId) {
 }
 
 export async function responderHilo(hiloId, payload) {
-  return { ok: true }
+  const response = await axiosClient.post('/emails/responder', payload, { timeout: 60000 })
+  return response.data
 }
 
 export async function redactarCorreo(payload) {

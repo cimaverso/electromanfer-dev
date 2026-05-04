@@ -15,3 +15,11 @@ class EnviarEmailSchema(BaseModel):
 class EnviarWhatsappSchema(BaseModel):
     telefono: str
     mensaje: str
+
+
+class ResponderHiloSchema(BaseModel):
+    thread_id: str
+    destino: str
+    asunto: str
+    cuerpo: str
+    in_reply_to: str | None = None

@@ -5,6 +5,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from email.utils import parsedate_to_datetime
+from app.services.email import enviar_cotizacion_email
 
 TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
 
@@ -241,3 +242,14 @@ def marcar_leido(thread_id: str) -> dict:
         body={"removeLabelIds": ["UNREAD"]}
     ).execute()
     return {"ok": True}
+
+def responder_hilo(destino: str, asunto: str, cuerpo: str, in_reply_to: str = None) -> str | None:
+    """Responde un hilo con texto simple usando la plantilla de Electromanfer."""
+    
+    return enviar_cotizacion_email(
+        destino=destino,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        consecutivo="",
+        in_reply_to=in_reply_to,
+    )
