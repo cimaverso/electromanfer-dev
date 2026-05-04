@@ -41,6 +41,12 @@ export function useBuzon() {
     try {
       const data = await getHilo(hiloId, bandeja)
       setHiloActivo(data)
+      // Marcar como leído al abrir
+      marcarLeido(hiloId).catch(() => { })
+      // Actualizar el hilo en la lista como leído
+      setHilos((prev) =>
+        prev.map((h) => h.id === hiloId ? { ...h, leido: true } : h)
+      )
       return data
     } catch {
       setError('No se pudo cargar el hilo.')
@@ -49,7 +55,6 @@ export function useBuzon() {
       setLoadingHilo(false)
     }
   }, [])
-
   // ─── Responder hilo ───────────────────────────────────────────────────────
   const responder = useCallback(async (hiloId, payload) => {
     setLoadingEnvio(true)

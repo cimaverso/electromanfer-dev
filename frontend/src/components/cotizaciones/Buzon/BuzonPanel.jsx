@@ -161,13 +161,35 @@ function MensajeBurbuja({ mensaje }) {
         <div className="buzon-msg__cuerpo">{mensaje.cuerpo}</div>
       )}
 
-      {mensaje.adjuntos?.map((adj, i) => (
-        <div key={i} className="buzon-msg__adjunto">
-          <div className="buzon-msg__adjunto-icon">PDF</div>
-          <span>{adj.nombre}</span>
-          <span className="buzon-msg__adjunto-size">{adj.tamanio}</span>
+      {mensaje.adjuntos?.length > 0 && (
+        <div className="buzon-msg__adjuntos">
+          {mensaje.adjuntos.map((adj, i) => {
+            const esImagen = adj.tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombre)
+            const esPDF = adj.tipo === 'application/pdf' || /\.pdf$/i.test(adj.nombre)
+
+            return (
+              <div key={i} className="buzon-msg__adjunto">
+                <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>
+                  {esImagen ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  )}
+                </span>
+                <span className="buzon-msg__adjunto-nombre">{adj.nombre}</span>
+                <span className="buzon-msg__adjunto-size">{adj.tamanio}</span>
+              </div>
+            )
+          })}
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -189,7 +211,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
   }
 
   const numImagenes = adjuntoPrevio?.adjuntosImagenes?.length || 0
-  const numFichas   = adjuntoPrevio?.adjuntosPdfs?.length || 0
+  const numFichas = adjuntoPrevio?.adjuntosPdfs?.length || 0
 
   return (
     <div className="buzon-reply">

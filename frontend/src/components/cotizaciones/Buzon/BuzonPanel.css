@@ -983,3 +983,22 @@
 }
 
 
+
+.buzon-msg__adjunto-icon--img {
+  background: rgba(74, 144, 217, 0.15);
+  color: #4a90d9;
+}
+
+.buzon-msg__adjunto-icon--pdf {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.buzon-msg__adjunto-nombre {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
