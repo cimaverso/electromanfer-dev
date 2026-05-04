@@ -151,15 +151,21 @@ def enviar_cotizacion_email(
         # Imágenes y fichas
         if adjuntos_urls:
             for adj in adjuntos_urls:
-                url = adj if isinstance(adj, str) else adj.get('url', '')
+                if isinstance(adj, str):
+                    url = adj
+                    nombre_original = url.split('/')[-1]
+                else:
+                    url = adj.get('url', '')
+                    nombre_original = adj.get('nombre', url.split('/')[-1])
+
                 if url:
                     resultado = _url_a_base64(url)
                     if resultado:
-                        data, nombre = resultado
+                        data, _ = resultado
                         part = MIMEBase('application', 'octet-stream')
                         part.set_payload(data)
                         encoders.encode_base64(part)
-                        part.add_header('Content-Disposition', f'attachment; filename="{nombre}"')
+                        part.add_header('Content-Disposition', f'attachment; filename="{nombre_original}"')
                         msg.attach(part)
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
