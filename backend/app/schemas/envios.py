@@ -23,3 +23,11 @@ class ResponderHiloSchema(BaseModel):
     asunto: str
     cuerpo: str
     in_reply_to: str | None = None
+
+class ResponderConAdjuntosSchema(BaseModel):
+    thread_id: str
+    destino: str
+    asunto: str
+    cuerpo: str
+    in_reply_to: Optional[str] = None
+    archivos: Optional[list] = None  # [{ nombre, base64 }]

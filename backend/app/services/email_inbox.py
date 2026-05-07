@@ -253,3 +253,24 @@ def responder_hilo(destino: str, asunto: str, cuerpo: str, in_reply_to: str = No
         consecutivo="",
         in_reply_to=in_reply_to,
     )
+
+
+def responder_con_adjuntos(destino: str, asunto: str, cuerpo: str, archivos: list = None, in_reply_to: str = None) -> str | None:
+    """Responde un hilo con texto y archivos locales adjuntos."""
+
+    adjuntos_urls = []
+    if archivos:
+        for archivo in archivos:
+            adjuntos_urls.append({
+                'nombre': archivo.get('nombre', 'archivo'),
+                'base64': archivo.get('base64', ''),
+            })
+
+    return enviar_cotizacion_email(
+        destino=destino,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        consecutivo="",
+        in_reply_to=in_reply_to,
+        adjuntos_urls=adjuntos_urls,
+    )

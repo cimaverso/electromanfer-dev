@@ -6,6 +6,7 @@ import {
   responderHilo,
   redactarCorreo,
   sincronizarBuzon,
+  responderConAdjuntos as responderConAdjuntosApi,
 } from '../api/buzonApi'
 
 export function useBuzon() {
@@ -126,6 +127,23 @@ export function useBuzon() {
   // ─── Sin leer (derivado) ──────────────────────────────────────────────────
   const sinLeer = hilos.filter((h) => !h.leido).length
 
+  // ─── Responder con adjuntos locales ──────────────────────────────────────────
+  const enviarConAdjuntos = useCallback(async (payload) => {
+    setLoadingEnvio(true)
+    setError(null)
+    try {
+      const data = await responderConAdjuntosApi(payload)
+      return { success: true, data }
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      const msg = typeof detail === 'string' ? detail : 'Error al enviar.'
+      setError(msg)
+      return { success: false, error: msg }
+    } finally {
+      setLoadingEnvio(false)
+    }
+  }, [])
+
   return {
     hilos,
     hiloActivo,
@@ -142,5 +160,6 @@ export function useBuzon() {
     redactar,
     sincronizar,
     cerrarHilo,
+    enviarConAdjuntos,
   }
 }

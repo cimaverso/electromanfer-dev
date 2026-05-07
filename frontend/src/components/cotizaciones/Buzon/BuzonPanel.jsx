@@ -494,6 +494,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     redactar,
     sincronizar,
     cerrarHilo,
+    enviarConAdjuntos,
   } = useBuzon()
 
   const [hilosMock, setHilosMock] = useState(MOCK_HILOS)
@@ -562,6 +563,39 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   }
 
   const handleResponder = async (texto) => {
+
+    // Si hay archivos locales adjuntos
+    if (adjuntoReply?.archivosLocales?.length > 0) {
+      setEnviando(true)
+      try {
+        const archivosB64 = await Promise.all(
+          adjuntoReply.archivosLocales.map(async (adj) => {
+            const b64 = await new Promise((res, rej) => {
+              const reader = new FileReader()
+              reader.onload = () => res(reader.result)
+              reader.onerror = rej
+              reader.readAsDataURL(adj.archivo)
+            })
+            return { nombre: adj.nombreArchivo, base64: b64 }
+          })
+        )
+        await enviarConAdjuntos({
+          thread_id: hiloActivo.id,
+          destino: hiloActivo.email_remitente,
+          asunto: hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)',
+          cuerpo: texto.trim() || 'Adjuntamos los archivos solicitados.',
+          in_reply_to: hiloActivo.last_message_id || hiloActivo.message_id || null,
+          archivos: archivosB64,
+        })
+        setAdjuntoReply(null)
+      } catch (err) {
+        console.error('Error enviando archivos locales:', err)
+      } finally {
+        setEnviando(false)
+      }
+      return
+    }
+    
     if (adjuntoReply?.cotizacion?.id) {
       setEnviando(true)
       try {

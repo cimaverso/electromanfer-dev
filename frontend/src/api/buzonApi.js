@@ -95,6 +95,11 @@ export async function redactarCorreo(payload) {
   return response.data
 }
 
+export async function responderConAdjuntos(payload) {
+  const response = await axiosClient.post('/emails/responder-con-adjuntos', payload, { timeout: 60000 })
+  return response.data
+}
+
 export async function sincronizarBuzon() {
   return { ok: true }
 }

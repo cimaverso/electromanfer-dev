@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
-from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo
+from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos
 from app.core.security import require_auth
 from app.schemas.auth import TokenData
-from app.schemas.envios import ResponderHiloSchema
+from app.schemas.envios import ResponderHiloSchema, ResponderConAdjuntosSchema
 
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
@@ -43,6 +43,22 @@ def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
             destino=data.destino,
             asunto=data.asunto,
             cuerpo=data.cuerpo,
+            in_reply_to=data.in_reply_to,
+        )
+        if not message_id:
+            raise HTTPException(status_code=500, detail="Error al enviar")
+        return {"ok": True, "message_id": message_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/responder-con-adjuntos")
+def responder_adjuntos(data: ResponderConAdjuntosSchema, _: TokenData = Depends(require_auth)):
+    try:
+        message_id = responder_con_adjuntos(
+            destino=data.destino,
+            asunto=data.asunto,
+            cuerpo=data.cuerpo,
+            archivos=data.archivos,
             in_reply_to=data.in_reply_to,
         )
         if not message_id:

@@ -154,19 +154,31 @@ def enviar_cotizacion_email(
                 if isinstance(adj, str):
                     url = adj
                     nombre_original = url.split('/')[-1]
-                else:
-                    url = adj.get('url', '')
-                    nombre_original = adj.get('nombre', url.split('/')[-1])
-
-                if url:
                     resultado = _url_a_base64(url)
-                    if resultado:
+                    if not resultado:
+                        continue
+                    data, _ = resultado
+                else:
+                    nombre_original = adj.get('nombre', 'archivo')
+                    b64 = adj.get('base64', '')
+                    url = adj.get('url', '')
+
+                    if b64:
+                        raw = b64.split(',')[1] if ',' in b64 else b64
+                        data = base64.b64decode(raw)
+                    elif url:
+                        resultado = _url_a_base64(url)
+                        if not resultado:
+                            continue
                         data, _ = resultado
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(data)
-                        encoders.encode_base64(part)
-                        part.add_header('Content-Disposition', f'attachment; filename="{nombre_original}"')
-                        msg.attach(part)
+                    else:
+                        continue
+
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(data)
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename="{nombre_original}"')
+                msg.attach(part)
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
