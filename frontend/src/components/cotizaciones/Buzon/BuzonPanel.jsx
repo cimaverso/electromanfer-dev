@@ -197,6 +197,7 @@ function MensajeBurbuja({ mensaje }) {
 function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion, adjuntoPrevio = null, onQuitarAdjunto }) {
   const [texto, setTexto] = useState('')
   const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
   const apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000'
 
   const handleEnviar = () => {
@@ -298,10 +299,23 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             <IconCotizacion />
             Generar cotización
           </button>
-          <button className="buzon-btn buzon-btn--ghost" onClick={onAdjuntarCotizacion} type="button">
+          <button className="buzon-btn buzon-btn--ghost" onClick={() => fileInputRef.current?.click()} type="button">
             <IconAdjuntar />
-            Adjuntar cotización
+            Adjuntar archivo
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const archivo = e.target.files?.[0]
+              if (!archivo) return
+              const blobUrl = URL.createObjectURL(archivo)
+              onAdjuntarCotizacion({ blobUrl, nombreArchivo: archivo.name, esLocal: true, archivo })
+              e.target.value = ''
+            }}
+          />
         </div>
         <div className="buzon-reply__enviar">
           <span className="buzon-reply__hint">Ctrl + Enter para enviar</span>
@@ -754,7 +768,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
               onNuevaCotizacion={() => setModalCotizacion(true)}
-              onAdjuntarCotizacion={() => { }}
+              onAdjuntarCotizacion={(adjunto) => setAdjuntoReply(adjunto)}
             />
           </>
         )}
