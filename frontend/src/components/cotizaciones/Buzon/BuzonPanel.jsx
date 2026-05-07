@@ -226,16 +226,22 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
 
   return (
     <div className="buzon-reply">
-      {adjuntoPrevio && (
+      {adjuntoPrevio && (adjuntoPrevio.nombreArchivo || adjuntoPrevio.archivosLocales?.length > 0) && (
         <div className="buzon-reply__adjuntos-panel">
           {/* PDF cotización */}
-          <div className="buzon-reply__adjunto-fila">
-            <div className="buzon-reply__adjunto-item">
-              <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--pdf">PDF</span>
-              <span className="buzon-reply__adjunto-nombre">{adjuntoPrevio.nombreArchivo}</span>
+          {adjuntoPrevio.nombreArchivo ? (
+            <div className="buzon-reply__adjunto-fila">
+              <div className="buzon-reply__ficha-item">
+                <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--pdf">PDF</span>
+                <span className="buzon-reply__ficha-nombre">{adjuntoPrevio.nombreArchivo}</span>
+              </div>
+              <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar">✕</button>
             </div>
-            <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar todos los adjuntos">✕</button>
-          </div>
+          ) : (
+            <div className="buzon-reply__adjunto-fila">
+              <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar">✕</button>
+            </div>
+          )}
 
           {/* Imágenes */}
           {numImagenes > 0 && (
@@ -275,7 +281,30 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             </div>
           )}
 
-          {numImagenes === 0 && numFichas === 0 && (
+          {adjuntoPrevio?.archivosLocales?.length > 0 && (
+            <div className="buzon-reply__adjunto-grupo">
+              <span className="buzon-reply__adjunto-grupo-label">
+                📎 {adjuntoPrevio.archivosLocales.length} archivo{adjuntoPrevio.archivosLocales.length !== 1 ? 's' : ''} adjunto{adjuntoPrevio.archivosLocales.length !== 1 ? 's' : ''}
+              </span>
+              <div className="buzon-reply__adjunto-fichas">
+                {adjuntoPrevio.archivosLocales.map((adj, i) => {
+                  const esImagen = /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombreArchivo)
+                  return (
+                    <div key={i} className="buzon-reply__ficha-item">
+                      <span className={`buzon-reply__adjunto-icon ${esImagen ? 'buzon-reply__adjunto-icon--img-sm' : 'buzon-reply__adjunto-icon--sm'}`}>
+                        {esImagen ? 'IMG' : 'PDF'}
+                      </span>
+                      <span className="buzon-reply__ficha-nombre" title={adj.nombreArchivo}>
+                        {adj.nombreArchivo}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {numImagenes === 0 && numFichas === 0 && !adjuntoPrevio?.archivosLocales?.length && (
             <span className="buzon-reply__adjunto-sin-recursos">
               Sin imágenes ni fichas seleccionadas para este producto
             </span>
@@ -307,12 +336,18 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             ref={fileInputRef}
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
+            multiple  // ← agregar
             style={{ display: 'none' }}
             onChange={(e) => {
-              const archivo = e.target.files?.[0]
-              if (!archivo) return
-              const blobUrl = URL.createObjectURL(archivo)
-              onAdjuntarCotizacion({ blobUrl, nombreArchivo: archivo.name, esLocal: true, archivo })
+              const archivos = Array.from(e.target.files || [])
+              if (!archivos.length) return
+              const adjuntos = archivos.map((archivo) => ({
+                blobUrl: URL.createObjectURL(archivo),
+                nombreArchivo: archivo.name,
+                esLocal: true,
+                archivo,
+              }))
+              onAdjuntarCotizacion(adjuntos)
               e.target.value = ''
             }}
           />
@@ -768,7 +803,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
               onNuevaCotizacion={() => setModalCotizacion(true)}
-              onAdjuntarCotizacion={(adjunto) => setAdjuntoReply(adjunto)}
+              onAdjuntarCotizacion={(adjuntos) => {
+                const lista = Array.isArray(adjuntos) ? adjuntos : [adjuntos]
+                setAdjuntoReply({ archivosLocales: lista })
+              }}
             />
           </>
         )}
