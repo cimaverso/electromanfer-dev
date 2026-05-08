@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     EXTERNAL_API_CLIENTES: str
     EXTERNAL_API_KEY: str
     GMAIL_USER: str = ""
-    GMAIL_APP_PASSWORD: str = ""
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"

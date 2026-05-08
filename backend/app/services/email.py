@@ -1,9 +1,12 @@
-import smtplib
 import base64
 import logging
 import httpx
 import uuid
 import os
+import json
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -11,6 +14,25 @@ from email import encoders
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
+
+def _get_gmail_service():
+    with open(TOKEN_PATH, "r") as f:
+        token_data = json.load(f)
+    creds = Credentials(
+        token=token_data["token"],
+        refresh_token=token_data["refresh_token"],
+        token_uri=token_data["token_uri"],
+        client_id=token_data["client_id"],
+        client_secret=token_data["client_secret"],
+        scopes=token_data["scopes"],
+    )
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        token_data["token"] = creds.token
+        with open(TOKEN_PATH, "w") as f:
+            json.dump(token_data, f)
+    return build("gmail", "v1", credentials=creds)
 
 
 def _url_a_base64(url: str):
@@ -137,8 +159,8 @@ def enviar_cotizacion_email(
         msg['Subject'] = asunto
 
         if in_reply_to:
-          msg['In-Reply-To'] = in_reply_to
-          msg['References'] = in_reply_to
+            msg['In-Reply-To'] = in_reply_to
+            msg['References'] = in_reply_to
 
         html_content = _construir_html(cuerpo, consecutivo, firma_b64=firma_b64_html)
         msg_alt = MIMEMultipart('alternative')
@@ -195,9 +217,27 @@ def enviar_cotizacion_email(
                 part.add_header('Content-Disposition', f'attachment; filename="{nombre_original}"')
                 msg.attach(part)
 
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
-            smtp.sendmail(settings.GMAIL_USER, destino, msg.as_string())
+        # Enviar via Gmail API (OAuth)
+        raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+        body = {"raw": raw_message}
+
+        service = _get_gmail_service()
+
+        if in_reply_to:
+            try:
+                results = service.users().messages().list(
+                    userId="me",
+                    q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}"
+                ).execute()
+                msgs = results.get("messages", [])
+                if msgs:
+                    body["threadId"] = msgs[0]["threadId"]
+            except Exception as e:
+                logger.warning(f"No se pudo encontrar threadId: {e}")
+
+        service.users().messages().send(
+            userId="me", body=body
+        ).execute()
 
         return message_id
 
