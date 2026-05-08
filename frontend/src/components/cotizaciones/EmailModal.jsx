@@ -205,10 +205,10 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       formData.append('pdf_cotizacion', blob, `${cotizacion.consecutivo}.pdf`)
     }
 
-    const imagenesUrls = imagenesAdj.map(a => a.url).filter(Boolean)
+    const imagenesUrls = imagenesAdj.map(a => ({ url: a.url, nombre: a.nombre })).filter(a => a.url)
     if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
 
-    const fichasUrls = pdfsAdj.map(a => a.url).filter(Boolean)
+    const fichasUrls = pdfsAdj.map(a => ({ url: a.url, nombre: a.nombre })).filter(a => a.url)
     if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
 
     onEnviar(cotizacion.id, formData)

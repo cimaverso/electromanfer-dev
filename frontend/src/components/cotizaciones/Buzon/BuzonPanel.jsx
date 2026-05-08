@@ -528,11 +528,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
 
         // Imágenes de productos — llegan como { url, nombre }
-        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => a.url || a).filter(Boolean)
+        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
         if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
 
-        // Fichas técnicas PDF — llegan como { url, nombre }
-        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => a.url || a).filter(Boolean)
+        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
         if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
 
         await axiosClient.post(

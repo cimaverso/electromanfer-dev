@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from typing import Optional
+import json
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
 from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema
@@ -65,8 +66,7 @@ async def enviar_email(
     db: Session = Depends(get_db),
     token: TokenData = Depends(require_auth)
 ):
-    import json
-
+    
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
@@ -78,10 +78,19 @@ async def enviar_email(
     imagenes_urls = json.loads(adjuntos_imagenes_urls) if adjuntos_imagenes_urls else []
     fichas_urls = json.loads(adjuntos_pdfs_urls) if adjuntos_pdfs_urls else []
 
-    # Combinar en lista de adjuntos — el servicio descarga por URL
+    # Combinar en lista de adjuntos — soporta string o {url, nombre}
     adjuntos_urls = []
-    adjuntos_urls.extend([{'url': u, 'nombre': u.split('/')[-1]} for u in imagenes_urls])
-    adjuntos_urls.extend([{'url': u, 'nombre': u.split('/')[-1]} for u in fichas_urls])
+    for u in imagenes_urls:
+        if isinstance(u, dict):
+            adjuntos_urls.append({'url': u.get('url', ''), 'nombre': u.get('nombre', u.get('url', '').split('/')[-1])})
+        else:
+            adjuntos_urls.append({'url': u, 'nombre': u.split('/')[-1]})
+
+    for u in fichas_urls:
+        if isinstance(u, dict):
+            adjuntos_urls.append({'url': u.get('url', ''), 'nombre': u.get('nombre', u.get('url', '').split('/')[-1])})
+        else:
+            adjuntos_urls.append({'url': u, 'nombre': u.split('/')[-1]})
 
     enviado = enviar_cotizacion_email(
         destino=destino,
