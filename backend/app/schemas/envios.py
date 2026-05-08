@@ -23,6 +23,7 @@ class ResponderHiloSchema(BaseModel):
     asunto: str
     cuerpo: str
     in_reply_to: str | None = None
+    firma_url: Optional[str] = None
 
 class ResponderConAdjuntosSchema(BaseModel):
     thread_id: str
@@ -30,4 +31,5 @@ class ResponderConAdjuntosSchema(BaseModel):
     asunto: str
     cuerpo: str
     in_reply_to: Optional[str] = None
-    archivos: Optional[list] = None  # [{ nombre, base64 }]
+    archivos: Optional[list] = None
+    firma_url: Optional[str] = None

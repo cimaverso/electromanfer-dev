@@ -44,6 +44,7 @@ def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
             asunto=data.asunto,
             cuerpo=data.cuerpo,
             in_reply_to=data.in_reply_to,
+            firma_url=data.firma_url,
         )
         if not message_id:
             raise HTTPException(status_code=500, detail="Error al enviar")
@@ -60,6 +61,7 @@ def responder_adjuntos(data: ResponderConAdjuntosSchema, _: TokenData = Depends(
             cuerpo=data.cuerpo,
             archivos=data.archivos,
             in_reply_to=data.in_reply_to,
+            firma_url=data.firma_url,
         )
         if not message_id:
             raise HTTPException(status_code=500, detail="Error al enviar")
