@@ -7,7 +7,6 @@ import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email.mime.image import MIMEImage
 from email import encoders
 from app.core.config import settings
 
@@ -38,10 +37,10 @@ def _url_a_base64(url: str):
         logger.error(f"Error descargando {url}: {e}")
     return None
 
-def _construir_html(cuerpo: str, consecutivo: str, con_firma: bool = False) -> str:
+def _construir_html(cuerpo: str, consecutivo: str, firma_b64: str = None) -> str:
     cuerpo_html = cuerpo.replace('\n', '<br>')
     logo_url = settings.LOGO_URL
-    firma_tag = '<img src="cid:firma_image" style="max-width:380px;margin-top:24px;" />' if con_firma else ''
+    firma_tag = f'<img src="{firma_b64}" style="max-width:380px;margin-top:24px;" />' if firma_b64 else ''
 
     return f"""
     <!DOCTYPE html>
@@ -123,11 +122,12 @@ def enviar_cotizacion_email(
 ) -> None:
     try:
         # Descargar firma
-        firma_data = None
+        firma_b64_html = None
         if firma_url:
             resultado = _url_a_base64(firma_url)
             if resultado:
                 firma_data, _ = resultado
+                firma_b64_html = f"data:image/png;base64,{base64.b64encode(firma_data).decode()}"
 
         msg = MIMEMultipart('related')
         msg['From'] = f"Electromanfer <{settings.GMAIL_USER}>"
@@ -140,17 +140,10 @@ def enviar_cotizacion_email(
           msg['In-Reply-To'] = in_reply_to
           msg['References'] = in_reply_to
 
-        html_content = _construir_html(cuerpo, consecutivo, con_firma=firma_data is not None)
+        html_content = _construir_html(cuerpo, consecutivo, firma_b64=firma_b64_html)
         msg_alt = MIMEMultipart('alternative')
         msg.attach(msg_alt)
         msg_alt.attach(MIMEText(html_content, 'html'))
-
-        # Adjuntar firma como inline
-        if firma_data:
-            img = MIMEImage(firma_data)
-            img.add_header('Content-ID', '<firma_image>')
-            img.add_header('Content-Disposition', 'inline')
-            msg.attach(img)
 
         # PDF cotización — acepta bytes directos o base64 legacy
         pdf_data_final = None
