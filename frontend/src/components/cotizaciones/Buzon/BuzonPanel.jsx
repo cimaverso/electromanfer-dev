@@ -538,7 +538,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         await axiosClient.post(
           `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
           formData,
-          { timeout: 120000, headers: { 'Content-Type': 'multipart/form-data' } }
+          { timeout: 120000 }
         )
         setAdjuntoReply(null)
       } catch (err) {
@@ -647,7 +647,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               <div ref={mensajesEndRef} />
             </div>
             <BarraRespuesta
-              onEnviar={(texto, firma) => { handleResponder(texto, firma); setAdjuntoReply(null) }}
+              onEnviar={handleResponder}
               loading={enviando || loadingEnvio}
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}

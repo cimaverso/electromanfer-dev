@@ -98,7 +98,6 @@ export async function redactarCorreo(payload) {
 export async function responderConAdjuntos(formData) {
   const response = await axiosClient.post('/emails/responder-con-adjuntos', formData, {
     timeout: 120000,
-    headers: { 'Content-Type': 'multipart/form-data' },
   })
   return response.data
 }

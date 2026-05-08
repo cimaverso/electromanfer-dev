@@ -105,7 +105,7 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
       const todasImagenes = []
       const todosPdfs = []
       items.forEach((item) => {
-        
+
         ; (item.imagenes_urls || []).forEach((recurso, i) => {
           const url = typeof recurso === 'string' ? recurso : recurso.url
           const nombre = recurso.nombre || url.split('/').pop()
@@ -133,12 +133,12 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
           }
         })
         const blobUrl = await generarPdfCotizacion(cotizacion, [], [], false, imagenesPorCodRef)
-        
+
         if (blobUrl) {
           const response = await fetch(blobUrl)
           const blob = await response.blob()
           pdfB64Ref.current = await blobToBase64(blob)
-          
+
         }
       } catch (e) {
         console.error('Error generando PDF:', e)
@@ -181,25 +181,37 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     setFn((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
-  const handleEnviar = () => {
+  const handleEnviar = async () => {
     if (!destino.trim()) return
+
     const imagenesAdj = imagenes
       .filter((i) => adjImgs.includes(i.id))
-      .map((i) => ({ nombre: i.nombre, url: i.url, base64: i.url.startsWith('data:') ? i.url : null }))
+      .map((i) => ({ nombre: i.nombre, url: i.url }))
     const pdfsAdj = pdfs
       .filter((p) => adjPdfs.includes(p.id))
       .map((p) => ({ nombre: p.nombre, url: p.url }))
 
-    onEnviar(cotizacion.id, {
-      destino: destino.trim(),
-      asunto,
-      cuerpo,
-      firma_url: firmaSeleccionada?.url || null,
-      firma_id: firmaSeleccionada?.id || null,
-      pdf_base64: pdfB64Ref.current,
-      adjuntos_imagenes: imagenesAdj,
-      adjuntos_pdfs: pdfsAdj,
-    })
+    const formData = new FormData()
+    formData.append('destino', destino.trim())
+    formData.append('asunto', asunto)
+    formData.append('cuerpo', cuerpo)
+    if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
+
+    // PDF como blob directo
+    if (pdfB64Ref.current) {
+      const base64 = pdfB64Ref.current.split(',')[1] || pdfB64Ref.current
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      formData.append('pdf_cotizacion', blob, `${cotizacion.consecutivo}.pdf`)
+    }
+
+    const imagenesUrls = imagenesAdj.map(a => a.url).filter(Boolean)
+    if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
+
+    const fichasUrls = pdfsAdj.map(a => a.url).filter(Boolean)
+    if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
+
+    onEnviar(cotizacion.id, formData)
   }
 
   const cargando = firmaLoading || recursosLoading

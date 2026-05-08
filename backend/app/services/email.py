@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 
 def _url_a_base64(url: str):
     try:
-        # Intentar leer del disco primero (evita deadlock en uvicorn single worker)
+        # URLs relativas — agregar base
+        if url.startswith('/'):
+            url = f"{settings.API_BASE_URL}{url}"
+
+        # Intentar leer del disco si es URL local
         if settings.API_BASE_URL and url.startswith(settings.API_BASE_URL):
             ruta_relativa = url.replace(settings.API_BASE_URL, '').lstrip('/')
             ruta_sin_media = ruta_relativa.removeprefix('media/')
@@ -26,7 +30,7 @@ def _url_a_base64(url: str):
                     return f.read(), os.path.basename(ruta_disco)
             logger.warning(f"No encontrado en disco: {ruta_disco}, intentando HTTP...")
 
-        # Fallback HTTP — URLs externas y VPS
+        # Fallback HTTP
         response = httpx.get(url, timeout=10)
         if response.status_code == 200:
             return response.content, url.split('/')[-1]

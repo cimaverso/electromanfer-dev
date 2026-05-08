@@ -26,10 +26,9 @@ export async function cambiarEstadoCotizacion(id, estado) {
   return response.data
 }
 
-export async function enviarEmail(id, payload) {
-  const response = await axiosClient.post(`/cotizaciones/${id}/enviar-email`, payload, {
-    timeout: 60000
+export async function enviarEmail(id, formData) {
+  const response = await axiosClient.post(`/cotizaciones/${id}/enviar-email`, formData, {
+    timeout: 120000,
   })
   return response.data
 }
-

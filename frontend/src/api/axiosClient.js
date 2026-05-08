@@ -4,11 +4,9 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
 
 const axiosClient = axios.create({
   baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
 })
 
-// ─── Refresh token ────────────────────────────────────────────────────────────
 async function refreshToken() {
   try {
     const response = await axios.post(
@@ -24,15 +22,17 @@ async function refreshToken() {
   }
 }
 
-// ─── Interceptor de REQUEST ───────────────────────────────────────────────────
 axiosClient.interceptors.request.use(
   async (config) => {
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json'
+    }
+
     const token = localStorage.getItem('access_token')
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]))
         const faltan = payload.exp * 1000 - Date.now()
-
         if (faltan < 5 * 60 * 1000 && faltan > 0) {
           const newToken = await refreshToken()
           if (newToken) {
@@ -48,7 +48,6 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// ─── Interceptor de RESPONSE ──────────────────────────────────────────────────
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
