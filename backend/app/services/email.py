@@ -10,7 +10,6 @@ from googleapiclient.discovery import build
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email.mime.image import MIMEImage
 from email import encoders
 from app.core.config import settings
 
@@ -57,10 +56,10 @@ def _url_a_base64(url: str):
         logger.error(f"Error descargando {url}: {e}")
     return None
 
-def _construir_html(cuerpo: str, consecutivo: str, firma_b64: str = None) -> str:
+def _construir_html(cuerpo: str, consecutivo: str, firma_url: str = None) -> str:
     cuerpo_html = cuerpo.replace('\n', '<br>')
     logo_url = settings.LOGO_URL
-    firma_tag = f'<img src="{firma_b64}" style="max-width:380px;margin-top:24px;" />' if firma_b64 else ''
+    firma_tag = f'<img src="{firma_url}" style="max-width:380px;margin-top:24px;" />' if firma_url else ''
 
     return f"""
     <!DOCTYPE html>
@@ -141,14 +140,13 @@ def enviar_cotizacion_email(
     in_reply_to: str = None,
 ) -> None:
     try:
-        # Descargar firma
-        firma_data_bytes = None
-        firma_b64_html = None
+        # Resolver URL pública de la firma
+        firma_url_publica = None
         if firma_url:
-            resultado = _url_a_base64(firma_url)
-            if resultado:
-                firma_data_bytes, _ = resultado
-                firma_b64_html = "cid:firma_electromanfer"
+            if firma_url.startswith('/'):
+                firma_url_publica = f"{settings.API_BASE_URL}{firma_url}"
+            else:
+                firma_url_publica = firma_url
 
         msg = MIMEMultipart('related')
         msg['From'] = f"Electromanfer <{settings.GMAIL_USER}>"
@@ -161,17 +159,10 @@ def enviar_cotizacion_email(
             msg['In-Reply-To'] = in_reply_to
             msg['References'] = in_reply_to
 
-        html_content = _construir_html(cuerpo, consecutivo, firma_b64=firma_b64_html)
+        html_content = _construir_html(cuerpo, consecutivo, firma_url=firma_url_publica)
         msg_alt = MIMEMultipart('alternative')
         msg.attach(msg_alt)
         msg_alt.attach(MIMEText(html_content, 'html'))
-
-        # Adjuntar firma como inline
-        if firma_data_bytes:
-            img = MIMEImage(firma_data_bytes)
-            img.add_header('Content-ID', '<firma_electromanfer>')
-            img.add_header('Content-Disposition', 'inline', filename='firma.png')
-            msg.attach(img)
 
         # PDF cotización
         pdf_data_final = None
