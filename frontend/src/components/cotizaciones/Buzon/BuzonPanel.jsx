@@ -732,12 +732,11 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
 // ─── BuzonPanel principal ─────────────────────────────────────────────────────
 
 export default function BuzonPanel() {
-  const {
+const {
     hilos: hilosApi,
     hiloActivo: hiloActivoApi,
-    loading: loadingHilos,
+    loadingHilos,
     loadingHilo,
-    enviando,
     loadingEnvio,
     loadingSync,
     sinLeer,
@@ -749,7 +748,7 @@ export default function BuzonPanel() {
     sincronizar,
   } = useBuzon()
 
-  const usandoMock = true // ← cambiar a false cuando el backend esté listo
+  const usandoMock = false // ← cambiar a false cuando el backend esté listo
 
   const [hilosMock, setHilosMock] = useState(MOCK_HILOS)
   const [hiloActivoMock, setHiloActivoMock] = useState(null)
@@ -995,7 +994,7 @@ export default function BuzonPanel() {
 
             <BarraRespuesta
               onEnviar={(texto, firma) => { handleResponder(texto); setAdjuntoReply(null) }}
-              loading={enviando || loadingEnvio}
+              loading={loadingEnvio}
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
               onNuevaCotizacion={() => setModalCotizacion(true)}
