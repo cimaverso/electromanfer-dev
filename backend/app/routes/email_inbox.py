@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos
 from app.core.security import require_auth
 from app.schemas.auth import TokenData
-from app.schemas.envios import ResponderHiloSchema, ResponderConAdjuntosSchema
+from app.schemas.envios import ResponderHiloSchema
+from typing import Optional, List
 
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
@@ -53,15 +54,32 @@ def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.post("/responder-con-adjuntos")
-def responder_adjuntos(data: ResponderConAdjuntosSchema, _: TokenData = Depends(require_auth)):
+async def responder_adjuntos(
+    thread_id: str = Form(...),
+    destino: str = Form(...),
+    asunto: str = Form(...),
+    cuerpo: str = Form(...),
+    in_reply_to: Optional[str] = Form(None),
+    firma_url: Optional[str] = Form(None),
+    archivos: List[UploadFile] = File(default=[]),
+    _: TokenData = Depends(require_auth),
+):
     try:
+        archivos_procesados = []
+        for archivo in archivos:
+            contenido = await archivo.read()
+            archivos_procesados.append({
+                'nombre': archivo.filename,
+                'data': contenido,
+            })
+
         message_id = responder_con_adjuntos(
-            destino=data.destino,
-            asunto=data.asunto,
-            cuerpo=data.cuerpo,
-            archivos=data.archivos,
-            in_reply_to=data.in_reply_to,
-            firma_url=data.firma_url,
+            destino=destino,
+            asunto=asunto,
+            cuerpo=cuerpo,
+            archivos=archivos_procesados,
+            in_reply_to=in_reply_to,
+            firma_url=firma_url,
         )
         if not message_id:
             raise HTTPException(status_code=500, detail="Error al enviar")

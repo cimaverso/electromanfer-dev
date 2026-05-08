@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from typing import Optional
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
 from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema
-from app.schemas.envios import EnviarEmailSchema
 from app.services.email import enviar_cotizacion_email
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
@@ -53,43 +52,55 @@ def detalle_cotizacion(
     return cotizacion
 
 @router.post("/{cotizacion_id}/enviar-email")
-def enviar_email(
+async def enviar_email(
     cotizacion_id: int,
-    data: EnviarEmailSchema,
+    destino: str = Form(...),
+    asunto: str = Form(...),
+    cuerpo: str = Form(...),
+    in_reply_to: Optional[str] = Form(None),
+    firma_url: Optional[str] = Form(None),
+    pdf_cotizacion: UploadFile = File(...),
+    adjuntos_imagenes_urls: Optional[str] = Form(None),
+    adjuntos_pdfs_urls: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     token: TokenData = Depends(require_auth)
 ):
+    import json
 
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
 
-    # Combinar imágenes y fichas en una sola lista
+    # Leer PDF como bytes directos
+    pdf_bytes = await pdf_cotizacion.read()
+
+    # Deserializar URLs de adjuntos
+    imagenes_urls = json.loads(adjuntos_imagenes_urls) if adjuntos_imagenes_urls else []
+    fichas_urls = json.loads(adjuntos_pdfs_urls) if adjuntos_pdfs_urls else []
+
+    # Combinar en lista de adjuntos — el servicio descarga por URL
     adjuntos_urls = []
-    if data.adjuntos_imagenes:
-        adjuntos_urls.extend(data.adjuntos_imagenes)
-    if data.adjuntos_pdfs:
-        adjuntos_urls.extend(data.adjuntos_pdfs)
+    adjuntos_urls.extend([{'url': u, 'nombre': u.split('/')[-1]} for u in imagenes_urls])
+    adjuntos_urls.extend([{'url': u, 'nombre': u.split('/')[-1]} for u in fichas_urls])
 
     enviado = enviar_cotizacion_email(
-        destino=data.destino,
-        asunto=data.asunto,
-        cuerpo=data.cuerpo,
-        pdf_base64=data.pdf_base64,
+        destino=destino,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        pdf_bytes=pdf_bytes,
         nombre_pdf=f"{cotizacion.consecutivo}.pdf",
-        firma_url=data.firma_url,
+        firma_url=firma_url,
         consecutivo=cotizacion.consecutivo,
-        adjuntos_urls=adjuntos_urls,
-        in_reply_to=data.in_reply_to,
+        adjuntos_urls=adjuntos_urls if adjuntos_urls else None,
+        in_reply_to=in_reply_to,
     )
 
-    # Después:
     if not enviado:
         raise HTTPException(status_code=500, detail="Error al enviar el correo")
 
     cotizacion.estado = "enviada_email"
     cotizacion.usuario_id = token.user_id
-    cotizacion.email_thread_id = enviado 
+    cotizacion.email_thread_id = enviado
     db.commit()
 
     return {"ok": True, "mensaje": "Correo enviado correctamente"}

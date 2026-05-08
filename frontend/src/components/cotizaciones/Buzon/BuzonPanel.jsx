@@ -484,29 +484,23 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     console.log('firma recibida en handleResponder:', firmaSeleccionada)
 
     // Archivos locales
+    // Archivos locales
     if (adjuntoReply?.archivosLocales?.length > 0) {
       setEnviando(true)
       try {
-        const archivosB64 = await Promise.all(
-          adjuntoReply.archivosLocales.map(async (adj) => {
-            const b64 = await new Promise((res, rej) => {
-              const reader = new FileReader()
-              reader.onload = () => res(reader.result)
-              reader.onerror = rej
-              reader.readAsDataURL(adj.archivo)
-            })
-            return { nombre: adj.nombreArchivo, base64: b64 }
-          })
-        )
-        await enviarConAdjuntos({
-          thread_id: hiloActivo.id,
-          destino: hiloActivo.email_remitente,
-          asunto: hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)',
-          cuerpo: texto.trim() || 'Adjuntamos los archivos solicitados.',
-          in_reply_to: hiloActivo.last_message_id || hiloActivo.message_id || null,
-          archivos: archivosB64,
-          firma_url: firmaSeleccionada?.url || null, 
+        const formData = new FormData()
+        formData.append('thread_id', hiloActivo.id)
+        formData.append('destino', hiloActivo.email_remitente)
+        formData.append('asunto', hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)')
+        formData.append('cuerpo', texto.trim() || 'Adjuntamos los archivos solicitados.')
+        formData.append('in_reply_to', hiloActivo.last_message_id || hiloActivo.message_id || '')
+        if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
+
+        adjuntoReply.archivosLocales.forEach((adj) => {
+          formData.append('archivos', adj.archivo, adj.nombreArchivo)
         })
+
+        await enviarConAdjuntos(formData)
         setAdjuntoReply(null)
       } catch (err) {
         console.error('Error enviando archivos locales:', err)
@@ -517,29 +511,34 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     }
 
     // Cotización adjunta
+    // Cotización adjunta
     if (adjuntoReply?.cotizacion?.id) {
       setEnviando(true)
       try {
         const blob = await fetch(adjuntoReply.blobUrl).then((r) => r.blob())
-        const pdfBase64 = await new Promise((res, rej) => {
-          const reader = new FileReader()
-          reader.onload = () => res(reader.result)
-          reader.onerror = rej
-          reader.readAsDataURL(blob)
-        })
+
+        const formData = new FormData()
+        formData.append('destino', hiloActivo?.email_remitente || '')
+        formData.append('asunto', hiloActivo?.asunto ? `Re: ${hiloActivo.asunto}` : `Cotización ${adjuntoReply.cotizacion.consecutivo}`)
+        formData.append('cuerpo', texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`)
+        formData.append('in_reply_to', hiloActivo?.last_message_id || hiloActivo?.message_id || '')
+        if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
+
+        // PDF de la cotización como archivo binario
+        formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
+
+        // Imágenes de productos — llegan como { url, nombre }
+        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => a.url || a).filter(Boolean)
+        if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
+
+        // Fichas técnicas PDF — llegan como { url, nombre }
+        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => a.url || a).filter(Boolean)
+        if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
+
         await axiosClient.post(
           `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
-          {
-            destino: hiloActivo?.email_remitente || '',
-            asunto: hiloActivo?.asunto ? `Re: ${hiloActivo.asunto}` : `Cotización ${adjuntoReply.cotizacion.consecutivo}`,
-            cuerpo: texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`,
-            pdf_base64: pdfBase64,
-            adjuntos_imagenes: adjuntoReply.adjuntosImagenes || [],
-            adjuntos_pdfs: adjuntoReply.adjuntosPdfs || [],
-            firma_url: firmaSeleccionada?.url || null,
-            in_reply_to: hiloActivo?.last_message_id || hiloActivo?.message_id || null,
-          },
-          { timeout: 60000 }
+          formData,
+          { timeout: 120000, headers: { 'Content-Type': 'multipart/form-data' } }
         )
         setAdjuntoReply(null)
       } catch (err) {

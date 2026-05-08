@@ -3,6 +3,7 @@ import base64
 import logging
 import httpx
 import uuid
+import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -15,8 +16,17 @@ logger = logging.getLogger(__name__)
 
 def _url_a_base64(url: str):
     try:
-        if url.startswith('/'):
-            url = f"{settings.API_BASE_URL}{url}"
+        # Intentar leer del disco primero (evita deadlock en uvicorn single worker)
+        if settings.API_BASE_URL and url.startswith(settings.API_BASE_URL):
+            ruta_relativa = url.replace(settings.API_BASE_URL, '').lstrip('/')
+            ruta_sin_media = ruta_relativa.removeprefix('media/')
+            ruta_disco = os.path.join(settings.MEDIA_BASE, ruta_sin_media)
+            if os.path.exists(ruta_disco):
+                with open(ruta_disco, 'rb') as f:
+                    return f.read(), os.path.basename(ruta_disco)
+            logger.warning(f"No encontrado en disco: {ruta_disco}, intentando HTTP...")
+
+        # Fallback HTTP — URLs externas y VPS
         response = httpx.get(url, timeout=10)
         if response.status_code == 200:
             return response.content, url.split('/')[-1]
@@ -100,12 +110,12 @@ def enviar_cotizacion_email(
     asunto: str,
     cuerpo: str,
     pdf_base64: str = None,
+    pdf_bytes: bytes = None,
     nombre_pdf: str = "cotizacion.pdf",
     adjuntos_urls: list = None,
     firma_url: str = None,
     consecutivo: str = "",
     in_reply_to: str = None,
-
 ) -> None:
     try:
         # Descargar firma
@@ -138,12 +148,17 @@ def enviar_cotizacion_email(
             img.add_header('Content-Disposition', 'inline')
             msg.attach(img)
 
-        # PDF cotización
-        if pdf_base64:
-            pdf_data = pdf_base64.split(',')[1] if ',' in pdf_base64 else pdf_base64
-            pdf_bytes = base64.b64decode(pdf_data)
+        # PDF cotización — acepta bytes directos o base64 legacy
+        pdf_data_final = None
+        if pdf_bytes is not None:
+            pdf_data_final = pdf_bytes
+        elif pdf_base64:
+            raw = pdf_base64.split(',')[1] if ',' in pdf_base64 else pdf_base64
+            pdf_data_final = base64.b64decode(raw)
+
+        if pdf_data_final is not None:
             part = MIMEBase('application', 'octet-stream')
-            part.set_payload(pdf_bytes)
+            part.set_payload(pdf_data_final)
             encoders.encode_base64(part)
             part.add_header('Content-Disposition', f'attachment; filename="{nombre_pdf}"')
             msg.attach(part)
@@ -160,10 +175,13 @@ def enviar_cotizacion_email(
                     data, _ = resultado
                 else:
                     nombre_original = adj.get('nombre', 'archivo')
+                    data_bytes = adj.get('data', None)
                     b64 = adj.get('base64', '')
                     url = adj.get('url', '')
 
-                    if b64:
+                    if data_bytes is not None:
+                        data = data_bytes
+                    elif b64:
                         raw = b64.split(',')[1] if ',' in b64 else b64
                         data = base64.b64decode(raw)
                     elif url:
