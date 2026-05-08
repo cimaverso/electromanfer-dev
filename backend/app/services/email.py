@@ -10,6 +10,7 @@ from googleapiclient.discovery import build
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from email import encoders
 from app.core.config import settings
 
@@ -37,11 +38,9 @@ def _get_gmail_service():
 
 def _url_a_base64(url: str):
     try:
-        # URLs relativas — agregar base
         if url.startswith('/'):
             url = f"{settings.API_BASE_URL}{url}"
 
-        # Intentar leer del disco si es URL local
         if settings.API_BASE_URL and url.startswith(settings.API_BASE_URL):
             ruta_relativa = url.replace(settings.API_BASE_URL, '').lstrip('/')
             ruta_sin_media = ruta_relativa.removeprefix('media/')
@@ -51,7 +50,6 @@ def _url_a_base64(url: str):
                     return f.read(), os.path.basename(ruta_disco)
             logger.warning(f"No encontrado en disco: {ruta_disco}, intentando HTTP...")
 
-        # Fallback HTTP
         response = httpx.get(url, timeout=10)
         if response.status_code == 200:
             return response.content, url.split('/')[-1]
@@ -144,17 +142,18 @@ def enviar_cotizacion_email(
 ) -> None:
     try:
         # Descargar firma
+        firma_data_bytes = None
         firma_b64_html = None
         if firma_url:
             resultado = _url_a_base64(firma_url)
             if resultado:
-                firma_data, _ = resultado
-                firma_b64_html = f"data:image/png;base64,{base64.b64encode(firma_data).decode()}"
+                firma_data_bytes, _ = resultado
+                firma_b64_html = "cid:firma_electromanfer"
 
         msg = MIMEMultipart('related')
         msg['From'] = f"Electromanfer <{settings.GMAIL_USER}>"
         msg['To'] = destino
-        message_id = f"<{uuid.uuid4()}@electromanfer.com>"
+        message_id = f"<{uuid.uuid4()}@mail.gmail.com>"
         msg['Message-ID'] = message_id
         msg['Subject'] = asunto
 
@@ -167,7 +166,14 @@ def enviar_cotizacion_email(
         msg.attach(msg_alt)
         msg_alt.attach(MIMEText(html_content, 'html'))
 
-        # PDF cotización — acepta bytes directos o base64 legacy
+        # Adjuntar firma como inline
+        if firma_data_bytes:
+            img = MIMEImage(firma_data_bytes)
+            img.add_header('Content-ID', '<firma_electromanfer>')
+            img.add_header('Content-Disposition', 'inline', filename='firma.png')
+            msg.attach(img)
+
+        # PDF cotización
         pdf_data_final = None
         if pdf_bytes is not None:
             pdf_data_final = pdf_bytes
@@ -225,13 +231,20 @@ def enviar_cotizacion_email(
 
         if in_reply_to:
             try:
-                results = service.users().messages().list(
-                    userId="me",
-                    q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}"
-                ).execute()
-                msgs = results.get("messages", [])
-                if msgs:
-                    body["threadId"] = msgs[0]["threadId"]
+                if not in_reply_to.startswith('<'):
+                    body["threadId"] = in_reply_to
+                    logger.info(f"Usando threadId directo: {in_reply_to}")
+                else:
+                    results = service.users().messages().list(
+                        userId="me",
+                        q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}"
+                    ).execute()
+                    msgs = results.get("messages", [])
+                    if msgs:
+                        body["threadId"] = msgs[0]["threadId"]
+                        logger.info(f"ThreadId encontrado: {msgs[0]['threadId']}")
+                    else:
+                        logger.warning(f"No se encontró threadId para in_reply_to: {in_reply_to}")
             except Exception as e:
                 logger.warning(f"No se pudo encontrar threadId: {e}")
 
