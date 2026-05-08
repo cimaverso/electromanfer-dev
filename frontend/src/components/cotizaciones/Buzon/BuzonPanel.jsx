@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import ModalCotizacionBuzon from './ModalCotizacionBuzon'
 import { useBuzon } from '../../../hooks/useBuzon'
 import axiosClient from '../../../api/axiosClient'
+import { listarFirmas } from '../../../api/firmasApi'
 import './BuzonPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -27,6 +28,25 @@ function formatFecha(iso) {
   }
   if (d.toDateString() === ayer.toDateString()) return 'Ayer'
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
+}
+
+// ─── Helper: carga imagen como base64 (igual que EmailModal) ─────────────────
+function cargarBase64(url) {
+  return new Promise((resolve) => {
+    if (!url) return resolve(null)
+    if (url.startsWith('data:')) return resolve(url)
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      canvas.getContext('2d').drawImage(img, 0, 0)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
 }
 
 // ─── Mock de datos ────────────────────────────────────────────────────────────
@@ -198,11 +218,79 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
   const [texto, setTexto] = useState('')
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
+  const firmaFileRef = useRef(null)
   const apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000'
 
+  // ── Estado acordeón ────────────────────────────────────────────────────────
+  const [adjuntosAbierto, setAdjuntosAbierto] = useState(true)
+  const [firmaAbierta, setFirmaAbierta] = useState(false)
+
+  // ── Estado firma (mismo patrón que EmailModal) ─────────────────────────────
+  const [firmas, setFirmas] = useState([])
+  const [firmaSeleccionada, setFirmaSeleccionada] = useState(null)
+  const [firmaB64, setFirmaB64] = useState(null)
+  const [firmaLoading, setFirmaLoading] = useState(true)
+  const [selectorFirmaAbierto, setSelectorFirmaAbierto] = useState(false)
+  const [subiendoFirma, setSubiendoFirma] = useState(false)
+
+  // Carga firmas al montar
+  useEffect(() => {
+    let cancelado = false
+    const cargar = async () => {
+      setFirmaLoading(true)
+      try {
+        const lista = await listarFirmas()
+        if (cancelado) return
+        setFirmas(lista)
+        if (lista.length > 0) {
+          setFirmaSeleccionada(lista[0])
+          const b64 = await cargarBase64(lista[0].url)
+          if (!cancelado) setFirmaB64(b64)
+        }
+      } catch {
+        // silencioso — mock no falla
+      } finally {
+        if (!cancelado) setFirmaLoading(false)
+      }
+    }
+    cargar()
+    return () => { cancelado = true }
+  }, [])
+
+  const handleSeleccionarFirma = async (firma) => {
+    setFirmaSeleccionada(firma)
+    setSelectorFirmaAbierto(false)
+    setFirmaLoading(true)
+    const b64 = await cargarBase64(firma.url)
+    setFirmaB64(b64)
+    setFirmaLoading(false)
+  }
+
+  const handleNuevaFirma = async (e) => {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+    e.target.value = ''
+    setSubiendoFirma(true)
+    try {
+      // Importa dinámicamente para no romper si firmasApi no exporta subirFirma
+      const { subirFirma } = await import('../../../api/firmasApi')
+      const formData = new FormData()
+      formData.append('nombre', archivo.name.replace(/\.[^.]+$/, ''))
+      formData.append('archivo', archivo)
+      const nueva = await subirFirma(formData)
+      setFirmas((prev) => [...prev, nueva])
+      handleSeleccionarFirma(nueva)
+    } catch {
+      // silencioso
+    } finally {
+      setSubiendoFirma(false)
+    }
+  }
+
+  // ── Helpers adjuntos ───────────────────────────────────────────────────────
   const handleEnviar = () => {
     if (!texto.trim() && !adjuntoPrevio) return
-    onEnviar(texto)
+    onEnviar(texto, firmaSeleccionada)
     setTexto('')
   }
 
@@ -210,108 +298,254 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleEnviar()
   }
 
-  const numImagenes = adjuntoPrevio?.adjuntosImagenes?.length || 0
-  const numFichas = adjuntoPrevio?.adjuntosPdfs?.length || 0
-
-  const resolverUrl = (adj) => {
-    const url = typeof adj === 'string' ? adj : adj?.url
-    if (!url) return ''
-    return url.startsWith('http') ? url : `${apiBase}${url}`
-  }
-
   const resolverNombre = (adj) => {
     if (typeof adj === 'string') return adj.split('/').pop() || 'archivo'
     return adj?.nombre || adj?.url?.split('/').pop() || 'archivo'
   }
 
+  const numImagenes = adjuntoPrevio?.adjuntosImagenes?.length || 0
+  const numFichas = adjuntoPrevio?.adjuntosPdfs?.length || 0
+  const numLocales = adjuntoPrevio?.archivosLocales?.length || 0
+  const totalAdjuntos = (adjuntoPrevio?.nombreArchivo ? 1 : 0) + numImagenes + numFichas + numLocales
+  const hayAdjuntos = totalAdjuntos > 0
+
   return (
     <div className="buzon-reply">
-      {adjuntoPrevio && (adjuntoPrevio.nombreArchivo || adjuntoPrevio.archivosLocales?.length > 0) && (
-        <div className="buzon-reply__adjuntos-panel">
-          {/* PDF cotización */}
-          {adjuntoPrevio.nombreArchivo ? (
-            <div className="buzon-reply__adjunto-fila">
-              <div className="buzon-reply__ficha-item">
-                <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--pdf">PDF</span>
-                <span className="buzon-reply__ficha-nombre">{adjuntoPrevio.nombreArchivo}</span>
-              </div>
-              <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar">✕</button>
-            </div>
-          ) : (
-            <div className="buzon-reply__adjunto-fila">
-              <button className="buzon-reply__adjunto-quitar" onClick={onQuitarAdjunto} type="button" title="Quitar">✕</button>
-            </div>
-          )}
 
-          {/* Imágenes */}
-          {numImagenes > 0 && (
-            <div className="buzon-reply__adjunto-grupo">
-              <span className="buzon-reply__adjunto-grupo-label">
-                🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''} de productos
-              </span>
-              <div className="buzon-reply__adjunto-fichas">
-                {adjuntoPrevio.adjuntosImagenes.map((adj, i) => (
-                  <div key={i} className="buzon-reply__ficha-item">
-                    <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--img-sm">IMG</span>
-                    <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>
-                      {resolverNombre(adj)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* ── Acordeón: Adjuntos ── */}
+      {hayAdjuntos && (
+        <div className="buzon-acordeon">
+          {/* Cabecera del acordeón adjuntos */}
+          <button
+            type="button"
+            className="buzon-acordeon__header"
+            onClick={() => setAdjuntosAbierto((v) => !v)}
+          >
+            <span className="buzon-acordeon__icon buzon-acordeon__icon--pdf">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </span>
+            <span className="buzon-acordeon__label">
+              Adjuntos
+              <span className="buzon-acordeon__badge">{totalAdjuntos}</span>
+            </span>
+            <button
+              type="button"
+              className="buzon-acordeon__quitar"
+              onClick={(e) => { e.stopPropagation(); onQuitarAdjunto() }}
+              title="Quitar todos los adjuntos"
+            >
+              ✕
+            </button>
+            <svg
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round"
+              className="buzon-acordeon__chevron"
+              style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
 
-          {/* Fichas técnicas */}
-          {numFichas > 0 && (
-            <div className="buzon-reply__adjunto-grupo">
-              <span className="buzon-reply__adjunto-grupo-label">
-                📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''} técnica{numFichas !== 1 ? 's' : ''}
-              </span>
-              <div className="buzon-reply__adjunto-fichas">
-                {adjuntoPrevio.adjuntosPdfs.map((adj, i) => (
-                  <div key={i} className="buzon-reply__ficha-item">
-                    <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
-                    <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>
-                      {resolverNombre(adj)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Contenido colapsable adjuntos */}
+          <div className={`buzon-acordeon__body ${adjuntosAbierto ? 'buzon-acordeon__body--open' : ''}`}>
+            <div className="buzon-acordeon__content">
 
-          {adjuntoPrevio?.archivosLocales?.length > 0 && (
-            <div className="buzon-reply__adjunto-grupo">
-              <span className="buzon-reply__adjunto-grupo-label">
-                📎 {adjuntoPrevio.archivosLocales.length} archivo{adjuntoPrevio.archivosLocales.length !== 1 ? 's' : ''} adjunto{adjuntoPrevio.archivosLocales.length !== 1 ? 's' : ''}
-              </span>
-              <div className="buzon-reply__adjunto-fichas">
-                {adjuntoPrevio.archivosLocales.map((adj, i) => {
-                  const esImagen = /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombreArchivo)
-                  return (
+              {/* PDF cotización */}
+              {adjuntoPrevio?.nombreArchivo && (
+                <div className="buzon-reply__ficha-item">
+                  <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--pdf">PDF</span>
+                  <span className="buzon-reply__ficha-nombre">{adjuntoPrevio.nombreArchivo}</span>
+                </div>
+              )}
+
+              {/* Imágenes de productos */}
+              {numImagenes > 0 && (
+                <div className="buzon-acordeon__grupo">
+                  <span className="buzon-acordeon__grupo-label">
+                    🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''} de productos
+                  </span>
+                  {adjuntoPrevio.adjuntosImagenes.map((adj, i) => (
                     <div key={i} className="buzon-reply__ficha-item">
-                      <span className={`buzon-reply__adjunto-icon ${esImagen ? 'buzon-reply__adjunto-icon--img-sm' : 'buzon-reply__adjunto-icon--sm'}`}>
-                        {esImagen ? 'IMG' : 'PDF'}
-                      </span>
-                      <span className="buzon-reply__ficha-nombre" title={adj.nombreArchivo}>
-                        {adj.nombreArchivo}
+                      <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--img-sm">IMG</span>
+                      <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>
+                        {resolverNombre(adj)}
                       </span>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+                  ))}
+                </div>
+              )}
 
-          {numImagenes === 0 && numFichas === 0 && !adjuntoPrevio?.archivosLocales?.length && (
-            <span className="buzon-reply__adjunto-sin-recursos">
-              Sin imágenes ni fichas seleccionadas para este producto
-            </span>
-          )}
+              {/* Fichas técnicas */}
+              {numFichas > 0 && (
+                <div className="buzon-acordeon__grupo">
+                  <span className="buzon-acordeon__grupo-label">
+                    📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''} técnica{numFichas !== 1 ? 's' : ''}
+                  </span>
+                  {adjuntoPrevio.adjuntosPdfs.map((adj, i) => (
+                    <div key={i} className="buzon-reply__ficha-item">
+                      <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
+                      <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>
+                        {resolverNombre(adj)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Archivos locales adjuntados manualmente */}
+              {numLocales > 0 && (
+                <div className="buzon-acordeon__grupo">
+                  <span className="buzon-acordeon__grupo-label">
+                    📎 {numLocales} archivo{numLocales !== 1 ? 's' : ''} adjunto{numLocales !== 1 ? 's' : ''}
+                  </span>
+                  {adjuntoPrevio.archivosLocales.map((adj, i) => {
+                    const esImagen = /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombreArchivo)
+                    return (
+                      <div key={i} className="buzon-reply__ficha-item">
+                        <span className={`buzon-reply__adjunto-icon ${esImagen ? 'buzon-reply__adjunto-icon--img-sm' : 'buzon-reply__adjunto-icon--sm'}`}>
+                          {esImagen ? 'IMG' : 'PDF'}
+                        </span>
+                        <span className="buzon-reply__ficha-nombre" title={adj.nombreArchivo}>
+                          {adj.nombreArchivo}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+            </div>
+          </div>
         </div>
       )}
 
+      {/* ── Acordeón: Firma ── */}
+      <div className="buzon-acordeon">
+        {/* Cabecera del acordeón firma */}
+        <button
+          type="button"
+          className="buzon-acordeon__header"
+          onClick={() => setFirmaAbierta((v) => !v)}
+        >
+          <span className="buzon-acordeon__icon buzon-acordeon__icon--firma">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+            </svg>
+          </span>
+          <span className="buzon-acordeon__label">
+            Firma del correo
+            {firmaSeleccionada && !firmaLoading && (
+              <span className="buzon-acordeon__firma-nombre">{firmaSeleccionada.nombre}</span>
+            )}
+            {firmaLoading && <span className="buzon-acordeon__dot-loading" />}
+          </span>
+          <svg
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+            className="buzon-acordeon__chevron"
+            style={{ transform: firmaAbierta ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        {/* Contenido colapsable firma */}
+        <div className={`buzon-acordeon__body ${firmaAbierta ? 'buzon-acordeon__body--open' : ''}`}>
+          <div className="buzon-acordeon__content buzon-acordeon__content--firma">
+
+            {firmaLoading ? (
+              <div className="buzon-acordeon__firma-placeholder">
+                <span className="buzon-acordeon__spinner" />
+                <span>Cargando firma...</span>
+              </div>
+            ) : firmaB64 ? (
+              <div
+                className="buzon-acordeon__firma-preview"
+                onClick={() => setSelectorFirmaAbierto((v) => !v)}
+                title="Clic para cambiar firma"
+              >
+                <img src={firmaB64} alt={firmaSeleccionada?.nombre || 'Firma'} className="buzon-acordeon__firma-img" />
+                <div className="buzon-acordeon__firma-overlay">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  <span>Cambiar firma</span>
+                </div>
+              </div>
+            ) : firmas.length === 0 ? (
+              <div className="buzon-acordeon__firma-placeholder">
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                  No hay firmas disponibles.
+                </span>
+                <button
+                  type="button"
+                  className="buzon-acordeon__firma-agregar"
+                  onClick={() => firmaFileRef.current?.click()}
+                  disabled={subiendoFirma}
+                >
+                  {subiendoFirma ? <span className="buzon-acordeon__spinner" /> : '+'}
+                  {subiendoFirma ? 'Subiendo...' : 'Agregar firma'}
+                </button>
+              </div>
+            ) : (
+              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)', margin: 0 }}>
+                No se pudo cargar la imagen.
+              </p>
+            )}
+
+            {/* Selector de firmas */}
+            {selectorFirmaAbierto && firmas.length > 0 && (
+              <div className="buzon-acordeon__firma-selector">
+                <p className="buzon-acordeon__firma-selector-title">Selecciona una firma</p>
+                {firmas.map((firma) => (
+                  <button
+                    key={firma.id}
+                    type="button"
+                    className={`buzon-acordeon__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'buzon-acordeon__firma-opcion--active' : ''}`}
+                    onClick={() => handleSeleccionarFirma(firma)}
+                  >
+                    <img
+                      src={firma.url}
+                      alt={firma.nombre}
+                      className="buzon-acordeon__firma-opcion-img"
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                    <span className="buzon-acordeon__firma-opcion-nombre">{firma.nombre}</span>
+                    {firmaSeleccionada?.id === firma.id && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--color-primary)', flexShrink: 0 }}>
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="buzon-acordeon__firma-agregar"
+                  onClick={() => firmaFileRef.current?.click()}
+                  disabled={subiendoFirma}
+                >
+                  {subiendoFirma ? <span className="buzon-acordeon__spinner" /> : '+'}
+                  {subiendoFirma ? 'Subiendo...' : 'Agregar firma'}
+                </button>
+              </div>
+            )}
+
+            <input
+              ref={firmaFileRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              style={{ display: 'none' }}
+              onChange={handleNuevaFirma}
+            />
+
+          </div>
+        </div>
+      </div>
+
+      {/* ── Textarea ── */}
       <textarea
         ref={textareaRef}
         className="buzon-reply__input"
@@ -322,6 +556,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
         rows={3}
       />
 
+      {/* ── Footer: acciones + enviar ── */}
       <div className="buzon-reply__footer">
         <div className="buzon-reply__acciones">
           <button className="buzon-btn buzon-btn--cot" onClick={onNuevaCotizacion} type="button">
@@ -336,7 +571,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             ref={fileInputRef}
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
-            multiple  // ← agregar
+            multiple
             style={{ display: 'none' }}
             onChange={(e) => {
               const archivos = Array.from(e.target.files || [])
@@ -450,23 +685,42 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
   }
 
   return (
-    <div className="buzon-modal-overlay" onClick={onClose}>
-      <div className="buzon-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="buzon-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="buzon-modal">
         <div className="buzon-modal__header">
-          <span className="buzon-modal__title">Nuevo correo</span>
+          <span className="buzon-modal__title">Redactar correo</span>
           <button className="buzon-modal__close" onClick={onClose} type="button">✕</button>
         </div>
         <div className="buzon-modal__body">
-          <input className="buzon-modal__field" placeholder="Para: correo@cliente.com"
-            value={destinatario} onChange={(e) => setDestinatario(e.target.value)} />
-          <input className="buzon-modal__field" placeholder="Asunto"
-            value={asunto} onChange={(e) => setAsunto(e.target.value)} />
-          <textarea className="buzon-modal__body-input" placeholder="Escribe el mensaje..."
-            rows={8} value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} />
+          <input
+            className="buzon-modal__field"
+            placeholder="Para: destinatario@email.com"
+            value={destinatario}
+            onChange={(e) => setDestinatario(e.target.value)}
+            autoFocus
+          />
+          <input
+            className="buzon-modal__field"
+            placeholder="Asunto"
+            value={asunto}
+            onChange={(e) => setAsunto(e.target.value)}
+          />
+          <textarea
+            className="buzon-modal__body-input"
+            placeholder="Escribe tu mensaje..."
+            rows={6}
+            value={cuerpo}
+            onChange={(e) => setCuerpo(e.target.value)}
+          />
         </div>
         <div className="buzon-modal__footer">
-          <button className="buzon-btn buzon-btn--ghost" onClick={onClose} type="button">Cancelar</button>
-          <button className="buzon-btn buzon-btn--primary" onClick={handleEnviar} disabled={loading} type="button">
+          <button className="buzon-btn" onClick={onClose} type="button">Cancelar</button>
+          <button
+            className="buzon-btn buzon-btn--primary"
+            onClick={handleEnviar}
+            disabled={loading || !destinatario.trim() || !asunto.trim() || !cuerpo.trim()}
+            type="button"
+          >
             {loading ? 'Enviando...' : 'Enviar'}
           </button>
         </div>
@@ -475,191 +729,99 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
   )
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+// ─── BuzonPanel principal ─────────────────────────────────────────────────────
 
-export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, adjuntoPendiente = null, onAdjuntoMontado = null }) {
+export default function BuzonPanel() {
   const {
-    hilos: hilosReales,
-    hiloActivo: hiloActivoReal,
-    bandeja,
-    sinLeer,
-    loadingHilos,
+    hilos: hilosApi,
+    hiloActivo: hiloActivoApi,
+    loading: loadingHilos,
     loadingHilo,
+    enviando,
     loadingEnvio,
     loadingSync,
+    sinLeer,
     error,
     cargarHilos,
     abrirHilo,
     responder,
     redactar,
     sincronizar,
-    cerrarHilo,
-    enviarConAdjuntos,
   } = useBuzon()
+
+  const usandoMock = true // ← cambiar a false cuando el backend esté listo
 
   const [hilosMock, setHilosMock] = useState(MOCK_HILOS)
   const [hiloActivoMock, setHiloActivoMock] = useState(null)
-  const usandoMock = false
-
-  const hilos = usandoMock ? hilosMock : hilosReales
-  const hiloActivo = usandoMock ? hiloActivoMock : hiloActivoReal
-
   const [bandejaActiva, setBandejaActiva] = useState('inbox')
+  const [modalCotizacion, setModalCotizacion] = useState(false)
   const [modalRedactar, setModalRedactar] = useState(false)
-  const [enviando, setEnviando] = useState(false)
+  const [adjuntoReply, setAdjuntoReply] = useState(null)
   const [sidebarColapsado, setSidebarColapsado] = useState(false)
   const mensajesEndRef = useRef(null)
 
-  useEffect(() => {
-    if (!usandoMock) cargarHilos('inbox')
-  }, [])
+  const hilos = usandoMock ? hilosMock : hilosApi
+  const hiloActivo = usandoMock ? hiloActivoMock : hiloActivoApi
 
   useEffect(() => {
-    if (!hiloInicialId) return
-    const hilo = (usandoMock ? hilosMock : hilosReales).find((h) => h.id === hiloInicialId)
-    if (hilo) handleAbrirHilo(hilo)
-  }, [hiloInicialId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (mensajesEndRef.current) {
+      mensajesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [hiloActivo?.mensajes?.length])
 
-  const [adjuntoReply, setAdjuntoReply] = useState(null)
-  const [modalCotizacion, setModalCotizacion] = useState(false)
-
-  useEffect(() => {
-    if (!adjuntoPendiente) return
-    setAdjuntoReply(adjuntoPendiente)
-    onAdjuntoMontado?.()
-  }, [adjuntoPendiente])
-
-  // ── Fix selección: acepta hilo_message_id o id como clave ────────────────
-  const hiloActivoKey = hiloActivo?.hilo_message_id || hiloActivo?.id || null
-
   const hiloEsActivo = (hilo) => {
-    if (!hiloActivoKey) return false
-    return hilo.hilo_message_id === hiloActivoKey || hilo.id === hiloActivoKey
+    if (usandoMock) return hiloActivoMock?.id === hilo.id
+    return hiloActivoApi?.id === hilo.id
   }
 
   const handleAbrirHilo = (hilo) => {
-    abrirHilo(hilo.hilo_message_id || hilo.id, bandejaActiva)
-  }
-
-  const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes = [], adjuntosPdfs = [] }) => {
-    if (blobUrl && nombreArchivo) {
-      setAdjuntoReply({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes, adjuntosPdfs })
-    }
-    setModalCotizacion(false)
-  }
-
-  const handleCambiarBandeja = (b) => {
-    setBandejaActiva(b)
     if (usandoMock) {
-      setHiloActivoMock(null)
+      setHiloActivoMock(hilo)
+      setHilosMock((prev) =>
+        prev.map((h) => (h.id === hilo.id ? { ...h, leido: true } : h))
+      )
     } else {
-      cargarHilos(b)
-      cerrarHilo()
+      abrirHilo(hilo.id)
     }
   }
 
   const handleResponder = async (texto) => {
-
-    // Si hay archivos locales adjuntos
-    if (adjuntoReply?.archivosLocales?.length > 0) {
-      setEnviando(true)
-      try {
-        const archivosB64 = await Promise.all(
-          adjuntoReply.archivosLocales.map(async (adj) => {
-            const b64 = await new Promise((res, rej) => {
-              const reader = new FileReader()
-              reader.onload = () => res(reader.result)
-              reader.onerror = rej
-              reader.readAsDataURL(adj.archivo)
-            })
-            return { nombre: adj.nombreArchivo, base64: b64 }
-          })
-        )
-        await enviarConAdjuntos({
-          thread_id: hiloActivo.id,
-          destino: hiloActivo.email_remitente,
-          asunto: hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)',
-          cuerpo: texto.trim() || 'Adjuntamos los archivos solicitados.',
-          in_reply_to: hiloActivo.last_message_id || hiloActivo.message_id || null,
-          archivos: archivosB64,
-        })
-        setAdjuntoReply(null)
-      } catch (err) {
-        console.error('Error enviando archivos locales:', err)
-      } finally {
-        setEnviando(false)
-      }
-      return
-    }
-    
-    if (adjuntoReply?.cotizacion?.id) {
-      setEnviando(true)
-      try {
-        const blob = await fetch(adjuntoReply.blobUrl).then((r) => r.blob())
-        const pdfBase64 = await new Promise((res, rej) => {
-          const reader = new FileReader()
-          reader.onload = () => res(reader.result)
-          reader.onerror = rej
-          reader.readAsDataURL(blob)
-        })
-
-        const destinatario = hiloActivo?.email_remitente || ''
-        const asunto = hiloActivo?.asunto
-          ? `Re: ${hiloActivo.asunto}`
-          : `Cotización ${adjuntoReply.cotizacion.consecutivo}`
-
-        await axiosClient.post(
-          `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
-          {
-            destino: destinatario,
-            asunto,
-            cuerpo: texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`,
-            pdf_base64: pdfBase64,
-            adjuntos_imagenes: adjuntoReply.adjuntosImagenes || [],
-            adjuntos_pdfs: adjuntoReply.adjuntosPdfs || [],
-            firma_url: null,
-            in_reply_to: hiloActivo?.last_message_id || hiloActivo?.message_id || null,
-          },
-          { timeout: 60000 }
-        )
-
-        setAdjuntoReply(null)
-      } catch (err) {
-        console.error('Error enviando cotización desde buzón:', err)
-      } finally {
-        setEnviando(false)
-      }
-      return
-    }
-
+    if (!hiloActivo) return
     if (usandoMock) {
-      const nuevoMsg = {
-        id: `m_${Date.now()}`,
+      const nuevo = {
+        id: `m-${Date.now()}`,
         direccion: 'enviado',
         remitente: 'Ventas Electromanfer',
         email: 'ventas@electromanfer.com',
         cuerpo: texto,
         fecha: new Date().toISOString(),
-        adjuntos: [],
+        adjuntos: adjuntoReply?.nombreArchivo
+          ? [{ nombre: adjuntoReply.nombreArchivo, tipo: 'pdf', tamanio: '~150 KB' }]
+          : [],
       }
-      setHiloActivoMock((prev) => ({
-        ...prev,
-        mensajes: [...(prev.mensajes || []), nuevoMsg],
-      }))
+      setHilosMock((prev) =>
+        prev.map((h) =>
+          h.id === hiloActivo.id
+            ? { ...h, mensajes: [...(h.mensajes || []), nuevo] }
+            : h
+        )
+      )
+      setHiloActivoMock((prev) =>
+        prev ? { ...prev, mensajes: [...(prev.mensajes || []), nuevo] } : prev
+      )
     } else {
-      const result = await responder(hiloActivo.id, {
-        thread_id: hiloActivo.id,
-        destino: hiloActivo.email_remitente,
-        asunto: hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)',
-        cuerpo: texto,
-        in_reply_to: hiloActivo.last_message_id || hiloActivo.message_id || null,
-      })
-      if (!result.success) console.error(result.error)
+      await responder(hiloActivo.id, { cuerpo: texto, adjuntos: adjuntoReply ? [adjuntoReply] : [] })
     }
+  }
+
+  const handleCotizacionGenerada = (adjuntos) => {
+    setAdjuntoReply(adjuntos)
+    setModalCotizacion(false)
+  }
+
+  const handleCambiarBandeja = (bandeja) => {
+    setBandejaActiva(bandeja)
+    if (!usandoMock) cargarHilos(bandeja)
   }
 
   const handleRedactar = async (payload) => {
@@ -832,7 +994,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
             </div>
 
             <BarraRespuesta
-              onEnviar={(texto) => { handleResponder(texto); setAdjuntoReply(null) }}
+              onEnviar={(texto, firma) => { handleResponder(texto); setAdjuntoReply(null) }}
               loading={enviando || loadingEnvio}
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}

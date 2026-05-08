@@ -190,7 +190,7 @@
 
 /* ─── Ítem de hilo ─────────────────────────────────────────────────────────── */
 .buzon-hilo-item {
-  padding: var(--space-4) var(--space-4);   /* ← vuelve a space-3 */
+  padding: var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   position: relative;
@@ -250,7 +250,7 @@
 }
 
 .buzon-hilo-item__asunto {
-    font-size: var(--font-size-xs);
+  font-size: var(--font-size-xs);
   color: var(--color-text-soft);
   white-space: nowrap;
   overflow: hidden;
@@ -353,7 +353,7 @@
 /* ─── Burbujas de mensaje ──────────────────────────────────────────────────── */
 .buzon-msg {
   max-width: 80%;
-  width: 80%; 
+  width: 80%;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -426,9 +426,35 @@
   flex-shrink: 0;
 }
 
+.buzon-msg__adjunto-icon--img {
+  background: rgba(74, 144, 217, 0.15);
+  color: #4a90d9;
+}
+
+.buzon-msg__adjunto-icon--pdf {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.buzon-msg__adjunto-nombre {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .buzon-msg__adjunto-size {
   color: var(--color-text-muted);
   margin-left: auto;
+}
+
+.buzon-msg__adjuntos {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 /* ─── Avatar ────────────────────────────────────────────────────────────────── */
@@ -455,14 +481,19 @@
 }
 
 /* ─── Barra de respuesta ───────────────────────────────────────────────────── */
+/*
+  CLAVE: flex-shrink: 0 garantiza que la barra NO se comprima.
+  Los acordeones tienen max-height limitada y scroll interno,
+  por lo que nunca expulsan el botón Enviar fuera del viewport.
+*/
 .buzon-reply {
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  flex-shrink: 0;
+  flex-shrink: 0;   /* ← NO se comprime aunque haya muchos adjuntos */
 }
 
 .buzon-reply__input {
@@ -508,6 +539,382 @@
 .buzon-reply__hint {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* ─── ACORDEÓN — sistema unificado adjuntos + firma ─────────────────────────
+   Cada acordeón es una fila delgada que se expande hacia arriba del textarea.
+   max-height + overflow-y garantizan que nunca empujen el botón Enviar.
+   ────────────────────────────────────────────────────────────────────────── */
+.buzon-acordeon {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+/* Cabecera: siempre visible, altura fija ~32px */
+.buzon-acordeon__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-surface-2);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-family);
+  transition: background var(--transition-fast);
+  min-height: 32px;
+}
+
+.buzon-acordeon__header:hover {
+  background: var(--color-surface-3);
+}
+
+.buzon-acordeon__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.buzon-acordeon__icon--pdf {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.buzon-acordeon__icon--firma {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.buzon-acordeon__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.buzon-acordeon__badge {
+  font-size: 10px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: 0 5px;
+  border-radius: var(--radius-xl);
+  font-weight: var(--font-weight-semibold);
+  min-width: 16px;
+  text-align: center;
+}
+
+.buzon-acordeon__firma-nombre {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.buzon-acordeon__dot-loading {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: buzon-acordeon-pulse 1s ease infinite;
+}
+
+@keyframes buzon-acordeon-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.6); }
+}
+
+/* Botón quitar (solo en acordeón de adjuntos) */
+.buzon-acordeon__quitar {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.buzon-acordeon__quitar:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+/* Chevron animado */
+.buzon-acordeon__chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+/* ── Cuerpo colapsable ── */
+.buzon-acordeon__body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.22s ease;
+}
+
+.buzon-acordeon__body--open {
+  /* 160px cubre ~5-6 items cómodamente sin devorar la pantalla */
+  max-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-3) transparent;
+}
+
+.buzon-acordeon__body--open::-webkit-scrollbar { width: 4px; }
+.buzon-acordeon__body--open::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 99px;
+}
+
+/* Padding interno del contenido */
+.buzon-acordeon__content {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Contenido firma: más padding vertical para la imagen */
+.buzon-acordeon__content--firma {
+  gap: var(--space-2);
+}
+
+/* Grupos dentro del acordeón (imágenes / fichas) */
+.buzon-acordeon__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-1);
+}
+
+.buzon-acordeon__grupo:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.buzon-acordeon__grupo-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Firma dentro del acordeón ── */
+.buzon-acordeon__firma-placeholder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.buzon-acordeon__spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: buzon-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.buzon-acordeon__firma-preview {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.buzon-acordeon__firma-preview:hover {
+  border-color: var(--color-primary);
+}
+
+.buzon-acordeon__firma-img {
+  max-width: 100%;
+  max-height: 44px;
+  object-fit: contain;
+  display: block;
+}
+
+.buzon-acordeon__firma-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.buzon-acordeon__firma-preview:hover .buzon-acordeon__firma-overlay {
+  opacity: 1;
+}
+
+.buzon-acordeon__firma-selector {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.buzon-acordeon__firma-selector-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  margin: 0;
+}
+
+.buzon-acordeon__firma-opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background var(--transition-fast);
+  font-family: var(--font-family);
+}
+
+.buzon-acordeon__firma-opcion:last-child {
+  border-bottom: none;
+}
+
+.buzon-acordeon__firma-opcion:hover {
+  background: var(--color-surface-2);
+}
+
+.buzon-acordeon__firma-opcion--active {
+  background: var(--color-primary-soft);
+}
+
+.buzon-acordeon__firma-opcion-img {
+  width: 60px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: var(--radius-xs);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.buzon-acordeon__firma-opcion-nombre {
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buzon-acordeon__firma-agregar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  border-top: 1px dashed var(--color-border);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-family);
+  transition: background var(--transition-fast);
+}
+
+.buzon-acordeon__firma-agregar:hover {
+  background: var(--color-primary-soft);
+}
+
+.buzon-acordeon__firma-agregar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Items de adjunto (compartidos) ───────────────────────────────────────── */
+.buzon-reply__ficha-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.buzon-reply__adjunto-icon {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+.buzon-reply__adjunto-icon--pdf {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.buzon-reply__adjunto-icon--sm {
+  font-size: 9px;
+  padding: 1px 5px;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.buzon-reply__adjunto-icon--img-sm {
+  background: rgba(74, 144, 217, 0.15);
+  color: #4a90d9;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+
+.buzon-reply__ficha-nombre {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-soft);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─── Botones ───────────────────────────────────────────────────────────────── */
@@ -692,10 +1099,95 @@
   z-index: var(--z-toast);
 }
 
-/* ─── Animación sync ────────────────────────────────────────────────────────── */
+/* ─── Animaciones ───────────────────────────────────────────────────────────── */
 @keyframes buzon-spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── iframe de correo HTML ─────────────────────────────────────────────────── */
+.buzon-msg__iframe {
+  width: 100%;
+  min-height: 300px;
+  max-height: 500px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  overflow-y: auto;
+}
+
+/* ─── Conteo de mensajes en ítem de hilo ────────────────────────────────────── */
+.buzon-hilo-item__count {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-3);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  margin-left: var(--space-1);
+}
+
+/* ─── Sidebar colapsable ─────────────────────────────────────────────────────── */
+.buzon-sidebar__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  align-self: flex-end;
+  margin: 0 var(--space-2) var(--space-2);
+  flex-shrink: 0;
+}
+
+.buzon-sidebar__toggle:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+
+.buzon-sidebar--collapsed {
+  padding: var(--space-3) 0;
+  align-items: center;
+}
+
+.buzon-sidebar--collapsed .buzon-sidebar__cuenta {
+  justify-content: center;
+  padding: var(--space-2) 0 var(--space-3);
+}
+
+.buzon-sidebar--collapsed .buzon-sidebar__nav,
+.buzon-sidebar--collapsed .buzon-sidebar__acciones {
+  padding: 0;
+  align-items: center;
+  width: 100%;
+}
+
+.buzon-sidebar--collapsed .buzon-nav-item {
+  justify-content: center;
+  padding: var(--space-2);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  margin: 0 auto;
+}
+
+.buzon-nav-badge--dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+/* Transición suave del grid al colapsar sidebar */
+.buzon-root {
+  transition: grid-template-columns 0.25s ease;
 }
 
 /* ─── Responsive ────────────────────────────────────────────────────────────── */
@@ -724,290 +1216,3 @@
     display: none;
   }
 }
-
-/* ─── Adjunto pre-cargado en barra de respuesta ─────────────────────────────── */
-.buzon-reply__adjunto-preview {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--space-2);
-}
-
-.buzon-reply__adjunto-nombre {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-soft);
-  flex: 1;
-}
-
-.buzon-reply__adjunto-quitar {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: var(--font-size-xs);
-  padding: 2px var(--space-1);
-  border-radius: var(--radius-xs);
-  transition: var(--transition-fast);
-}
-
-.buzon-reply__adjunto-quitar:hover {
-  color: var(--color-danger);
-  background: var(--color-danger-soft);
-}
-
-.buzon-msg__iframe {
-  width: 100%;
-  min-height: 300px;
-  max-height: 500px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  overflow-y: auto;
-}
-
-.buzon-hilo-item__count {
-  font-size: 10px;
-  color: var(--color-text-muted);
-  background: var(--color-surface-3);
-  padding: 1px 5px;
-  border-radius: var(--radius-xs);
-  margin-left: var(--space-1);
-}
-
-/* ─── Agregar al final de BuzonPanel.css ─────────────────────────────────────
-   Panel de adjuntos en la barra de respuesta (PDF + imágenes + fichas)
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.buzon-reply__adjuntos-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-2);
-  border-bottom: 1px solid var(--color-border);
-  border-top: 1px solid var(--color-border);
-}
-
-/* Fila PDF + botón quitar */
-.buzon-reply__adjunto-fila {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.buzon-reply__adjunto-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-  min-width: 0;
-}
-
-.buzon-reply__adjunto-icon {
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-  letter-spacing: 0.03em;
-}
-
-.buzon-reply__adjunto-icon--pdf {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
-}
-
-.buzon-reply__adjunto-icon--sm {
-  font-size: 9px;
-  padding: 1px 5px;
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
-}
-
-.buzon-reply__adjunto-nombre {
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.buzon-reply__adjunto-quitar {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: var(--font-size-xs);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-xs);
-  transition: var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.buzon-reply__adjunto-quitar:hover {
-  color: var(--color-danger);
-  background: var(--color-danger-soft);
-}
-
-/* Grupos: imágenes / fichas */
-.buzon-reply__adjunto-grupo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.buzon-reply__adjunto-grupo-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  font-weight: var(--font-weight-medium);
-}
-
-/* Thumbnails de imágenes */
-.buzon-reply__adjunto-thumbs {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.buzon-reply__thumb {
-  width: 44px;
-  height: 44px;
-  object-fit: cover;
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-3);
-}
-
-/* Lista de fichas PDF */
-.buzon-reply__adjunto-fichas {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.buzon-reply__ficha-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.buzon-reply__ficha-nombre {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-soft);
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Aviso cuando no hay recursos configurados */
-.buzon-reply__adjunto-sin-recursos {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-
-/* ─── Sidebar colapsable ─────────────────────────────────────────────────────
-   Agregar al FINAL de BuzonPanel.css
-   ─────────────────────────────────────────────────────────────────────────── */
-
-/* Botón toggle */
-.buzon-sidebar__toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  align-self: flex-end;
-  margin: 0 var(--space-2) var(--space-2);
-  flex-shrink: 0;
-}
-
-.buzon-sidebar__toggle:hover {
-  background: var(--color-surface-3);
-  color: var(--color-text);
-}
-
-/* Sidebar colapsado: centrar iconos */
-.buzon-sidebar--collapsed {
-  padding: var(--space-3) 0;
-  align-items: center;
-}
-
-.buzon-sidebar--collapsed .buzon-sidebar__cuenta {
-  justify-content: center;
-  padding: var(--space-2) 0 var(--space-3);
-}
-
-.buzon-sidebar--collapsed .buzon-sidebar__nav,
-.buzon-sidebar--collapsed .buzon-sidebar__acciones {
-  padding: 0;
-  align-items: center;
-  width: 100%;
-}
-
-.buzon-sidebar--collapsed .buzon-nav-item {
-  justify-content: center;
-  padding: var(--space-2);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  margin: 0 auto;
-}
-
-/* Dot indicador de no leídos cuando colapsado */
-.buzon-nav-badge--dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-primary);
-}
-
-/* Transición suave del grid */
-.buzon-root {
-  transition: grid-template-columns 0.25s ease;
-}
-
-
-
-.buzon-msg__adjunto-icon--img {
-  background: rgba(74, 144, 217, 0.15);
-  color: #4a90d9;
-}
-
-.buzon-msg__adjunto-icon--pdf {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
-}
-
-.buzon-msg__adjunto-nombre {
-  flex: 1;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.buzon-reply__adjunto-icon--img-sm {
-  background: rgba(74, 144, 217, 0.15);
-  color: #4a90d9;
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: var(--radius-xs);
-}
-
