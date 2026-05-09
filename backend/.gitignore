@@ -58,4 +58,4 @@ logs/
 *.env.docker
 
 
-gmail_token.json
+gmail_token.jsongmail_token.json
