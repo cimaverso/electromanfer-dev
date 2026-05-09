@@ -11,11 +11,11 @@ class EnviarEmailSchema(BaseModel):
     adjuntos_imagenes: Optional[list] = None
     adjuntos_pdfs: Optional[list] = None
     in_reply_to: Optional[str] = None
+    references: Optional[str] = None
 
 class EnviarWhatsappSchema(BaseModel):
     telefono: str
     mensaje: str
-
 
 class ResponderHiloSchema(BaseModel):
     thread_id: str
@@ -23,6 +23,7 @@ class ResponderHiloSchema(BaseModel):
     asunto: str
     cuerpo: str
     in_reply_to: str | None = None
+    references: str | None = None
     firma_url: Optional[str] = None
 
 class ResponderConAdjuntosSchema(BaseModel):
@@ -31,5 +32,6 @@ class ResponderConAdjuntosSchema(BaseModel):
     asunto: str
     cuerpo: str
     in_reply_to: Optional[str] = None
+    references: Optional[str] = None
     archivos: Optional[list] = None
     firma_url: Optional[str] = None

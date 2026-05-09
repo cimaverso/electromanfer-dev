@@ -36,7 +36,7 @@ def leido(email_id: str, _: TokenData = Depends(require_auth)):
         return marcar_leido(email_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.post("/responder")
 def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
     try:
@@ -45,6 +45,7 @@ def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
             asunto=data.asunto,
             cuerpo=data.cuerpo,
             in_reply_to=data.in_reply_to,
+            references=data.references,
             firma_url=data.firma_url,
         )
         if not message_id:
@@ -52,7 +53,7 @@ def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
         return {"ok": True, "message_id": message_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.post("/responder-con-adjuntos")
 async def responder_adjuntos(
     thread_id: str = Form(...),
@@ -60,6 +61,7 @@ async def responder_adjuntos(
     asunto: str = Form(...),
     cuerpo: str = Form(...),
     in_reply_to: Optional[str] = Form(None),
+    references: Optional[str] = Form(None),
     firma_url: Optional[str] = Form(None),
     archivos: List[UploadFile] = File(default=[]),
     _: TokenData = Depends(require_auth),
@@ -72,13 +74,13 @@ async def responder_adjuntos(
                 'nombre': archivo.filename,
                 'data': contenido,
             })
-
         message_id = responder_con_adjuntos(
             destino=destino,
             asunto=asunto,
             cuerpo=cuerpo,
             archivos=archivos_procesados,
             in_reply_to=in_reply_to,
+            references=references,
             firma_url=firma_url,
         )
         if not message_id:

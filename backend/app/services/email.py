@@ -34,12 +34,10 @@ def _get_gmail_service():
             json.dump(token_data, f)
     return build("gmail", "v1", credentials=creds)
 
-
 def _url_a_base64(url: str):
     try:
         if url.startswith('/'):
             url = f"{settings.API_BASE_URL}{url}"
-
         if settings.API_BASE_URL and url.startswith(settings.API_BASE_URL):
             ruta_relativa = url.replace(settings.API_BASE_URL, '').lstrip('/')
             ruta_sin_media = ruta_relativa.removeprefix('media/')
@@ -48,7 +46,6 @@ def _url_a_base64(url: str):
                 with open(ruta_disco, 'rb') as f:
                     return f.read(), os.path.basename(ruta_disco)
             logger.warning(f"No encontrado en disco: {ruta_disco}, intentando HTTP...")
-
         response = httpx.get(url, timeout=10)
         if response.status_code == 200:
             return response.content, url.split('/')[-1]
@@ -138,6 +135,7 @@ def enviar_cotizacion_email(
     firma_url: str = None,
     consecutivo: str = "",
     in_reply_to: str = None,
+    references: str = None,
 ) -> None:
     try:
         # Resolver URL pública de la firma
@@ -156,8 +154,8 @@ def enviar_cotizacion_email(
         msg['Subject'] = asunto
 
         if in_reply_to:
-            msg['In-Reply-To'] = in_reply_to
-            msg['References'] = in_reply_to
+            msg['In-Reply-To'] = references or in_reply_to
+            msg['References'] = references or in_reply_to
 
         html_content = _construir_html(cuerpo, consecutivo, firma_url=firma_url_publica)
         msg_alt = MIMEMultipart('alternative')

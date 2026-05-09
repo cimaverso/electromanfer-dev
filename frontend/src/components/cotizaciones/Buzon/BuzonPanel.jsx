@@ -481,9 +481,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   }
 
   const handleResponder = async (texto, firmaSeleccionada) => {
-    console.log('firma recibida en handleResponder:', firmaSeleccionada)
-
-    // Archivos locales
     // Archivos locales
     if (adjuntoReply?.archivosLocales?.length > 0) {
       setEnviando(true)
@@ -493,7 +490,8 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         formData.append('destino', hiloActivo.email_remitente)
         formData.append('asunto', hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)')
         formData.append('cuerpo', texto.trim() || 'Adjuntamos los archivos solicitados.')
-        formData.append('in_reply_to', hiloActivo.last_message_id || hiloActivo.message_id || '')
+        formData.append('in_reply_to', hiloActivo.id)
+        formData.append('references', hiloActivo.last_message_id || '')
         if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
 
         adjuntoReply.archivosLocales.forEach((adj) => {
@@ -511,7 +509,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     }
 
     // Cotización adjunta
-    // Cotización adjunta
     if (adjuntoReply?.cotizacion?.id) {
       setEnviando(true)
       try {
@@ -521,13 +518,12 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         formData.append('destino', hiloActivo?.email_remitente || '')
         formData.append('asunto', hiloActivo?.asunto ? `Re: ${hiloActivo.asunto}` : `Cotización ${adjuntoReply.cotizacion.consecutivo}`)
         formData.append('cuerpo', texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`)
-        formData.append('in_reply_to', hiloActivo?.last_message_id || hiloActivo?.message_id || '')
+        formData.append('in_reply_to', hiloActivo?.id || '')
+        formData.append('references', hiloActivo?.last_message_id || '')
         if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
 
-        // PDF de la cotización como archivo binario
         formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
 
-        // Imágenes de productos — llegan como { url, nombre }
         const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
         if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
 
@@ -554,7 +550,8 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
       destino: hiloActivo.email_remitente,
       asunto: hiloActivo.asunto ? `Re: ${hiloActivo.asunto}` : '(Sin asunto)',
       cuerpo: texto,
-      in_reply_to: hiloActivo.last_message_id || hiloActivo.message_id || null,
+      in_reply_to: hiloActivo.id || null,
+      references: hiloActivo.last_message_id || null,
       firma_url: firmaSeleccionada?.url || null,
     })
     if (!result.success) console.error(result.error)

@@ -63,7 +63,6 @@ def _headers_dict(msg):
     return {h["name"]: h["value"] for h in msg["payload"].get("headers", [])}
 
 def _parsear_completo(msg):
-    """Headers + cuerpo + adjuntos — para vista de hilo."""
     headers = _headers_dict(msg)
     label_ids = msg.get("labelIds", [])
     in_reply_to = headers.get("In-Reply-To", "").strip()
@@ -123,35 +122,26 @@ def _parsear_completo(msg):
 # ─── Endpoints ─────
 
 def get_inbox(limit: int = 10) -> list[dict]:
-    """Lista hilos de inbox usando threads.list — nativo y rápido."""
     service = _get_service()
-
     result = service.users().threads().list(
         userId="me", labelIds=["INBOX"], maxResults=limit
     ).execute()
-
     threads = result.get("threads", [])
     hilos = []
-
     for t in threads:
-        # Solo metadata del hilo — el último mensaje define el preview
         thread = service.users().threads().get(
             userId="me", id=t["id"], format="metadata",
             metadataHeaders=METADATA_HEADERS
         ).execute()
-
         msgs = thread.get("messages", [])
         if not msgs:
             continue
-
         ultimo = msgs[-1]
         primero = msgs[0]
         headers_ultimo = _headers_dict(ultimo)
         headers_primero = _headers_dict(primero)
-
         tiene_no_leido = any("UNREAD" in m.get("labelIds", []) for m in msgs)
         es_enviado = "SENT" in primero.get("labelIds", [])
-
         hilos.append({
             "id": t["id"],
             "thread_id": t["id"],
@@ -167,35 +157,27 @@ def get_inbox(limit: int = 10) -> list[dict]:
             "direccion": "recibido",
             "cotizacion_consecutivo": None,
         })
-
     return hilos
 
 def get_sent(limit: int = 10) -> list[dict]:
-    """Lista hilos de enviados."""
     service = _get_service()
-
     result = service.users().threads().list(
         userId="me", labelIds=["SENT"], maxResults=limit
     ).execute()
-
     threads = result.get("threads", [])
     hilos = []
-
     for t in threads:
         thread = service.users().threads().get(
             userId="me", id=t["id"], format="metadata",
             metadataHeaders=METADATA_HEADERS
         ).execute()
-
         msgs = thread.get("messages", [])
         if not msgs:
             continue
-
         ultimo = msgs[-1]
         primero = msgs[0]
         headers_primero = _headers_dict(primero)
         headers_ultimo = _headers_dict(ultimo)
-
         hilos.append({
             "id": t["id"],
             "thread_id": t["id"],
@@ -211,7 +193,6 @@ def get_sent(limit: int = 10) -> list[dict]:
             "direccion": "enviado",
             "cotizacion_consecutivo": None,
         })
-
     return hilos
 
 def get_hilo(thread_id: str) -> list[dict]:
@@ -219,10 +200,9 @@ def get_hilo(thread_id: str) -> list[dict]:
     thread = service.users().threads().get(
         userId="me", id=thread_id, format="full"
     ).execute()
-
     mensajes = []
     msgs = thread.get("messages", [])
-    for i, msg in enumerate(msgs):
+    for msg in msgs:
         parsed = _parsear_completo(msg)
         mensajes.append(parsed)
 
@@ -243,19 +223,18 @@ def marcar_leido(thread_id: str) -> dict:
     ).execute()
     return {"ok": True}
 
-def responder_hilo(destino: str, asunto: str, cuerpo: str, in_reply_to: str = None, firma_url: str = None) -> str | None:
+def responder_hilo(destino: str, asunto: str, cuerpo: str, in_reply_to: str = None, references: str = None, firma_url: str = None) -> str | None:
     return enviar_cotizacion_email(
         destino=destino,
         asunto=asunto,
         cuerpo=cuerpo,
         consecutivo="",
         in_reply_to=in_reply_to,
+        references=references,
         firma_url=firma_url,
     )
 
-def responder_con_adjuntos(destino: str, asunto: str, cuerpo: str, archivos: list = None, in_reply_to: str = None, firma_url: str = None) -> str | None:
-    """Responde un hilo con texto y archivos locales adjuntos."""
-
+def responder_con_adjuntos(destino: str, asunto: str, cuerpo: str, archivos: list = None, in_reply_to: str = None, references: str = None, firma_url: str = None) -> str | None:
     adjuntos_procesados = []
     if archivos:
         for archivo in archivos:
@@ -263,13 +242,13 @@ def responder_con_adjuntos(destino: str, asunto: str, cuerpo: str, archivos: lis
                 'nombre': archivo.get('nombre', 'archivo'),
                 'data': archivo.get('data', b''),
             })
-
     return enviar_cotizacion_email(
         destino=destino,
         asunto=asunto,
         cuerpo=cuerpo,
         consecutivo="",
         in_reply_to=in_reply_to,
+        references=references,
         firma_url=firma_url,
         adjuntos_urls=adjuntos_procesados if adjuntos_procesados else None,
     )
