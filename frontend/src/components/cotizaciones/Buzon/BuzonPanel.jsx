@@ -481,7 +481,49 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   }
 
   const handleResponder = async (texto, firmaSeleccionada) => {
-    // Archivos locales
+
+    // Cotización adjunta (va primero)
+    if (adjuntoReply?.cotizacion?.id) {
+      setEnviando(true)
+      try {
+        const blob = await fetch(adjuntoReply.blobUrl).then((r) => r.blob())
+        const formData = new FormData()
+        formData.append('destino', hiloActivo?.email_remitente || '')
+        formData.append('asunto', hiloActivo?.asunto ? `Re: ${hiloActivo.asunto}` : `Cotización ${adjuntoReply.cotizacion.consecutivo}`)
+        formData.append('cuerpo', texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`)
+        formData.append('in_reply_to', hiloActivo?.id || '')
+        formData.append('references', hiloActivo?.last_message_id || '')
+        if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
+        formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
+
+        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
+        if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
+
+        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
+        if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
+
+        // Archivos locales adicionales junto con la cotización
+        if (adjuntoReply?.archivosLocales?.length > 0) {
+          adjuntoReply.archivosLocales.forEach((adj) => {
+            formData.append('archivos_extra', adj.archivo, adj.nombreArchivo)
+          })
+        }
+
+        await axiosClient.post(
+          `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
+          formData,
+          { timeout: 120000 }
+        )
+        setAdjuntoReply(null)
+      } catch (err) {
+        console.error('Error enviando cotización desde buzón:', err)
+      } finally {
+        setEnviando(false)
+      }
+      return
+    }
+
+    // Archivos locales solos (sin cotización)
     if (adjuntoReply?.archivosLocales?.length > 0) {
       setEnviando(true)
       try {
@@ -502,42 +544,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         setAdjuntoReply(null)
       } catch (err) {
         console.error('Error enviando archivos locales:', err)
-      } finally {
-        setEnviando(false)
-      }
-      return
-    }
-
-    // Cotización adjunta
-    if (adjuntoReply?.cotizacion?.id) {
-      setEnviando(true)
-      try {
-        const blob = await fetch(adjuntoReply.blobUrl).then((r) => r.blob())
-
-        const formData = new FormData()
-        formData.append('destino', hiloActivo?.email_remitente || '')
-        formData.append('asunto', hiloActivo?.asunto ? `Re: ${hiloActivo.asunto}` : `Cotización ${adjuntoReply.cotizacion.consecutivo}`)
-        formData.append('cuerpo', texto.trim() || `Estimado cliente, adjuntamos la cotización ${adjuntoReply.cotizacion.consecutivo}. Quedamos atentos.`)
-        formData.append('in_reply_to', hiloActivo?.id || '')
-        formData.append('references', hiloActivo?.last_message_id || '')
-        if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
-
-        formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
-
-        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
-        if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
-
-        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
-        if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
-
-        await axiosClient.post(
-          `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
-          formData,
-          { timeout: 120000 }
-        )
-        setAdjuntoReply(null)
-      } catch (err) {
-        console.error('Error enviando cotización desde buzón:', err)
       } finally {
         setEnviando(false)
       }
@@ -650,7 +656,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               onNuevaCotizacion={() => setModalCotizacion(true)}
               onAdjuntarCotizacion={(adjuntos) => {
                 const lista = Array.isArray(adjuntos) ? adjuntos : [adjuntos]
-                setAdjuntoReply({ archivosLocales: lista })
+                setAdjuntoReply((prev) => ({
+                  ...prev,
+                  archivosLocales: [...(prev?.archivosLocales || []), ...lista]
+                }))
               }}
             />
           </>

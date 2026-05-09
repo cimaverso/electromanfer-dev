@@ -15,3 +15,4 @@ frontend/dist/
 *.log
 .DS_Store".env.save" 
 "docker-compose.dev.yml" 
+backend/app/gmail_token.json 

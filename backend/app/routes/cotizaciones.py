@@ -59,26 +59,24 @@ async def enviar_email(
     asunto: str = Form(...),
     cuerpo: str = Form(...),
     in_reply_to: Optional[str] = Form(None),
+    references: Optional[str] = Form(None),
     firma_url: Optional[str] = Form(None),
     pdf_cotizacion: UploadFile = File(...),
     adjuntos_imagenes_urls: Optional[str] = Form(None),
     adjuntos_pdfs_urls: Optional[str] = Form(None),
+    archivos_extra: list[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     token: TokenData = Depends(require_auth)
 ):
-    
     cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
 
-    # Leer PDF como bytes directos
     pdf_bytes = await pdf_cotizacion.read()
 
-    # Deserializar URLs de adjuntos
     imagenes_urls = json.loads(adjuntos_imagenes_urls) if adjuntos_imagenes_urls else []
     fichas_urls = json.loads(adjuntos_pdfs_urls) if adjuntos_pdfs_urls else []
 
-    # Combinar en lista de adjuntos — soporta string o {url, nombre}
     adjuntos_urls = []
     for u in imagenes_urls:
         if isinstance(u, dict):
@@ -92,6 +90,11 @@ async def enviar_email(
         else:
             adjuntos_urls.append({'url': u, 'nombre': u.split('/')[-1]})
 
+    # Archivos extra adjuntados manualmente
+    for archivo in archivos_extra:
+        contenido = await archivo.read()
+        adjuntos_urls.append({'nombre': archivo.filename, 'data': contenido})
+
     enviado = enviar_cotizacion_email(
         destino=destino,
         asunto=asunto,
@@ -102,6 +105,7 @@ async def enviar_email(
         consecutivo=cotizacion.consecutivo,
         adjuntos_urls=adjuntos_urls if adjuntos_urls else None,
         in_reply_to=in_reply_to,
+        references=references,
     )
 
     if not enviado:
