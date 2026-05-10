@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import './Sidebar.css'
 
@@ -42,7 +42,6 @@ const NAV_ITEMS = [
   },
 ]
 
-// Módulos próximamente — desactivados visualmente
 const NAV_ITEMS_PROXIMOS = [
   {
     label: 'WhatsApp',
@@ -67,17 +66,19 @@ const NAV_ITEMS_PROXIMOS = [
 
 const SIDEBAR_EVENT = 'sidebar:toggle'
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, onMobileClose }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, handleLogout } = useAuth()
 
   const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('sidebar_collapsed') === 'true'
-    } catch {
-      return false
-    }
+    try { return localStorage.getItem('sidebar_collapsed') === 'true' } catch { return false }
   })
+
+  // Cierra sidebar mobile al cambiar de ruta
+  useEffect(() => {
+    if (onMobileClose) onMobileClose()
+  }, [location.pathname])
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -94,7 +95,11 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+    <aside className={[
+      'sidebar',
+      collapsed ? 'sidebar--collapsed' : '',
+      mobileOpen ? 'sidebar--mobile-open' : '',
+    ].filter(Boolean).join(' ')}>
 
       {/* ── Logo ── */}
       <div className="sidebar__logo">
@@ -103,18 +108,14 @@ export default function Sidebar() {
             src="/logo_electromanfer.svg"
             alt="Electromanfer"
             className="sidebar__logo-img sidebar__logo-img--collapsed"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         ) : (
           <img
             src="/logo_completo.png"
             alt="Electromanfer"
             className="sidebar__logo-img"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         )}
         {!collapsed && (
@@ -129,7 +130,6 @@ export default function Sidebar() {
       <nav className="sidebar__nav">
         <ul className="sidebar__nav-list">
 
-          {/* Ítems activos */}
           {NAV_ITEMS.map((item) => (
             <li key={item.path} className="sidebar__nav-item">
               <NavLink
@@ -149,10 +149,8 @@ export default function Sidebar() {
             </li>
           ))}
 
-          {/* Separador próximamente */}
           <li className="sidebar__nav-separator" />
 
-          {/* Ítems próximamente — no navegables */}
           {NAV_ITEMS_PROXIMOS.map((item) => (
             <li key={item.label} className="sidebar__nav-item">
               <span
@@ -214,7 +212,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* ── Botón colapsar ── */}
+      {/* ── Botón colapsar (solo desktop) ── */}
       <button
         className="sidebar__toggle"
         onClick={toggleCollapsed}

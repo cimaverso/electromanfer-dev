@@ -2,16 +2,18 @@
 .sidebar {
   width: var(--sidebar-width-open);
   min-height: 100vh;
-  background-color: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   position: fixed;
   top: 0;
   left: 0;
   z-index: var(--z-sidebar);
-  transition: width var(--transition-slow);
-  /* FIX: overflow visible para que el toggle no se corte */
+  transition:
+    width var(--transition-slow),
+    background-color var(--transition-base),
+    border-color var(--transition-base);
   overflow: visible;
 }
 
@@ -25,13 +27,12 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-6) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--sidebar-border);
   min-height: var(--header-height);
-  /* clip interno para que el logo no desborde */
   overflow: hidden;
+  transition: border-color var(--transition-base);
 }
 
-/* ─── Logo imagen ─── */
 .sidebar__logo-img {
   height: 36px;
   width: auto;
@@ -57,13 +58,13 @@
 .sidebar__logo-name {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+  color: var(--sidebar-hover-text);
   letter-spacing: 0.04em;
 }
 
 .sidebar__logo-sub {
   font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  color: var(--sidebar-text-muted);
   letter-spacing: 0.02em;
 }
 
@@ -93,7 +94,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-3);
   border-radius: var(--radius-sm);
-  color: var(--color-text-soft);
+  color: var(--sidebar-text);
   text-decoration: none;
   transition: var(--transition-fast);
   white-space: nowrap;
@@ -102,18 +103,19 @@
 }
 
 .sidebar__nav-link:hover {
-  background-color: var(--color-surface-2);
-  color: var(--color-text);
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-hover-text);
 }
 
 .sidebar__nav-link--active {
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary);
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  font-weight: var(--font-weight-semibold);
 }
 
 .sidebar__nav-link--active:hover {
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary);
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
 }
 
 /* ─── Icono nav ─── */
@@ -135,6 +137,7 @@
 .sidebar__nav-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  color: inherit;
   overflow: hidden;
   white-space: nowrap;
 }
@@ -145,8 +148,8 @@
   left: calc(var(--sidebar-width-closed) + var(--space-2));
   top: 50%;
   transform: translateY(-50%);
-  background-color: var(--color-surface-3);
-  color: var(--color-text);
+  background-color: var(--sidebar-tooltip-bg);
+  color: var(--sidebar-hover-text);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   padding: var(--space-2) var(--space-3);
@@ -157,7 +160,7 @@
   transition: opacity var(--transition-fast);
   z-index: var(--z-tooltip);
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sidebar-border);
 }
 
 .sidebar--collapsed .sidebar__nav-link:hover .sidebar__tooltip,
@@ -169,12 +172,12 @@
 /* ─── Footer sidebar ─── */
 .sidebar__footer {
   padding: var(--space-3);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  /* clip interno */
   overflow: hidden;
+  transition: border-color var(--transition-base);
 }
 
 /* ─── Usuario ─── */
@@ -213,7 +216,7 @@
 .sidebar__user-name {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text);
+  color: var(--sidebar-user-name);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -221,7 +224,7 @@
 
 .sidebar__user-role {
   font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  color: var(--sidebar-user-role);
   text-transform: capitalize;
 }
 
@@ -234,7 +237,7 @@
   border-radius: var(--radius-sm);
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--sidebar-logout-text);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   width: 100%;
@@ -247,37 +250,35 @@
 }
 
 .sidebar__logout:hover {
-  background-color: var(--color-danger-soft);
-  color: var(--color-danger);
+  background-color: var(--sidebar-logout-hover-bg);
+  color: var(--sidebar-logout-hover-text);
 }
 
-/* ─── Botón toggle colapsar — FIX: visible y correctamente posicionado ─── */
+/* ─── Botón toggle colapsar ─── */
 .sidebar__toggle {
   position: absolute;
   top: calc(var(--header-height) / 2 - 14px);
-  /* Empuja el botón hacia afuera del sidebar sin ser cortado */
   right: -14px;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: var(--color-surface-2);
-  border: 1px solid var(--color-border-strong);
+  background-color: var(--sidebar-toggle-bg);
+  border: 1px solid var(--sidebar-toggle-border);
+  color: var(--sidebar-toggle-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: var(--transition-base);
-  /* z-index sobre el contenido principal */
   z-index: calc(var(--z-sidebar) + 10);
   box-shadow: var(--shadow-sm);
-  /* Evitar que hereden clip del padre */
   flex-shrink: 0;
 }
 
 .sidebar__toggle:hover {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--sidebar-active-bg);
+  border-color: transparent;
+  color: var(--sidebar-active-text);
   box-shadow: var(--shadow-primary);
 }
 
@@ -292,50 +293,69 @@
   transform: rotate(180deg);
 }
 
-/* ─── Responsive ─── */
+/* ─── Separador ─── */
+.sidebar__nav-separator {
+  height: 1px;
+  background-color: var(--sidebar-border);
+  margin: var(--space-2) var(--space-3);
+}
+
+/* ─── Ítem desactivado ─── */
+.sidebar__nav-link--disabled {
+  opacity: 0.40;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Badge "Pronto" ─── */
+.sidebar__nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--sidebar-badge-text);
+  background-color: var(--sidebar-badge-bg);
+  border: 1px solid var(--sidebar-badge-border);
+  border-radius: 99px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+/* ═══════════════════════════════
+   RESPONSIVE MOBILE
+   ═══════════════════════════════ */
 @media (max-width: 768px) {
   .sidebar {
-    /* En móvil el sidebar se oculta fuera de pantalla */
     transform: translateX(-100%);
     width: var(--sidebar-width-open) !important;
+    transition:
+      transform var(--transition-slow),
+      background-color var(--transition-base);
+    box-shadow: none;
   }
 
   .sidebar--mobile-open {
     transform: translateX(0);
+    box-shadow: var(--shadow-lg);
   }
 
   .sidebar__toggle {
     display: none;
   }
-}
 
-/* ── Agregar al final de Sidebar.css ── */
+  /* En mobile siempre expandido — forzar labels visibles */
+  .sidebar--collapsed .sidebar__nav-label,
+  .sidebar--collapsed .sidebar__user-info,
+  .sidebar--collapsed .sidebar__nav-badge {
+    display: flex;
+  }
 
-/* Separador entre ítems activos y próximamente */
-.sidebar__nav-separator {
-  height: 1px;
-  background-color: var(--color-border);
-  margin: var(--space-2) var(--space-3);
-}
+  .sidebar--collapsed .sidebar__logo-text {
+    display: flex !important;
+  }
 
-/* Ítem desactivado — no es un link, es un span */
-.sidebar__nav-link--disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  pointer-events: none;
-  filter: grayscale(0.4);
-}
-
-/* Badge "Pronto" */
-.sidebar__nav-badge {
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-muted);
-  background-color: var(--color-surface-3);
-  border: 1px solid var(--color-border);
-  border-radius: 99px;
-  padding: 1px 6px;
-  white-space: nowrap;
-  letter-spacing: 0.03em;
+  /* Tooltips no tienen sentido en mobile */
+  .sidebar__tooltip {
+    display: none;
+  }
 }

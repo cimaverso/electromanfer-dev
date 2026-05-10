@@ -17,7 +17,8 @@ function formatFecha(iso) {
   const hoy = new Date()
   const ayer = new Date(hoy)
   ayer.setDate(hoy.getDate() - 1)
-  if (d.toDateString() === hoy.toDateString()) return d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  if (d.toDateString() === hoy.toDateString())
+    return d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
   if (d.toDateString() === ayer.toDateString()) return 'Ayer'
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
@@ -40,8 +41,32 @@ function cargarBase64(url) {
   })
 }
 
-// ─── Mock de datos ────────────────────────────────────────────────────────────
-const MOCK_HILOS = []
+// ─── Inyección de estilos en el iframe del correo ────────────────────────────
+function buildSrcDoc(htmlOriginal) {
+  if (!htmlOriginal) return null
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light'
+
+  const style = dark
+    ? `<style>
+        html, body { background: transparent !important; margin: 0; padding: 0; }
+        * { color: #F0F4FF !important; }
+        a { color: #9DBE5A !important; }
+        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; }
+        table, td, th { border-color: rgba(255,255,255,0.1) !important; }
+        img { max-width: 100%; }
+      </style>`
+    : `<style>
+        html, body { background: transparent !important; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: #111827; }
+        a { color: #5E8A1A; }
+        img { max-width: 100%; }
+      </style>`
+
+  if (/<head[\s>]/i.test(htmlOriginal)) {
+    return htmlOriginal.replace(/<head([\s>])/i, `<head$1${style}`)
+  }
+  return `<!DOCTYPE html><html><head>${style}</head><body>${htmlOriginal}</body></html>`
+}
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 
@@ -51,22 +76,34 @@ function Avatar({ nombre, tipo = 'cliente' }) {
 
 function HiloItem({ hilo, activo, onClick }) {
   return (
-    <div className={`buzon-hilo-item ${activo ? 'buzon-hilo-item--activo' : ''} ${!hilo.leido ? 'buzon-hilo-item--no-leido' : ''}`} onClick={() => onClick(hilo)}>
+    <div
+      className={[
+        'buzon-hilo-item',
+        activo ? 'buzon-hilo-item--activo' : '',
+        !hilo.leido ? 'buzon-hilo-item--no-leido' : '',
+      ].filter(Boolean).join(' ')}
+      onClick={() => onClick(hilo)}
+    >
       {!hilo.leido && <span className="buzon-hilo-item__dot" />}
       <div className="buzon-hilo-item__row">
         <span className="buzon-hilo-item__remitente">{hilo.remitente}</span>
-        {hilo.mensajes_count > 1 && <span className="buzon-hilo-item__count">{hilo.mensajes_count}</span>}
+        {hilo.mensajes_count > 1 && (
+          <span className="buzon-hilo-item__count">{hilo.mensajes_count}</span>
+        )}
         <span className="buzon-hilo-item__fecha">{formatFecha(hilo.fecha)}</span>
       </div>
       <div className="buzon-hilo-item__asunto">{hilo.asunto}</div>
-      <div className="buzon-hilo-item__preview">{hilo.preview}</div>
-      {hilo.cotizacion_consecutivo && <span className="buzon-hilo-item__cot-tag">{hilo.cotizacion_consecutivo}</span>}
+      {hilo.cotizacion_consecutivo && (
+        <span className="buzon-hilo-item__cot-tag">{hilo.cotizacion_consecutivo}</span>
+      )}
     </div>
   )
 }
 
 function MensajeBurbuja({ mensaje }) {
   const enviado = mensaje.direccion === 'enviado'
+  const srcDocFinal = mensaje.cuerpo_html ? buildSrcDoc(mensaje.cuerpo_html) : null
+
   return (
     <div className={`buzon-msg ${enviado ? 'buzon-msg--enviado' : 'buzon-msg--recibido'}`}>
       <div className="buzon-msg__header">
@@ -74,11 +111,27 @@ function MensajeBurbuja({ mensaje }) {
         <span className="buzon-msg__nombre">{mensaje.remitente}</span>
         <span className="buzon-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
-      {mensaje.cuerpo_html ? (
-        <iframe srcDoc={mensaje.cuerpo_html} className="buzon-msg__iframe" sandbox="allow-same-origin" title="correo" />
+
+      {srcDocFinal ? (
+        <iframe
+          srcDoc={srcDocFinal}
+          className="buzon-msg__iframe"
+          sandbox="allow-same-origin"
+          title="correo"
+          onLoad={(e) => {
+            try {
+              const doc = e.target.contentDocument
+              if (doc) {
+                const h = doc.documentElement.scrollHeight
+                e.target.style.height = Math.min(Math.max(h, 60), 500) + 'px'
+              }
+            } catch { /* cross-origin: dejar altura por defecto */ }
+          }}
+        />
       ) : (
         <div className="buzon-msg__cuerpo">{mensaje.cuerpo}</div>
       )}
+
       {mensaje.adjuntos?.length > 0 && (
         <div className="buzon-msg__adjuntos">
           {mensaje.adjuntos.map((adj, i) => {
@@ -88,11 +141,14 @@ function MensajeBurbuja({ mensaje }) {
                 <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>
                   {esImagen ? (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
                     </svg>
                   ) : (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
                     </svg>
                   )}
                 </span>
@@ -106,8 +162,6 @@ function MensajeBurbuja({ mensaje }) {
     </div>
   )
 }
-
-// ─── BarraRespuesta ───────────────────────────────────────────────────────────
 
 function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion, adjuntoPrevio = null, onQuitarAdjunto }) {
   const [texto, setTexto] = useState('')
@@ -195,8 +249,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
 
   return (
     <div className="buzon-reply">
-
-      {/* ── Acordeón: Adjuntos ── */}
+      {/* Acordeón Adjuntos */}
       {hayAdjuntos && (
         <div className="buzon-acordeon">
           <button type="button" className="buzon-acordeon__header" onClick={() => setAdjuntosAbierto((v) => !v)}>
@@ -208,10 +261,14 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             <span className="buzon-acordeon__label">
               Adjuntos <span className="buzon-acordeon__badge">{totalAdjuntos}</span>
             </span>
-            <button type="button" className="buzon-acordeon__quitar" onClick={(e) => { e.stopPropagation(); onQuitarAdjunto() }} title="Quitar todos">✕</button>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buzon-acordeon__chevron" style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <button type="button" className="buzon-acordeon__quitar"
+              onClick={(e) => { e.stopPropagation(); onQuitarAdjunto() }}
+              title="Quitar todos"
+            >✕</button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className="buzon-acordeon__chevron"
+              style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            ><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           <div className={`buzon-acordeon__body ${adjuntosAbierto ? 'buzon-acordeon__body--open' : ''}`}>
             <div className="buzon-acordeon__content">
@@ -223,7 +280,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
               )}
               {numImagenes > 0 && (
                 <div className="buzon-acordeon__grupo">
-                  <span className="buzon-acordeon__grupo-label">🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''} de productos</span>
+                  <span className="buzon-acordeon__grupo-label">🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''}</span>
                   {adjuntoPrevio.adjuntosImagenes.map((adj, i) => (
                     <div key={i} className="buzon-reply__ficha-item">
                       <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--img-sm">IMG</span>
@@ -234,7 +291,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
               )}
               {numFichas > 0 && (
                 <div className="buzon-acordeon__grupo">
-                  <span className="buzon-acordeon__grupo-label">📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''} técnica{numFichas !== 1 ? 's' : ''}</span>
+                  <span className="buzon-acordeon__grupo-label">📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''}</span>
                   {adjuntoPrevio.adjuntosPdfs.map((adj, i) => (
                     <div key={i} className="buzon-reply__ficha-item">
                       <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
@@ -245,7 +302,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
               )}
               {numLocales > 0 && (
                 <div className="buzon-acordeon__grupo">
-                  <span className="buzon-acordeon__grupo-label">📎 {numLocales} archivo{numLocales !== 1 ? 's' : ''} adjunto{numLocales !== 1 ? 's' : ''}</span>
+                  <span className="buzon-acordeon__grupo-label">📎 {numLocales} archivo{numLocales !== 1 ? 's' : ''}</span>
                   {adjuntoPrevio.archivosLocales.map((adj, i) => {
                     const esImagen = /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombreArchivo)
                     return (
@@ -264,7 +321,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
         </div>
       )}
 
-      {/* ── Acordeón: Firma ── */}
+      {/* Acordeón Firma */}
       <div className="buzon-acordeon">
         <button type="button" className="buzon-acordeon__header" onClick={() => setFirmaAbierta((v) => !v)}>
           <span className="buzon-acordeon__icon buzon-acordeon__icon--firma">
@@ -277,9 +334,10 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             {firmaSeleccionada && !firmaLoading && <span className="buzon-acordeon__firma-nombre">{firmaSeleccionada.nombre}</span>}
             {firmaLoading && <span className="buzon-acordeon__dot-loading" />}
           </span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buzon-acordeon__chevron" style={{ transform: firmaAbierta ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className="buzon-acordeon__chevron"
+            style={{ transform: firmaAbierta ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          ><polyline points="6 9 12 15 18 9" /></svg>
         </button>
         <div className={`buzon-acordeon__body ${firmaAbierta ? 'buzon-acordeon__body--open' : ''}`}>
           <div className="buzon-acordeon__content buzon-acordeon__content--firma">
@@ -301,9 +359,6 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
             ) : firmas.length === 0 ? (
               <div className="buzon-acordeon__firma-placeholder">
                 <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>No hay firmas disponibles.</span>
-                <button type="button" className="buzon-acordeon__firma-agregar" onClick={() => firmaFileRef.current?.click()} disabled={subiendoFirma}>
-                  {subiendoFirma ? <span className="buzon-acordeon__spinner" /> : '+'} {subiendoFirma ? 'Subiendo...' : 'Agregar firma'}
-                </button>
               </div>
             ) : (
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)', margin: 0 }}>No se pudo cargar la imagen.</p>
@@ -312,7 +367,10 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
               <div className="buzon-acordeon__firma-selector">
                 <p className="buzon-acordeon__firma-selector-title">Selecciona una firma</p>
                 {firmas.map((firma) => (
-                  <button key={firma.id} type="button" className={`buzon-acordeon__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'buzon-acordeon__firma-opcion--active' : ''}`} onClick={() => handleSeleccionarFirma(firma)}>
+                  <button key={firma.id} type="button"
+                    className={`buzon-acordeon__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'buzon-acordeon__firma-opcion--active' : ''}`}
+                    onClick={() => handleSeleccionarFirma(firma)}
+                  >
                     <img src={firma.url} alt={firma.nombre} className="buzon-acordeon__firma-opcion-img" onError={(e) => { e.target.style.display = 'none' }} />
                     <span className="buzon-acordeon__firma-opcion-nombre">{firma.nombre}</span>
                     {firmaSeleccionada?.id === firma.id && (
@@ -332,17 +390,17 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
         </div>
       </div>
 
-      {/* ── Textarea ── */}
+      {/* Textarea */}
       <textarea ref={textareaRef} className="buzon-reply__input" placeholder="Escribe tu respuesta..." value={texto} onChange={(e) => setTexto(e.target.value)} onKeyDown={handleKeyDown} rows={3} />
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div className="buzon-reply__footer">
         <div className="buzon-reply__acciones">
           <button className="buzon-btn buzon-btn--cot" onClick={onNuevaCotizacion} type="button">
             <IconCotizacion /> Generar cotización
           </button>
           <button className="buzon-btn buzon-btn--ghost" onClick={() => fileInputRef.current?.click()} type="button">
-            <IconAdjuntar /> Adjuntar archivo
+            <IconAdjuntar /> Adjuntar
           </button>
           <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple style={{ display: 'none' }}
             onChange={(e) => {
@@ -355,7 +413,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
           />
         </div>
         <div className="buzon-reply__enviar">
-          <span className="buzon-reply__hint">Ctrl + Enter para enviar</span>
+          <span className="buzon-reply__hint">Ctrl + Enter</span>
           <button className="buzon-btn buzon-btn--primary" onClick={handleEnviar} disabled={loading || (!texto.trim() && !adjuntoPrevio)} type="button">
             {loading ? 'Enviando...' : 'Enviar'}
           </button>
@@ -366,26 +424,26 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
 }
 
 // ─── Iconos ───────────────────────────────────────────────────────────────────
-
-function IconBandeja() { return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="2" /><path d="M1 5l7 5 7-5" /></svg> }
-function IconEnviados() { return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2L2 8l4 2 2 4 6-12z" /></svg> }
-function IconRedactar() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 3v10M3 8h10" /></svg> }
+function IconBandeja() { return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="2" /><path d="M1 5l7 5 7-5" /></svg> }
+function IconEnviados() { return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2L2 8l4 2 2 4 6-12z" /></svg> }
+function IconRedactar() { return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 3v10M3 8h10" /></svg> }
 function IconCotizacion() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="2" /><path d="M5 8h6M5 5h4M5 11h3" /></svg> }
 function IconAdjuntar() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 8V5a4 4 0 118 0v6a2 2 0 01-4 0V6" /></svg> }
-function IconSync({ spin }) { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={spin ? { animation: 'buzon-spin 1s linear infinite' } : {}}><path d="M13 8A5 5 0 112 5.5" /><path d="M2 3v3h3" /></svg> }
-function IconChevron({ collapsed }) { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ transition: 'transform 0.25s', transform: collapsed ? 'rotate(90deg)' : 'rotate(-90deg)' }}><path d="M4 6l4 4 4-4" /></svg> }
+function IconSync({ spin }) {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={spin ? { animation: 'buzon-spin 1s linear infinite' } : {}}><path d="M13 8A5 5 0 112 5.5" /><path d="M2 3v3h3" /></svg>
+}
+function IconChevron({ collapsed }) {
+  return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ transition: 'transform 0.25s', transform: collapsed ? 'rotate(90deg)' : 'rotate(-90deg)' }}><path d="M4 6l4 4 4-4" /></svg>
+}
+function IconAtras() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+}
 
 // ─── Modal redactar ───────────────────────────────────────────────────────────
-
 function ModalRedactar({ onEnviar, onClose, loading }) {
   const [destinatario, setDestinatario] = useState('')
   const [asunto, setAsunto] = useState('')
   const [cuerpo, setCuerpo] = useState('')
-
-  const handleEnviar = () => {
-    if (!destinatario.trim() || !asunto.trim() || !cuerpo.trim()) return
-    onEnviar({ destinatario, asunto, cuerpo })
-  }
 
   return (
     <div className="buzon-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -401,7 +459,7 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
         </div>
         <div className="buzon-modal__footer">
           <button className="buzon-btn" onClick={onClose} type="button">Cancelar</button>
-          <button className="buzon-btn buzon-btn--primary" onClick={handleEnviar} disabled={loading || !destinatario.trim() || !asunto.trim() || !cuerpo.trim()} type="button">
+          <button className="buzon-btn buzon-btn--primary" onClick={() => { if (destinatario.trim() && asunto.trim() && cuerpo.trim()) onEnviar({ destinatario, asunto, cuerpo }) }} disabled={loading || !destinatario.trim() || !asunto.trim() || !cuerpo.trim()} type="button">
             {loading ? 'Enviando...' : 'Enviar'}
           </button>
         </div>
@@ -411,7 +469,6 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
 }
 
 // ─── BuzonPanel principal ─────────────────────────────────────────────────────
-
 export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, adjuntoPendiente = null, onAdjuntoMontado = null }) {
   const {
     hilos: hilosReales,
@@ -431,9 +488,8 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     enviarConAdjuntos,
   } = useBuzon()
 
-  const usandoMock = false
-  const hilos = usandoMock ? MOCK_HILOS : hilosReales
-  const hiloActivo = usandoMock ? null : hiloActivoReal
+  const hilos = hilosReales
+  const hiloActivo = hiloActivoReal
 
   const [bandejaActiva, setBandejaActiva] = useState('inbox')
   const [modalRedactar, setModalRedactar] = useState(false)
@@ -441,15 +497,17 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   const [sidebarColapsado, setSidebarColapsado] = useState(false)
   const [adjuntoReply, setAdjuntoReply] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
+  const [vistaMovil, setVistaMovil] = useState('lista') // 'lista' | 'hilo'
+
   const mensajesEndRef = useRef(null)
 
-  useEffect(() => { if (!usandoMock) cargarHilos('inbox') }, [])
+  useEffect(() => { cargarHilos('inbox') }, [])
 
   useEffect(() => {
     if (!hiloInicialId) return
     const hilo = hilosReales.find((h) => h.id === hiloInicialId)
     if (hilo) handleAbrirHilo(hilo)
-  }, [hiloInicialId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hiloInicialId]) // eslint-disable-line
 
   useEffect(() => {
     mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -467,7 +525,15 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     return hilo.hilo_message_id === hiloActivoKey || hilo.id === hiloActivoKey
   }
 
-  const handleAbrirHilo = (hilo) => abrirHilo(hilo.hilo_message_id || hilo.id, bandejaActiva)
+  const handleAbrirHilo = (hilo) => {
+    abrirHilo(hilo.hilo_message_id || hilo.id, bandejaActiva)
+    setVistaMovil('hilo')
+  }
+
+  const handleVolverALista = () => {
+    setVistaMovil('lista')
+    cerrarHilo()
+  }
 
   const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes = [], adjuntosPdfs = [] }) => {
     if (blobUrl && nombreArchivo) setAdjuntoReply({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes, adjuntosPdfs })
@@ -478,11 +544,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     setBandejaActiva(b)
     cargarHilos(b)
     cerrarHilo()
+    setVistaMovil('lista')
   }
 
   const handleResponder = async (texto, firmaSeleccionada) => {
-
-    // Cotización adjunta (va primero)
     if (adjuntoReply?.cotizacion?.id) {
       setEnviando(true)
       try {
@@ -495,35 +560,17 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         formData.append('references', hiloActivo?.last_message_id || '')
         if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
         formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
-
-        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
+        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter((a) => a.url)
         if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
-
-        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter(a => a.url)
+        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter((a) => a.url)
         if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
-
-        // Archivos locales adicionales junto con la cotización
-        if (adjuntoReply?.archivosLocales?.length > 0) {
-          adjuntoReply.archivosLocales.forEach((adj) => {
-            formData.append('archivos_extra', adj.archivo, adj.nombreArchivo)
-          })
-        }
-
-        await axiosClient.post(
-          `/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`,
-          formData,
-          { timeout: 120000 }
-        )
+        if (adjuntoReply?.archivosLocales?.length > 0) adjuntoReply.archivosLocales.forEach((adj) => formData.append('archivos_extra', adj.archivo, adj.nombreArchivo))
+        await axiosClient.post(`/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`, formData, { timeout: 120000 })
         setAdjuntoReply(null)
-      } catch (err) {
-        console.error('Error enviando cotización desde buzón:', err)
-      } finally {
-        setEnviando(false)
-      }
+      } catch (err) { console.error('Error enviando cotización desde buzón:', err) } finally { setEnviando(false) }
       return
     }
 
-    // Archivos locales solos (sin cotización)
     if (adjuntoReply?.archivosLocales?.length > 0) {
       setEnviando(true)
       try {
@@ -535,22 +582,13 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         formData.append('in_reply_to', hiloActivo.id)
         formData.append('references', hiloActivo.last_message_id || '')
         if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
-
-        adjuntoReply.archivosLocales.forEach((adj) => {
-          formData.append('archivos', adj.archivo, adj.nombreArchivo)
-        })
-
+        adjuntoReply.archivosLocales.forEach((adj) => formData.append('archivos', adj.archivo, adj.nombreArchivo))
         await enviarConAdjuntos(formData)
         setAdjuntoReply(null)
-      } catch (err) {
-        console.error('Error enviando archivos locales:', err)
-      } finally {
-        setEnviando(false)
-      }
+      } catch (err) { console.error('Error enviando archivos locales:', err) } finally { setEnviando(false) }
       return
     }
 
-    // Respuesta simple
     const result = await responder(hiloActivo.id, {
       thread_id: hiloActivo.id,
       destino: hiloActivo.email_remitente,
@@ -563,18 +601,56 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     if (!result.success) console.error(result.error)
   }
 
-  const handleRedactar = async (payload) => {
-    const result = await redactar(payload)
-    if (result.success) setModalRedactar(false)
-  }
-
-  const sinLeerTotal = sinLeer
   const gridColumns = sidebarColapsado ? '52px 340px 1fr' : '220px 340px 1fr'
+  const sinLeerTotal = sinLeer
 
   return (
-    <div className={`buzon-root ${sidebarColapsado ? 'buzon-root--collapsed' : ''}`} style={{ gridTemplateColumns: gridColumns }}>
+    <div
+      className={[
+        'buzon-root',
+        vistaMovil === 'hilo' ? 'buzon-root--mobile-hilo' : '',
+      ].filter(Boolean).join(' ')}
+      style={{ gridTemplateColumns: gridColumns }}
+    >
+      {/* ── Barra navegación mobile — ANTES del sidebar para que quede arriba en flex column ── */}
+      <div className="buzon-mobile-nav">
+        <button
+          className={`buzon-mobile-nav__tab ${bandejaActiva === 'inbox' ? 'buzon-mobile-nav__tab--active' : ''}`}
+          onClick={() => handleCambiarBandeja('inbox')}
+          type="button"
+        >
+          <IconBandeja />
+          <span>Recibidos</span>
+          {sinLeerTotal > 0 && <span className="buzon-mobile-nav__badge">{sinLeerTotal}</span>}
+        </button>
+        <button
+          className={`buzon-mobile-nav__tab ${bandejaActiva === 'sent' ? 'buzon-mobile-nav__tab--active' : ''}`}
+          onClick={() => handleCambiarBandeja('sent')}
+          type="button"
+        >
+          <IconEnviados />
+          <span>Enviados</span>
+        </button>
+        <button
+          className="buzon-mobile-nav__tab"
+          onClick={() => setModalRedactar(true)}
+          type="button"
+        >
+          <IconRedactar />
+          <span>Redactar</span>
+        </button>
+        <button
+          className="buzon-mobile-nav__sync"
+          onClick={() => sincronizar()}
+          disabled={loadingSync}
+          type="button"
+          title="Sincronizar"
+        >
+          <IconSync spin={loadingSync} />
+        </button>
+      </div>
 
-      {/* ── Sidebar ── */}
+      {/* ── Sidebar desktop ── */}
       <div className={`buzon-sidebar ${sidebarColapsado ? 'buzon-sidebar--collapsed' : ''}`}>
         <button className="buzon-sidebar__toggle" onClick={() => setSidebarColapsado((v) => !v)} type="button" title={sidebarColapsado ? 'Expandir' : 'Colapsar'}>
           <IconChevron collapsed={sidebarColapsado} />
@@ -587,8 +663,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           <button className={`buzon-nav-item ${bandejaActiva === 'inbox' ? 'buzon-nav-item--activo' : ''}`} onClick={() => handleCambiarBandeja('inbox')} type="button" title="Bandeja de entrada">
             <IconBandeja />
             {!sidebarColapsado && <span>Bandeja de entrada</span>}
-            {!sidebarColapsado && sinLeerTotal > 0 && <span className="buzon-nav-badge">{sinLeerTotal}</span>}
-            {sidebarColapsado && sinLeerTotal > 0 && <span className="buzon-nav-badge--dot" />}
+            {sinLeerTotal > 0 && <span className="buzon-nav-badge">{sinLeerTotal}</span>}
           </button>
           <button className={`buzon-nav-item ${bandejaActiva === 'sent' ? 'buzon-nav-item--activo' : ''}`} onClick={() => handleCambiarBandeja('sent')} type="button" title="Enviados">
             <IconEnviados />{!sidebarColapsado && <span>Enviados</span>}
@@ -634,6 +709,9 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         ) : (
           <>
             <div className="buzon-hilo__header">
+              <button className="buzon-hilo__volver" onClick={handleVolverALista} type="button">
+                <IconAtras /> Volver
+              </button>
               <div className="buzon-hilo__asunto">{hiloActivo.asunto}</div>
               <div className="buzon-hilo__meta">
                 {hiloActivo.remitente} · {hiloActivo.mensajes?.length || 0} mensaje{hiloActivo.mensajes?.length !== 1 ? 's' : ''}
@@ -656,10 +734,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               onNuevaCotizacion={() => setModalCotizacion(true)}
               onAdjuntarCotizacion={(adjuntos) => {
                 const lista = Array.isArray(adjuntos) ? adjuntos : [adjuntos]
-                setAdjuntoReply((prev) => ({
-                  ...prev,
-                  archivosLocales: [...(prev?.archivosLocales || []), ...lista]
-                }))
+                setAdjuntoReply((prev) => ({ ...prev, archivosLocales: [...(prev?.archivosLocales || []), ...lista] }))
               }}
             />
           </>
@@ -675,7 +750,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         />
       )}
       {modalRedactar && (
-        <ModalRedactar onEnviar={handleRedactar} onClose={() => setModalRedactar(false)} loading={loadingEnvio} />
+        <ModalRedactar onEnviar={async (p) => { const r = await redactar(p); if (r.success) setModalRedactar(false) }} onClose={() => setModalRedactar(false)} loading={loadingEnvio} />
       )}
       {error && <div className="buzon-error">{error}</div>}
     </div>

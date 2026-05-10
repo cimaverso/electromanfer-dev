@@ -1,50 +1,78 @@
+/* ════════════════════════════════════════════
+   ELECTROMANFER — Design Tokens
+   Dark mode: valores por defecto en :root
+   Light mode: override con [data-theme="light"]
+   ════════════════════════════════════════════ */
+
 :root {
   /* ─── Colores principales ─── */
-  --color-primary: #8CA653;
-  --color-primary-hover: #7a9448;
-  --color-primary-active: #6b8340;
-  --color-primary-soft: rgba(140, 166, 83, 0.12);
+  --color-primary: #9DBE5A;
+  --color-primary-hover: #8CAD4A;
+  --color-primary-active: #7A9C3C;
+  --color-primary-soft: rgba(157, 190, 90, 0.15);
 
-  --color-secondary: #BCBF5E;
-  --color-secondary-hover: #a8ab50;
+  --color-secondary: #D0D46A;
+  --color-secondary-hover: #BEC05C;
 
-  --color-accent: #F2CD5C;
-  --color-accent-hover: #e0bc4a;
+  --color-accent: #FFD966;
+  --color-accent-hover: #EEC84E;
 
   /* ─── Fondos dark ─── */
   --color-bg: #0F1115;
-  --color-bg-soft: #151922;
-  --color-surface: #1B2130;
-  --color-surface-2: #252D3D;
-  --color-surface-3: #2E374A;
+  --color-bg-soft: #13171E;
+  --color-surface: #1A2030;
+  --color-surface-2: #232C3E;
+  --color-surface-3: #2C364A;
 
-  /* ─── Textos ─── */
-  --color-text: #F5F7FA;
-  --color-text-soft: #A9B2C3;
-  --color-text-muted: #7E8799;
+  /* ─── Textos dark — alta legibilidad ─── */
+  --color-text: #F0F4FF;
+  --color-text-soft: #C8D0E0;
+  --color-text-muted: #8E9BB0;
 
-  /* ─── Bordes ─── */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
+  /* ─── Bordes dark ─── */
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
 
   /* ─── Estados semánticos ─── */
-  --color-success: #6BAA4E;
-  --color-success-soft: rgba(107, 170, 78, 0.12);
-  --color-danger: #D9534F;
-  --color-danger-soft: rgba(217, 83, 79, 0.12);
-  --color-warning: #D9A441;
-  --color-warning-soft: rgba(217, 164, 65, 0.12);
-  --color-info: #5B8DEF;
-  --color-info-soft: rgba(91, 141, 239, 0.12);
+  --color-success: #72C45A;
+  --color-success-soft: rgba(114, 196, 90, 0.14);
+  --color-danger: #E05C58;
+  --color-danger-soft: rgba(224, 92, 88, 0.14);
+  --color-warning: #F0B840;
+  --color-warning-soft: rgba(240, 184, 64, 0.14);
+  --color-info: #6B9EF5;
+  --color-info-soft: rgba(107, 158, 245, 0.14);
 
   /* ─── Blanco y negro ─── */
   --color-white: #FFFFFF;
   --color-dark: #0D0D0D;
 
-  /* ─── Layout sidebar ─── */
+  /* ─── Layout ─── */
   --sidebar-width-open: 260px;
   --sidebar-width-closed: 84px;
   --header-height: 72px;
+
+  /* ─── Sidebar dark — tokens propios ─── */
+  --sidebar-bg:                 var(--color-surface);
+  --sidebar-border:             var(--color-border);
+  --sidebar-text:               var(--color-text-soft);
+  --sidebar-text-muted:         var(--color-text-muted);
+  --sidebar-hover-bg:           var(--color-surface-2);
+  --sidebar-hover-text:         var(--color-text);
+  --sidebar-active-bg:          var(--color-primary-soft);
+  --sidebar-active-text:        var(--color-primary);
+  --sidebar-toggle-bg:          var(--color-surface-2);
+  --sidebar-toggle-border:      var(--color-border-strong);
+  --sidebar-toggle-text:        var(--color-text-soft);
+  --sidebar-tooltip-bg:         var(--color-surface-3);
+  --sidebar-badge-bg:           var(--color-surface-3);
+  --sidebar-badge-border:       var(--color-border);
+  --sidebar-badge-text:         var(--color-text-muted);
+  --sidebar-logout-text:        var(--color-text-muted);
+  --sidebar-logout-hover-bg:    var(--color-danger-soft);
+  --sidebar-logout-hover-text:  var(--color-danger);
+  --sidebar-user-name:          var(--color-text);
+  --sidebar-user-role:          var(--color-text-muted);
 
   /* ─── Radios ─── */
   --radius-xs: 6px;
@@ -54,10 +82,10 @@
   --radius-xl: 24px;
 
   /* ─── Sombras ─── */
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.20);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.36);
-  --shadow-primary: 0 4px 20px rgba(140, 166, 83, 0.25);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.44);
+  --shadow-primary: 0 4px 20px rgba(157, 190, 90, 0.30);
 
   /* ─── Transiciones ─── */
   --transition-base: all 0.25s ease;
@@ -102,4 +130,76 @@
   --z-modal: 300;
   --z-toast: 400;
   --z-tooltip: 500;
+  --z-overlay: 90;
+}
+
+/* ════════════════════════════════════════════
+   LIGHT MODE
+   ════════════════════════════════════════════ */
+[data-theme="light"] {
+  /* ─── Colores principales ─── */
+  --color-primary: #5E8A1A;
+  --color-primary-hover: #4E7A10;
+  --color-primary-active: #3E6A08;
+  --color-primary-soft: rgba(94, 138, 26, 0.12);
+
+  --color-secondary: #8A8E28;
+  --color-secondary-hover: #7A7E20;
+
+  --color-accent: #C89A00;
+  --color-accent-hover: #B08800;
+
+  /* ─── Fondos light ─── */
+  --color-bg: #F2F4F8;
+  --color-bg-soft: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F0F2F6;
+  --color-surface-3: #E4E8EF;
+
+  /* ─── Textos light ─── */
+  --color-text: #111827;
+  --color-text-soft: #374151;
+  --color-text-muted: #6B7280;
+
+  /* ─── Bordes light ─── */
+  --color-border: rgba(0, 0, 0, 0.09);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+
+  /* ─── Estados semánticos light ─── */
+  --color-success: #2E7D32;
+  --color-success-soft: rgba(46, 125, 50, 0.12);
+  --color-danger: #C62828;
+  --color-danger-soft: rgba(198, 40, 40, 0.10);
+  --color-warning: #E65100;
+  --color-warning-soft: rgba(230, 81, 0, 0.10);
+  --color-info: #1565C0;
+  --color-info-soft: rgba(21, 101, 192, 0.10);
+
+  /* ─── Sombras light ─── */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+  --shadow-primary: 0 4px 16px rgba(94, 138, 26, 0.24);
+
+  /* ─── Sidebar light — fondo verde, texto blanco/verde claro ─── */
+  --sidebar-bg:                 #5E8A1A;
+  --sidebar-border:             rgba(0, 0, 0, 0.12);
+  --sidebar-text:               #D8EEB8;
+  --sidebar-text-muted:         #A8C878;
+  --sidebar-hover-bg:           rgba(255, 255, 255, 0.12);
+  --sidebar-hover-text:         #FFFFFF;
+  --sidebar-active-bg:          rgba(255, 255, 255, 0.22);
+  --sidebar-active-text:        #FFFFFF;
+  --sidebar-toggle-bg:          #4E7A10;
+  --sidebar-toggle-border:      rgba(0, 0, 0, 0.18);
+  --sidebar-toggle-text:        #D8EEB8;
+  --sidebar-tooltip-bg:         #3E6A08;
+  --sidebar-badge-bg:           rgba(0, 0, 0, 0.15);
+  --sidebar-badge-border:       rgba(0, 0, 0, 0.10);
+  --sidebar-badge-text:         #C8E8A0;
+  --sidebar-logout-text:        #A8C878;
+  --sidebar-logout-hover-bg:    rgba(255, 80, 80, 0.18);
+  --sidebar-logout-hover-text:  #FFB3B0;
+  --sidebar-user-name:          #FFFFFF;
+  --sidebar-user-role:          #C8E8A0;
 }

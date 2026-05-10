@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useProductos } from '../../../hooks/useProductos'
 import { useCotizacionDraft } from '../../../hooks/useCotizacionDraft'
 import { useCotizaciones } from '../../../hooks/useCotizaciones'
@@ -13,7 +13,7 @@ import CotizacionForm from '../CotizacionForm'
 import CotizacionResumen from '../CotizacionResumen'
 import './ModalCotizacionBuzon.css'
 
-// ─── Helper: construye imagenesPorCodRef igual que PdfPreview ────────────────
+// ─── Helper: construye imagenesPorCodRef ──────────────────────────────────────
 async function cargarImagenesParaPdf(items = []) {
   const imagenesPorCodRef = {}
   const codRefs = [...new Set(items.map((i) => i.cod_ref))]
@@ -25,15 +25,13 @@ async function cargarImagenesParaPdf(items = []) {
           recursos.find((r) => r.tipo === 'imagen' && r.principal) ||
           recursos.find((r) => r.tipo === 'imagen')
         if (principal) imagenesPorCodRef[cod] = principal.url
-      } catch {
-        // sin imagen para este cod_ref — quedará como placeholder en el PDF
-      }
+      } catch { /* sin imagen */ }
     })
   )
   return imagenesPorCodRef
 }
 
-// ─── Helper: carga adjuntos con seleccionada:true por cada producto ───────────
+// ─── Helper: carga adjuntos seleccionados ─────────────────────────────────────
 async function cargarAdjuntosSeleccionados(items = []) {
   const adjuntosImagenes = []
   const adjuntosPdfs = []
@@ -47,12 +45,68 @@ async function cargarAdjuntosSeleccionados(items = []) {
           if (r.tipo === 'imagen') adjuntosImagenes.push({ url: r.url, nombre: r.nombre || r.url.split('/').pop() })
           else if (r.tipo === 'pdf') adjuntosPdfs.push({ url: r.url, nombre: r.nombre || r.url.split('/').pop() })
         })
-      } catch {
-        // sin recursos para este cod_ref
-      }
+      } catch { /* sin recursos */ }
     })
   )
   return { adjuntosImagenes, adjuntosPdfs }
+}
+
+// ─── Hook: scroll por arrastre (mouse drag to scroll) ────────────────────────
+// Usa getBoundingClientRect() para coordenadas absolutas correctas dentro del modal.
+// Los listeners de move/up van en document para no perder el drag al salir del elemento.
+function useDragScroll() {
+  const ref = useRef(null)
+  const state = useRef({ dragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 })
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const onMouseDown = (e) => {
+      // No activar en elementos interactivos
+      if (['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(e.target.tagName)) return
+      const rect = el.getBoundingClientRect()
+      state.current = {
+        dragging: true,
+        startX: e.clientX - rect.left,
+        startY: e.clientY - rect.top,
+        scrollLeft: el.scrollLeft,
+        scrollTop: el.scrollTop,
+      }
+      el.style.cursor = 'grabbing'
+      el.style.userSelect = 'none'
+      e.preventDefault()
+    }
+
+    const onMouseMove = (e) => {
+      if (!state.current.dragging) return
+      const rect = el.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      el.scrollLeft = state.current.scrollLeft - (x - state.current.startX)
+      el.scrollTop = state.current.scrollTop - (y - state.current.startY)
+    }
+
+    const onMouseUp = () => {
+      if (!state.current.dragging) return
+      state.current.dragging = false
+      el.style.cursor = 'grab'
+      el.style.userSelect = ''
+    }
+
+    // mousedown en el elemento, move/up en document para no perder el drag
+    el.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  return ref
 }
 
 // ─── Modal historial ──────────────────────────────────────────────────────────
@@ -84,10 +138,10 @@ function ModalHistorial({ onSeleccionar, onClose }) {
     iso ? new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
   const estadoBadge = (e) => ({
-    generada: { label: 'Generada', cls: 'badge--info' },
-    enviada: { label: 'Enviada', cls: 'badge--warning' },
-    efectiva: { label: 'Efectiva', cls: 'badge--success' },
-    anulada: { label: 'Anulada', cls: 'badge--danger' },
+    generada:         { label: 'Generada',  cls: 'badge--info' },
+    enviada:          { label: 'Enviada',   cls: 'badge--warning' },
+    efectiva:         { label: 'Efectiva',  cls: 'badge--success' },
+    anulada:          { label: 'Anulada',   cls: 'badge--danger' },
   }[e] || { label: e, cls: '' })
 
   return (
@@ -161,8 +215,13 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
   const [generandoPdf, setGenerandoPdf] = useState(false)
   const [tabBuscador, setTabBuscador] = useState('buscar')
 
+  // Refs para scroll por arrastre en las dos tablas
+  const dragRefBuscar = useDragScroll()
+  const dragRefSeleccionados = useDragScroll()
+
   const hasBuscado = !loadingBusqueda && (resultados.length > 0 || errorBusqueda !== null || query.trim() !== '')
 
+  // Pre-llenar datos del cliente desde el hilo del buzón
   useEffect(() => {
     if (!hilo?.emailRemitente) return
     if (!clienteDraft?.email && !clienteDraft?.nombre_razon_social) {
@@ -195,11 +254,11 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
       notas: '',
       observaciones_pdf: '',
       items: selectedProducts.map((p) => ({
-        cod_ref: p.cod_ref,
-        nom_ref: p.nom_ref,
-        cod_tip: p.cod_tip || null,
-        nom_tip: p.nom_tip || null,
-        cantidad: p.cantidad,
+        cod_ref:   p.cod_ref,
+        nom_ref:   p.nom_ref,
+        cod_tip:   p.cod_tip  || null,
+        nom_tip:   p.nom_tip  || null,
+        cantidad:  p.cantidad,
         valor_web: p.valor_web,
       })),
     }
@@ -217,7 +276,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
     try {
       const items = result.data.cotizaciones_items || []
 
-      // Carga imágenes para el PDF y adjuntos seleccionados en paralelo
       const [imagenesPorCodRef, { adjuntosImagenes, adjuntosPdfs }] = await Promise.all([
         cargarImagenesParaPdf(items),
         cargarAdjuntosSeleccionados(items),
@@ -233,7 +291,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
         adjuntosPdfs,
       })
     } catch {
-      // PDF falló pero la cotización se generó — notificar igual
       onCotizacionGenerada({
         blobUrl: null,
         nombreArchivo: '',
@@ -326,8 +383,9 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                 </button>
               </div>
 
+              {/* ── Tab: Buscar productos ── */}
               {tabBuscador === 'buscar' && (
-                <div className="mcb-col__scroll">
+                <>
                   <div className="mcb-search-wrap">
                     <SearchInput
                       value={query}
@@ -338,9 +396,7 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                     />
                   </div>
 
-                  {loadingBusqueda && (
-                    <LoadingSpinner size="sm" text="Buscando..." />
-                  )}
+                  {loadingBusqueda && <LoadingSpinner size="sm" text="Buscando..." />}
 
                   {!loadingBusqueda && errorBusqueda && (
                     <div className="mcb-empty">⚠️ {errorBusqueda}</div>
@@ -350,32 +406,32 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                     <div className="mcb-empty">Sin resultados para "{query}"</div>
                   )}
 
+                  {!loadingBusqueda && !errorBusqueda && !hasBuscado && (
+                    <div className="mcb-empty">📦 Escribe un producto y presiona Buscar</div>
+                  )}
+
+                  {/* Tabla con scroll H+V y arrastre — 10 ítems visibles */}
                   {!loadingBusqueda && !errorBusqueda && resultados.length > 0 && (
-                    <div className="mcb-tabla-wrap">
+                    <div className="mcb-tabla-wrap" ref={dragRefBuscar}>
                       <ProductosTable
                         productos={resultados}
                         onVerDetalle={verDetalle}
                       />
                     </div>
                   )}
-
-                  {!loadingBusqueda && !errorBusqueda && !hasBuscado && (
-                    <div className="mcb-empty">
-                      📦 Escribe un producto y presiona Buscar
-                    </div>
-                  )}
-                </div>
+                </>
               )}
 
+              {/* ── Tab: Seleccionados ── */}
               {tabBuscador === 'seleccionados' && (
-                <div className="mcb-col__scroll">
+                <div className="mcb-tabla-wrap" ref={dragRefSeleccionados}>
                   <CotizacionTable onIrAProductos={() => setTabBuscador('buscar')} />
                 </div>
               )}
             </div>
 
             {/* ── Columna 2: Datos del cliente ── */}
-            <div className="mcb-col mcb-col--form">
+            <div className="mcb-col mcb-col--cliente">
               <div className="mcb-col__label">Datos del cliente</div>
               <div className="mcb-col__scroll">
                 <CotizacionForm />

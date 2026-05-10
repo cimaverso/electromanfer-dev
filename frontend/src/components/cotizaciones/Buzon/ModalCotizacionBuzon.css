@@ -8,20 +8,20 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  backdrop-filter: blur(2px);
 }
 
-/* El modal de historial va encima del modal principal */
 .mcb-overlay--top {
   z-index: calc(var(--z-modal) + 10);
 }
 
-/* ─── Modal principal ────────────────────────────────────────────────────────── */
+/* ─── Modal principal — más ancho para evitar compresión ─────────────────────── */
 .mcb-modal {
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
-  width: min(1160px, 97vw);
-  height: min(800px, 92vh);
+  width: min(1280px, 98vw);
+  height: min(840px, 94vh);
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
@@ -71,10 +71,11 @@
   flex-shrink: 0;
 }
 
-/* ─── Cuerpo 3 columnas ──────────────────────────────────────────────────────── */
+/* ─── Cuerpo 3 columnas — rebalanceado ──────────────────────────────────────── */
 .mcb-modal__body {
   display: grid;
-  grid-template-columns: 1fr 360px 260px;
+  /* Col 1: buscador+tabla (flex), Col 2: form cliente (fijo), Col 3: resumen (fijo) */
+  grid-template-columns: 1fr minmax(300px, 380px) minmax(240px, 280px);
   flex: 1;
   overflow: hidden;
 }
@@ -86,9 +87,12 @@
   border-right: 1px solid var(--color-border);
 }
 
-.mcb-col:last-child {
-  border-right: none;
+/* La columna de búsqueda contiene el scroll — el overflow lo maneja mcb-tabla-wrap */
+.mcb-col--busqueda {
+  overflow: hidden;
 }
+
+.mcb-col:last-child { border-right: none; }
 
 .mcb-col__label {
   font-size: var(--font-size-xs);
@@ -102,6 +106,7 @@
   flex-shrink: 0;
 }
 
+/* Scroll vertical — la columna scroll siempre disponible */
 .mcb-col__scroll {
   flex: 1;
   overflow-y: auto;
@@ -111,7 +116,10 @@
 }
 
 .mcb-col__scroll::-webkit-scrollbar { width: 5px; }
-.mcb-col__scroll::-webkit-scrollbar-thumb { background: var(--color-surface-3); border-radius: 99px; }
+.mcb-col__scroll::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 99px;
+}
 
 /* ─── Tabs dentro de columna buscador ───────────────────────────────────────── */
 .mcb-col__tabs {
@@ -137,6 +145,7 @@
   justify-content: center;
   gap: var(--space-2);
   margin-bottom: -1px;
+  white-space: nowrap;
 }
 
 .mcb-col__tab:hover {
@@ -167,15 +176,102 @@
   flex-shrink: 0;
 }
 
+/* ─── Tabla wrapper: único contexto de scroll H+V + arrastre ────────────────── */
 .mcb-tabla-wrap {
+  flex: 1;
+  /* Ambos ejes de scroll aquí — el padre (mcb-col--busqueda) tiene overflow:hidden */
   overflow-x: auto;
+  overflow-y: auto;
+  cursor: grab;
+  user-select: none;
+  display: block;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-3) transparent;
 }
 
-.mcb-empty {
-  padding: var(--space-8) var(--space-4);
-  text-align: center;
+.mcb-tabla-wrap:active { cursor: grabbing; }
+
+.mcb-tabla-wrap::-webkit-scrollbar { width: 5px; height: 5px; }
+.mcb-tabla-wrap::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 99px;
+}
+
+/* La tabla NO colapsa — fuerza scroll horizontal si es necesario */
+.mcb-tabla-wrap table {
+  min-width: 560px;
+  width: 100%;
+}
+
+/* Filas de tabla legibles */
+.mcb-tabla-wrap td,
+.mcb-tabla-wrap th {
+  white-space: nowrap;
+  padding: var(--space-3) var(--space-4);
+}
+
+/* ─── Form datos cliente — más padding, menos comprimido ───────────────────── */
+.mcb-col--cliente .mcb-col__scroll {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.mcb-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mcb-field__label {
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-soft);
+}
+
+.mcb-field__input {
+  height: 40px;
+  padding: 0 var(--space-3);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  transition: var(--transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mcb-field__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.mcb-field__input::placeholder { color: var(--color-text-muted); }
+
+.mcb-field__textarea {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  resize: vertical;
+  min-height: 72px;
+  transition: var(--transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mcb-field__textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 
 /* ─── Columna resumen ────────────────────────────────────────────────────────── */
@@ -188,6 +284,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* ─── Empty ──────────────────────────────────────────────────────────────────── */
+.mcb-empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 /* ─── Error ──────────────────────────────────────────────────────────────────── */
@@ -232,8 +336,8 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
-  width: min(560px, 95vw);
-  max-height: 80vh;
+  width: min(600px, 95vw);
+  max-height: 82vh;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
@@ -273,6 +377,7 @@
   outline: none;
   transition: var(--transition-fast);
   font-family: var(--font-family);
+  box-sizing: border-box;
 }
 
 .mcb-historial__input:focus { border-color: var(--color-primary); }
@@ -355,15 +460,8 @@
   white-space: nowrap;
 }
 
-.mcb-btn:hover {
-  background: var(--color-surface-2);
-  color: var(--color-text);
-}
-
-.mcb-btn--ghost {
-  background: transparent;
-  border-color: var(--color-border);
-}
+.mcb-btn:hover { background: var(--color-surface-2); color: var(--color-text); }
+.mcb-btn--ghost { background: transparent; border-color: var(--color-border); }
 
 .mcb-close {
   background: none;
@@ -376,32 +474,61 @@
   transition: var(--transition-fast);
 }
 
-.mcb-close:hover {
-  color: var(--color-text);
-  background: var(--color-surface-3);
-}
+.mcb-close:hover { color: var(--color-text); background: var(--color-surface-3); }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .mcb-modal__body {
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr minmax(260px, 320px) minmax(220px, 260px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .mcb-modal {
+    width: 98vw;
+    height: 96vh;
+  }
+
+  .mcb-modal__body {
+    grid-template-columns: 1fr 280px;
     grid-template-rows: 1fr auto;
   }
+
   .mcb-col--resumen {
     grid-column: 1 / -1;
     border-top: 1px solid var(--color-border);
-    max-height: 200px;
+    max-height: 220px;
+    border-right: none;
   }
 }
 
 @media (max-width: 768px) {
+  .mcb-modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+
   .mcb-modal__body {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    overflow-y: auto;
   }
+
   .mcb-col {
     border-right: none;
     border-bottom: 1px solid var(--color-border);
-    max-height: 300px;
+    max-height: 320px;
+    overflow: hidden;
   }
-  .mcb-col--resumen { max-height: none; }
+
+  .mcb-col--resumen {
+    max-height: none;
+    grid-column: auto;
+  }
+
+  /* En mobile la tabla siempre puede hacer scroll horizontal */
+  .mcb-tabla-wrap {
+    max-height: 240px;
+  }
 }

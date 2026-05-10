@@ -62,8 +62,7 @@ export default function ProductosTable({ productos = [], onVerDetalle }) {
 
   return (
     <>
-      <div className="productos-table-wrapper">
-        <table className="productos-table">
+      <table className="productos-table">
           <thead>
             <tr>
               <th>Código</th>
@@ -178,8 +177,7 @@ export default function ProductosTable({ productos = [], onVerDetalle }) {
               )
             })}
           </tbody>
-        </table>
-      </div>
+      </table>
 
       {/* ── Modal de recursos (fuera del wrapper para evitar z-index issues) ── */}
       {modalRecursos && (
