@@ -102,7 +102,14 @@ function HiloItem({ hilo, activo, onClick }) {
 
 function MensajeBurbuja({ mensaje }) {
   const enviado = mensaje.direccion === 'enviado'
-  const srcDocFinal = mensaje.cuerpo_html ? buildSrcDoc(mensaje.cuerpo_html) : null
+
+  // Si el HTML contiene imágenes inline (cid:), NO procesarlo con buildSrcDoc
+  // porque el iframe pierde las referencias a los adjuntos inline de Gmail.
+  // En ese caso se pasa el HTML crudo directamente, igual que hacía la versión anterior.
+  const tieneCid = mensaje.cuerpo_html && /src=["']cid:/i.test(mensaje.cuerpo_html)
+  const srcDocFinal = mensaje.cuerpo_html
+    ? (tieneCid ? mensaje.cuerpo_html : buildSrcDoc(mensaje.cuerpo_html))
+    : null
 
   return (
     <div className={`buzon-msg ${enviado ? 'buzon-msg--enviado' : 'buzon-msg--recibido'}`}>
@@ -612,7 +619,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
       ].filter(Boolean).join(' ')}
       style={{ gridTemplateColumns: gridColumns }}
     >
-      {/* ── Barra navegación mobile — ANTES del sidebar para que quede arriba en flex column ── */}
+      {/* ── Barra navegación mobile ── */}
       <div className="buzon-mobile-nav">
         <button
           className={`buzon-mobile-nav__tab ${bandejaActiva === 'inbox' ? 'buzon-mobile-nav__tab--active' : ''}`}
