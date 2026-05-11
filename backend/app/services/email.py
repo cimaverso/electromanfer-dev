@@ -135,7 +135,6 @@ def enviar_cotizacion_email(
     firma_url: str = None,
     consecutivo: str = "",
     in_reply_to: str = None,
-    references: str = None,
 ) -> None:
     try:
         # Resolver URL pública de la firma
@@ -154,8 +153,9 @@ def enviar_cotizacion_email(
         msg['Subject'] = asunto
 
         if in_reply_to:
-            msg['In-Reply-To'] = references or in_reply_to
-            msg['References'] = references or in_reply_to
+            reply_id = in_reply_to if in_reply_to.startswith('<') else f"<{in_reply_to}>"
+            msg['In-Reply-To'] = reply_id
+            msg['References'] = reply_id
 
         html_content = _construir_html(cuerpo, consecutivo, firma_url=firma_url_publica)
         msg_alt = MIMEMultipart('alternative')

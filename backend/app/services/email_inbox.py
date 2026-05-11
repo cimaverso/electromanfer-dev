@@ -114,7 +114,7 @@ def _parsear_completo(msg):
         "leido": "UNREAD" not in label_ids,
         "direccion": "enviado" if es_enviado else "recibido",
         "cuerpo": _limpiar_cuerpo(cuerpo_plain),
-        "cuerpo_html": cuerpo_html if es_enviado else "",
+        "cuerpo_html": cuerpo_html,
         "adjuntos": adjuntos,
     }
 

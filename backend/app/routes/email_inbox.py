@@ -39,6 +39,7 @@ def leido(email_id: str, _: TokenData = Depends(require_auth)):
 
 @router.post("/responder")
 def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
+    print(f">>> in_reply_to={data.in_reply_to} references={data.references}")
     try:
         message_id = responder_hilo(
             destino=data.destino,

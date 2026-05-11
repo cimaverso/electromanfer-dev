@@ -38,24 +38,25 @@ export async function getHilo(hiloMessageId, bandeja = 'inbox') {
   const response = await axiosClient.get(`/emails/hilo/${encodeURIComponent(hiloMessageId)}`)
   const mensajes = response.data
   if (!mensajes || mensajes.length === 0) return null
-
   const primero = mensajes[0]
   const esEnviado = bandeja === 'sent'
   const campoPersona = esEnviado ? primero.destinatario : primero.remitente
   const nombre = limpiarNombre(campoPersona)
   const emailAddr = extraerEmail(campoPersona)
+  const CUENTA_PROPIA = 'ventas@electromanfer.com'
+  const emailFinal = emailAddr === CUENTA_PROPIA ? extraerEmail(primero.destinatario) : emailAddr
   const cotMatch = primero.asunto?.match(/COT-\d{4}-\d{4}/)
-
+  const ultimoRecibidoConId = [...mensajes].reverse().find(m => m.message_id && m.message_id !== '' && m.direccion === 'recibido')
   return {
     id: hiloMessageId,
     leido: true,
     remitente: nombre || emailAddr,
-    email_remitente: emailAddr,
+    email_remitente: emailFinal,
     asunto: primero.asunto || '(Sin asunto)',
     fecha: primero.fecha,
     cotizacion_consecutivo: cotMatch ? cotMatch[0] : null,
     message_id: hiloMessageId,
-    last_message_id: mensajes[mensajes.length - 1]?.message_id || hiloMessageId, // ← agregar
+    last_message_id: ultimoRecibidoConId?.message_id || hiloMessageId,
     mensajes: mensajes.map((m) => ({
       id: m.id,
       direccion: m.direccion,
