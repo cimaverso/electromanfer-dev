@@ -645,14 +645,14 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           <IconEnviados />
           <span>Enviados</span>
         </button>
-        <button
+        {/* <button
           className="buzon-mobile-nav__tab"
           onClick={() => setModalRedactar(true)}
           type="button"
         >
           <IconRedactar />
           <span>Redactar</span>
-        </button>
+        </button> */}
         <button
           className="buzon-mobile-nav__sync"
           onClick={() => sincronizar()}
@@ -685,9 +685,9 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         </nav>
         <div className="buzon-sidebar__divider" />
         <div className="buzon-sidebar__acciones">
-          <button className="buzon-nav-item" onClick={() => setModalRedactar(true)} type="button" title="Redactar">
+          {/* <button className="buzon-nav-item" onClick={() => setModalRedactar(true)} type="button" title="Redactar">
             <IconRedactar />{!sidebarColapsado && <span>Redactar</span>}
-          </button>
+          </button> */}
           <button className="buzon-nav-item buzon-nav-item--cot" onClick={() => setModalCotizacion(true)} type="button" title="Nueva cotización">
             <IconCotizacion />{!sidebarColapsado && <span>Nueva cotización</span>}
           </button>
