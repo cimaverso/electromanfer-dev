@@ -76,6 +76,7 @@ export default function CotizacionTable({ onIrAProductos }) {
   }
 
   return (
+    <>
     <div className="cot-table-wrapper">
       <table className="cot-table">
         <thead>
@@ -163,5 +164,74 @@ export default function CotizacionTable({ onIrAProductos }) {
         </tbody>
       </table>
     </div>
+
+    {/* ── Vista móvil: tarjetas (visible solo ≤ 640px vía CSS) ── */}
+    <div className="cot-cards">
+      {selectedProducts.map((p, index) => {
+        const subtotal = (p.valor_web || 0) * p.cantidad
+        return (
+          <div key={p.cod_ref} className="cot-card">
+            <div className="cot-card__header">
+              <span className="cot-card__num">{index + 1}</span>
+              <div className="cot-card__info">
+                <span className="cot-card__cod">{p.cod_ref}</span>
+                <span className="cot-card__nom">{p.nom_ref}</span>
+                {p.nom_tip && <span className="cot-card__tipo">{p.nom_tip}</span>}
+              </div>
+              <button
+                className="cot-table__remove"
+                onClick={() => removeProduct(p.cod_ref)}
+                title="Quitar producto"
+                aria-label="Quitar producto"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              </button>
+            </div>
+            <div className="cot-card__footer">
+              <div className="cot-card__precio-wrapper">
+                <span className="cot-card__precio-label">Precio unit.</span>
+                <PrecioInput
+                  codRef={p.cod_ref}
+                  valorWeb={p.valor_web}
+                  updatePrice={updatePrice}
+                />
+              </div>
+              <div className="cot-table__qty">
+                <button
+                  className="cot-table__qty-btn"
+                  onClick={() => updateQuantity(p.cod_ref, p.cantidad - 1)}
+                  disabled={p.cantidad <= 1}
+                  aria-label="Reducir"
+                >−</button>
+                <input
+                  type="number"
+                  className="cot-table__qty-input"
+                  value={p.cantidad}
+                  min={1}
+                  onChange={(e) => updateQuantity(p.cod_ref, e.target.value)}
+                  aria-label="Cantidad"
+                />
+                <button
+                  className="cot-table__qty-btn"
+                  onClick={() => updateQuantity(p.cod_ref, p.cantidad + 1)}
+                  aria-label="Aumentar"
+                >+</button>
+              </div>
+              <div className="cot-card__subtotal-wrapper">
+                <span className="cot-card__subtotal-label">Subtotal</span>
+                <span className="cot-card__subtotal-value">{formatCOP(subtotal)}</span>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+    </>
   )
 }

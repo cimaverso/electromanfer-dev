@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
-from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos
+from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos, eliminar_hilo, eliminar_mensaje
 from app.core.security import require_auth
 from app.schemas.auth import TokenData
 from app.schemas.envios import ResponderHiloSchema
@@ -39,7 +39,6 @@ def leido(email_id: str, _: TokenData = Depends(require_auth)):
 
 @router.post("/responder")
 def responder(data: ResponderHiloSchema, _: TokenData = Depends(require_auth)):
-    print(f">>> in_reply_to={data.in_reply_to} references={data.references}")
     try:
         message_id = responder_hilo(
             destino=data.destino,
@@ -87,5 +86,20 @@ async def responder_adjuntos(
         if not message_id:
             raise HTTPException(status_code=500, detail="Error al enviar")
         return {"ok": True, "message_id": message_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@router.delete("/hilo/{thread_id}")
+def eliminar_hilo(thread_id: str, _: TokenData = Depends(require_auth)):
+    try:
+        return eliminar_hilo(thread_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/mensaje/{message_id}")
+def eliminar_mensaje(message_id: str, _: TokenData = Depends(require_auth)):
+    try:
+        return eliminar_mensaje(message_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

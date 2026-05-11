@@ -266,3 +266,19 @@ def responder_con_adjuntos(destino: str, asunto: str, cuerpo: str, archivos: lis
         firma_url=firma_url,
         adjuntos_urls=adjuntos_procesados if adjuntos_procesados else None,
     )
+
+def eliminar_hilo(thread_id: str) -> dict:
+    service = _get_service()
+    service.users().threads().trash(
+        userId="me",
+        id=thread_id
+    ).execute()
+    return {"ok": True, "thread_id": thread_id}
+
+def eliminar_mensaje(message_id: str) -> dict:
+    service = _get_service()
+    service.users().messages().trash(
+        userId="me",
+        id=message_id
+    ).execute()
+    return {"ok": True, "message_id": message_id}
