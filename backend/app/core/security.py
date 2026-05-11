@@ -23,7 +23,7 @@ def verify_password(plain_password, hashed_password):
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
-    expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=30))
+    expire = datetime.now(UTC) + (expires_delta or timedelta(hours=30))
     session_token = secrets.token_hex(16)
     to_encode.update({"exp": expire, "session_token": session_token})
     encoded = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
