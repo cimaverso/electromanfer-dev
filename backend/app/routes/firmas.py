@@ -6,12 +6,23 @@ from app.services.firmas import FirmasService
 from app.schemas.auth import TokenData
 from app.core.security import require_auth, require_admin
 
-router = APIRouter(prefix="/firmas", tags=["firmas"])
+router = APIRouter(prefix="/firmas", tags=["Firmas"])
 
 
 @router.get("", response_model=list[FirmaOut])
-def listar_firmas(db: Session = Depends(get_db), _: TokenData = Depends(require_auth)):
-    return FirmasService.listar(db)
+def listar_firmas(
+    db: Session = Depends(get_db),
+    current_user: TokenData = Depends(require_auth)
+):
+    return FirmasService.listar(db, current_user.user_id)
+
+@router.patch("/{firma_id}/preferida")
+def guardar_firma(
+    firma_id: int,
+    db: Session = Depends(get_db),
+    current_user: TokenData = Depends(require_auth)
+):
+    return FirmasService.guardar_preferida(firma_id, current_user.user_id, db)
 
 @router.post("", response_model=FirmaOut)
 def subir_firma(

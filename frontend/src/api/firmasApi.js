@@ -28,3 +28,8 @@ export async function eliminarFirma(id) {
   await axiosClient.delete(`/firmas/${id}`)
   return { success: true }
 }
+
+export async function guardarFirmaPreferida(firmaId) {
+  const response = await axiosClient.patch(`/firmas/${firmaId}/preferida`)
+  return response.data
+}

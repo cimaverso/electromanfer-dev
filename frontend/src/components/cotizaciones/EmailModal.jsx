@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { listarFirmas, subirFirma, eliminarFirma } from '../../api/firmasApi'
+import { listarFirmas, subirFirma, eliminarFirma, guardarFirmaPreferida } from '../../api/firmasApi'
 import { generarPdfCotizacion } from '../../utils/pdfGenerator'
 import './EmailModal.css'
 
@@ -175,6 +175,10 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
     const b64 = await cargarBase64(firma.url)
     setFirmaB64(b64)
     setFirmaLoading(false)
+    // Guardar preferencia en BD (silencioso)
+    try {
+      await guardarFirmaPreferida(firma.id)
+    } catch { /* silencioso */ }
   }
 
   const toggleAdj = (id, setFn) => {

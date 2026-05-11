@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import ModalCotizacionBuzon from './ModalCotizacionBuzon'
 import { useBuzon } from '../../../hooks/useBuzon'
 import axiosClient from '../../../api/axiosClient'
-import { listarFirmas } from '../../../api/firmasApi'
+import { listarFirmas, guardarFirmaPreferida } from '../../../api/firmasApi'
 import './BuzonPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -219,6 +219,10 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
     const b64 = await cargarBase64(firma.url)
     setFirmaB64(b64)
     setFirmaLoading(false)
+    // Guardar preferencia en BD (silencioso)
+    try {
+      await guardarFirmaPreferida(firma.id)
+    } catch { /* silencioso */ }
   }
 
   const handleNuevaFirma = async (e) => {

@@ -54,6 +54,8 @@ class Usuarios(Base):
         String(255),
         nullable=True
     )
+    
+    firma_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     activo: Mapped[bool] = mapped_column(
         Boolean,

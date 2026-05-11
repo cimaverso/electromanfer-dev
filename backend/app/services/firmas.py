@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models.firmas import Firmas
 from app.core.config import settings
+from app.models.usuarios import Usuarios
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,23 @@ class FirmasService:
         return path
 
     @staticmethod
-    def listar(db: Session) -> list[Firmas]:
+    def listar(db: Session, user_id: int) -> list[Firmas]:
+        user = db.get(Usuarios, user_id)
+        firma_preferida_id = user.firma_id if user else None
         stmt = select(Firmas).order_by(Firmas.id)
-        return db.execute(stmt).scalars().all()
+        firmas = db.execute(stmt).scalars().all()
+        if firma_preferida_id:
+            firmas = sorted(firmas, key=lambda f: (f.id != firma_preferida_id))
+        return firmas
+
+    @staticmethod
+    def guardar_preferida(firma_id: int, user_id: int, db: Session) -> dict:
+        user = db.get(Usuarios, user_id)
+        if not user:
+            raise HTTPException(404, "Usuario no encontrado")
+        user.firma_id = firma_id
+        db.commit()
+        return {"ok": True}
 
     @staticmethod
     def subir(nombre: str, archivo: UploadFile, db: Session) -> Firmas:
