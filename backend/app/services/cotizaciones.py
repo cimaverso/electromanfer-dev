@@ -10,12 +10,12 @@ from app.schemas.cotizaciones import CotizacionCreate
 from app.services.clientes import ClientesService
 from typing import Optional
 from app.models.clientes import Clientes
-from datetime import timedelta
 from datetime import date
+import pytz
 
 
 logger = logging.getLogger(__name__)
-
+BOGOTA_TZ = pytz.timezone('America/Bogota')
 IVA = 0.19
 
 
@@ -24,7 +24,7 @@ class CotizacionesService:
     #Consecutivo
     @staticmethod
     def _generar_consecutivo(db: Session) -> str:
-        anio = datetime.now(timezone.utc).year
+        anio = datetime.now(BOGOTA_TZ).year
         prefijo = f"COT-{anio}-"
         ultimo = db.execute(
             select(Cotizaciones)
@@ -167,9 +167,11 @@ class CotizacionesService:
         if estado:
             query = query.where(Cotizaciones.estado == estado)
         if fecha_inicio:
-            query = query.where(Cotizaciones.created_at >= fecha_inicio)
+            fecha_inicio_utc = BOGOTA_TZ.localize(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0)).astimezone(timezone.utc)
+            query = query.where(Cotizaciones.created_at >= fecha_inicio_utc)
         if fecha_fin:
-            query = query.where(Cotizaciones.created_at < fecha_fin + timedelta(days=1))
+            fecha_fin_utc = BOGOTA_TZ.localize(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59)).astimezone(timezone.utc)
+            query = query.where(Cotizaciones.created_at <= fecha_fin_utc)
         if cliente:
             query = query.join(Cotizaciones.clientes).where(
                 Clientes.nombre_razon_social.ilike(f"%{cliente}%")
