@@ -6,6 +6,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from email.utils import parsedate_to_datetime
 from app.services.email import enviar_cotizacion_email
+from bs4 import BeautifulSoup
 
 TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
 
@@ -59,6 +60,19 @@ def _limpiar_cuerpo(texto: str) -> str:
         limpias.append(linea)
     return '\n'.join(limpias).strip()
 
+def _limpiar_html(html: str) -> str:
+    if not html:
+        return ""
+    try:
+        soup = BeautifulSoup(html, 'html.parser')
+        for bq in soup.find_all('blockquote'):
+            bq.decompose()
+        for div in soup.find_all('div', class_='gmail_quote'):
+            div.decompose()
+        return str(soup)
+    except Exception:
+        return html
+    
 def _headers_dict(msg):
     return {h["name"]: h["value"] for h in msg["payload"].get("headers", [])}
 
@@ -114,7 +128,7 @@ def _parsear_completo(msg):
         "leido": "UNREAD" not in label_ids,
         "direccion": "enviado" if es_enviado else "recibido",
         "cuerpo": _limpiar_cuerpo(cuerpo_plain),
-        "cuerpo_html": cuerpo_html,
+        "cuerpo_html": _limpiar_html(cuerpo_html),
         "adjuntos": adjuntos,
     }
 

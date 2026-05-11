@@ -135,6 +135,7 @@ def enviar_cotizacion_email(
     firma_url: str = None,
     consecutivo: str = "",
     in_reply_to: str = None,
+    references: str = None,
 ) -> None:
     try:
         # Resolver URL pública de la firma

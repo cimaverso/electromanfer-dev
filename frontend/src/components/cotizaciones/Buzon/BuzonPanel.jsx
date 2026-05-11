@@ -42,26 +42,23 @@ function cargarBase64(url) {
 }
 
 // ─── Inyección de estilos en el iframe del correo ────────────────────────────
-function buildSrcDoc(htmlOriginal) {
+function buildSrcDoc(htmlOriginal, enviado = false) {
   if (!htmlOriginal) return null
   const dark = document.documentElement.getAttribute('data-theme') !== 'light'
-
   const style = dark
     ? `<style>
         html, body { background: transparent !important; margin: 0; padding: 0; }
-        * { color: #F0F4FF !important; }
         a { color: #9DBE5A !important; }
-        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; }
+        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; ${!enviado ? 'color: #F0F4FF;' : ''} }
         table, td, th { border-color: rgba(255,255,255,0.1) !important; }
         img { max-width: 100%; }
       </style>`
     : `<style>
         html, body { background: transparent !important; margin: 0; padding: 0; }
-        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: #111827; }
+        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; ${!enviado ? 'color: #111827;' : ''} }
         a { color: #5E8A1A; }
         img { max-width: 100%; }
       </style>`
-
   if (/<head[\s>]/i.test(htmlOriginal)) {
     return htmlOriginal.replace(/<head([\s>])/i, `<head$1${style}`)
   }
@@ -102,13 +99,21 @@ function HiloItem({ hilo, activo, onClick }) {
 
 function MensajeBurbuja({ mensaje }) {
   const enviado = mensaje.direccion === 'enviado'
+  const [tema, setTema] = useState(
+    document.documentElement.getAttribute('data-theme') || 'dark'
+  )
 
-  // Si el HTML contiene imágenes inline (cid:), NO procesarlo con buildSrcDoc
-  // porque el iframe pierde las referencias a los adjuntos inline de Gmail.
-  // En ese caso se pasa el HTML crudo directamente, igual que hacía la versión anterior.
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTema(document.documentElement.getAttribute('data-theme') || 'dark')
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
+
   const tieneCid = mensaje.cuerpo_html && /src=["']cid:/i.test(mensaje.cuerpo_html)
   const srcDocFinal = mensaje.cuerpo_html
-    ? (tieneCid ? mensaje.cuerpo_html : buildSrcDoc(mensaje.cuerpo_html))
+    ? (tieneCid ? mensaje.cuerpo_html : buildSrcDoc(mensaje.cuerpo_html, enviado))
     : null
 
   return (
@@ -121,6 +126,7 @@ function MensajeBurbuja({ mensaje }) {
 
       {srcDocFinal ? (
         <iframe
+          key={tema}
           srcDoc={srcDocFinal}
           className="buzon-msg__iframe"
           sandbox="allow-same-origin"
@@ -132,7 +138,7 @@ function MensajeBurbuja({ mensaje }) {
                 const h = doc.documentElement.scrollHeight
                 e.target.style.height = Math.min(Math.max(h, 60), 500) + 'px'
               }
-            } catch { /* cross-origin: dejar altura por defecto */ }
+            } catch { }
           }}
         />
       ) : (

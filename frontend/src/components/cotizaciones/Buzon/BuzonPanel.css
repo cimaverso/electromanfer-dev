@@ -425,9 +425,8 @@
 }
 
 .buzon-msg__iframe {
-  width: 100%;
-  min-height: 80px;
-  max-height: 500px;
+ width: 100%;
+  min-height: 60px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -1011,3 +1010,4 @@
   .buzon-sidebar .buzon-sidebar__email,
   .buzon-sidebar .buzon-nav-item span:not(.buzon-nav-badge) { display: none; }
 }
+
