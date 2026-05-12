@@ -18,7 +18,6 @@ function correoAHilo(correo, bandeja) {
   const nombre = limpiarNombre(campoPersona)
   const emailAddr = extraerEmail(campoPersona)
   const cotMatch = correo.asunto?.match(/COT-\d{4}-\d{4}/)
-
   return {
     id: correo.id,
     leido: esEnviado ? true : (correo.leido ?? true),
@@ -70,13 +69,25 @@ export async function getHilo(hiloMessageId, bandeja = 'inbox') {
   }
 }
 
+// Devuelve { hilos: [...], nextPageToken: string|null }
 export async function listarHilos(bandeja = 'inbox', filtros = {}) {
   const endpoint = bandeja === 'inbox' ? '/emails/inbox' : '/emails/sent'
-  const response = await axiosClient.get(endpoint, {
-    params: { limit: filtros.limit || 10 },
-  })
-  const correos = Array.isArray(response.data) ? response.data : []
-  return correos.map((c) => correoAHilo(c, bandeja))
+  const params = { limit: filtros.limit || 10 }
+  if (filtros.page_token) params.page_token = filtros.page_token
+  if (filtros.q) params.q = filtros.q
+
+  const response = await axiosClient.get(endpoint, { params })
+  const data = response.data
+
+  // Soporta tanto el formato nuevo { hilos, next_page_token }
+  // como el antiguo array plano (retrocompatibilidad)
+  const correos = Array.isArray(data) ? data : (data.hilos || [])
+  const nextPageToken = Array.isArray(data) ? null : (data.next_page_token || null)
+
+  return {
+    hilos: correos.map((c) => correoAHilo(c, bandeja)),
+    nextPageToken,
+  }
 }
 
 export async function marcarLeido(hiloId) {
@@ -90,9 +101,7 @@ export async function responderHilo(hiloId, payload) {
 }
 
 export async function redactarCorreo(payload) {
-  const response = await axiosClient.post('/emails/enviar', payload, {
-    timeout: 60000,
-  })
+  const response = await axiosClient.post('/emails/enviar', payload, { timeout: 60000 })
   return response.data
 }
 

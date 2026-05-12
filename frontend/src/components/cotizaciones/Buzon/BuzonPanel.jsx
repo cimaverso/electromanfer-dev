@@ -503,6 +503,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     sincronizar,
     cerrarHilo,
     enviarConAdjuntos,
+      paginaActual,           // +
+  hayPaginaSiguiente,     // +
+  irPaginaSiguiente,      // +
+  irPaginaAnterior, 
   } = useBuzon()
 
   const hilos = hilosReales
@@ -708,12 +712,42 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           {sinLeerTotal > 0 && bandejaActiva === 'inbox' && <span className="buzon-lista__sin-leer">{sinLeerTotal} sin leer</span>}
         </div>
         <input className="buzon-lista__search" placeholder="Buscar correos..." onChange={(e) => cargarHilos(bandejaActiva, { q: e.target.value })} />
+       
         {loadingHilos ? (
           <div className="buzon-lista__empty">Cargando...</div>
         ) : hilos.length === 0 ? (
           <div className="buzon-lista__empty">Sin correos</div>
         ) : (
           hilos.map((hilo) => <HiloItem key={hilo.id} hilo={hilo} activo={hiloEsActivo(hilo)} onClick={handleAbrirHilo} />)
+        )}
+
+        {/* ── Paginación ── */}
+        {!loadingHilos && (paginaActual > 1 || hayPaginaSiguiente) && (
+          <div className="buzon-paginacion">
+            <button
+              className="buzon-paginacion__btn"
+              onClick={irPaginaAnterior}
+              disabled={paginaActual <= 1}
+              title="Página anterior"
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <span className="buzon-paginacion__pagina">{paginaActual}</span>
+            <button
+              className="buzon-paginacion__btn"
+              onClick={irPaginaSiguiente}
+              disabled={!hayPaginaSiguiente}
+              title="Página siguiente"
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 

@@ -19,14 +19,46 @@ export function useBuzon() {
   const [error, setError] = useState(null)
   const [bandeja, setBandeja] = useState('inbox')
 
+  // ─── Paginación ───────────────────────────────────────────────────────────
+  // tokenStack[0] = undefined (página 1, sin token)
+  // tokenStack[1] = nextPageToken de página 1 → página 2
+  // tokenStack[n] = token para llegar a página n+1
+  const [tokenStack, setTokenStack] = useState([undefined])
+  const [paginaActual, setPaginaActual] = useState(1)
+  const [hayPaginaSiguiente, setHayPaginaSiguiente] = useState(false)
+
   // ─── Cargar lista de hilos ────────────────────────────────────────────────
+  // pageToken interno — se maneja desde irSiguiente/irAnterior
   const cargarHilos = useCallback(async (bandejaTarget = 'inbox', filtros = {}) => {
     setLoadingHilos(true)
     setError(null)
     try {
-      const data = await listarHilos(bandejaTarget, filtros)
-      setHilos(Array.isArray(data) ? data : [])
+      const result = await listarHilos(bandejaTarget, filtros)
+      setHilos(result.hilos)
       setBandeja(bandejaTarget)
+
+      // Si se llama externamente (búsqueda, cambio bandeja) reinicia paginación
+      if (!filtros.page_token) {
+        setTokenStack([undefined])
+        setPaginaActual(1)
+        setHayPaginaSiguiente(!!result.nextPageToken)
+        // Guardar el nextPageToken de página 1
+        if (result.nextPageToken) {
+          setTokenStack([undefined, result.nextPageToken])
+        }
+      } else {
+        setHayPaginaSiguiente(!!result.nextPageToken)
+        if (result.nextPageToken) {
+          setTokenStack((prev) => {
+            const next = [...prev]
+            // Solo agregar si no lo tenemos ya
+            if (next[next.length - 1] !== result.nextPageToken) {
+              next.push(result.nextPageToken)
+            }
+            return next
+          })
+        }
+      }
     } catch {
       setError('Error al cargar los correos.')
       setHilos([])
@@ -35,6 +67,54 @@ export function useBuzon() {
     }
   }, [])
 
+  // ─── Ir a página siguiente ────────────────────────────────────────────────
+  const irPaginaSiguiente = useCallback(async () => {
+    // El token para la siguiente página está en tokenStack[paginaActual]
+    const token = tokenStack[paginaActual]
+    if (!token) return
+    setLoadingHilos(true)
+    setError(null)
+    try {
+      const result = await listarHilos(bandeja, { page_token: token })
+      setHilos(result.hilos)
+      setPaginaActual((p) => p + 1)
+      setHayPaginaSiguiente(!!result.nextPageToken)
+      if (result.nextPageToken) {
+        setTokenStack((prev) => {
+          const next = [...prev]
+          if (next[paginaActual + 1] === undefined) {
+            next[paginaActual + 1] = result.nextPageToken
+          }
+          return next
+        })
+      }
+    } catch {
+      setError('Error al cargar la página siguiente.')
+    } finally {
+      setLoadingHilos(false)
+    }
+  }, [bandeja, tokenStack, paginaActual])
+
+  // ─── Ir a página anterior ─────────────────────────────────────────────────
+  const irPaginaAnterior = useCallback(async () => {
+    if (paginaActual <= 1) return
+    const nuevaPagina = paginaActual - 1
+    // El token para página n está en tokenStack[n-1]
+    const token = tokenStack[nuevaPagina - 1]
+    setLoadingHilos(true)
+    setError(null)
+    try {
+      const result = await listarHilos(bandeja, { page_token: token })
+      setHilos(result.hilos)
+      setPaginaActual(nuevaPagina)
+      setHayPaginaSiguiente(true) // si hay anterior, siempre hay siguiente
+    } catch {
+      setError('Error al cargar la página anterior.')
+    } finally {
+      setLoadingHilos(false)
+    }
+  }, [bandeja, tokenStack, paginaActual])
+
   // ─── Abrir hilo ───────────────────────────────────────────────────────────
   const abrirHilo = useCallback(async (hiloId, bandeja = 'inbox') => {
     setLoadingHilo(true)
@@ -42,9 +122,7 @@ export function useBuzon() {
     try {
       const data = await getHilo(hiloId, bandeja)
       setHiloActivo(data)
-      // Marcar como leído al abrir
       marcarLeido(hiloId).catch(() => { })
-      // Actualizar el hilo en la lista como leído
       setHilos((prev) =>
         prev.map((h) => h.id === hiloId ? { ...h, leido: true } : h)
       )
@@ -56,13 +134,13 @@ export function useBuzon() {
       setLoadingHilo(false)
     }
   }, [])
+
   // ─── Responder hilo ───────────────────────────────────────────────────────
   const responder = useCallback(async (hiloId, payload) => {
     setLoadingEnvio(true)
     setError(null)
     try {
       const data = await responderHilo(hiloId, payload)
-      // Agregar el mensaje nuevo al hilo activo optimistamente
       if (data?.mensaje) {
         setHiloActivo((prev) =>
           prev
@@ -108,6 +186,9 @@ export function useBuzon() {
     setError(null)
     try {
       await sincronizarBuzon()
+      // Reinicia a página 1 al sincronizar
+      setTokenStack([undefined])
+      setPaginaActual(1)
       await cargarHilos(bandeja)
       return { success: true }
     } catch {
@@ -127,7 +208,7 @@ export function useBuzon() {
   // ─── Sin leer (derivado) ──────────────────────────────────────────────────
   const sinLeer = hilos.filter((h) => !h.leido).length
 
-  // ─── Responder con adjuntos locales ──────────────────────────────────────────
+  // ─── Responder con adjuntos locales ──────────────────────────────────────
   const enviarConAdjuntos = useCallback(async (payload) => {
     setLoadingEnvio(true)
     setError(null)
@@ -154,6 +235,12 @@ export function useBuzon() {
     loadingEnvio,
     loadingSync,
     error,
+    // Paginación
+    paginaActual,
+    hayPaginaSiguiente,
+    irPaginaSiguiente,
+    irPaginaAnterior,
+    // Acciones
     cargarHilos,
     abrirHilo,
     responder,

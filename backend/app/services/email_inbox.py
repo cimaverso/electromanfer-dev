@@ -135,11 +135,18 @@ def _parsear_completo(msg):
 
 # ─── Endpoints ─────
 
-def get_inbox(limit: int = 10) -> list[dict]:
+def get_inbox(limit: int = 10, page_token: str = None) -> dict:
     service = _get_service()
-    result = service.users().threads().list(
-        userId="me", labelIds=["INBOX"], maxResults=limit
-    ).execute()
+    params = {
+        "userId": "me",
+        "labelIds": ["INBOX"],
+        "maxResults": limit,
+    }
+    if page_token:
+        params["pageToken"] = page_token
+
+    result = service.users().threads().list(**params).execute()
+    next_page_token = result.get("nextPageToken", None)
     threads = result.get("threads", [])
     hilos = []
     for t in threads:
@@ -171,13 +178,20 @@ def get_inbox(limit: int = 10) -> list[dict]:
             "direccion": "recibido",
             "cotizacion_consecutivo": None,
         })
-    return hilos
+    return {"hilos": hilos, "next_page_token": next_page_token}
 
-def get_sent(limit: int = 10) -> list[dict]:
+def get_sent(limit: int = 10, page_token: str = None) -> dict:
     service = _get_service()
-    result = service.users().threads().list(
-        userId="me", labelIds=["SENT"], maxResults=limit
-    ).execute()
+    params = {
+        "userId": "me",
+        "labelIds": ["SENT"],
+        "maxResults": limit,
+    }
+    if page_token:
+        params["pageToken"] = page_token
+
+    result = service.users().threads().list(**params).execute()
+    next_page_token = result.get("nextPageToken", None)
     threads = result.get("threads", [])
     hilos = []
     for t in threads:
@@ -207,7 +221,7 @@ def get_sent(limit: int = 10) -> list[dict]:
             "direccion": "enviado",
             "cotizacion_consecutivo": None,
         })
-    return hilos
+    return {"hilos": hilos, "next_page_token": next_page_token}
 
 def get_hilo(thread_id: str) -> list[dict]:
     service = _get_service()

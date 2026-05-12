@@ -28,6 +28,114 @@ function safeAddImage(doc, b64, x, y, w, h) {
   }
 }
 
+// ── Lee orientación EXIF de un ArrayBuffer JPEG ──────────────────────────────
+// Retorna 1-8 (1 = normal, 3 = 180°, 6 = 90°CW, 8 = 270°CW)
+function leerExifOrientation(arrayBuffer) {
+  try {
+    const view = new DataView(arrayBuffer)
+    if (view.getUint16(0) !== 0xFFD8) return 1 // no es JPEG
+    let offset = 2
+    while (offset < view.byteLength) {
+      const marker = view.getUint16(offset)
+      offset += 2
+      if (marker === 0xFFE1) {
+        // APP1
+        const exifHeader = view.getUint32(offset + 2)
+        if (exifHeader !== 0x45786966) return 1 // no es 'Exif'
+        const tiffOffset = offset + 8
+        const littleEndian = view.getUint16(tiffOffset) === 0x4949
+        const ifdOffset = tiffOffset + view.getUint32(tiffOffset + 4, littleEndian)
+        const entries = view.getUint16(ifdOffset, littleEndian)
+        for (let i = 0; i < entries; i++) {
+          const entryOffset = ifdOffset + 2 + i * 12
+          if (view.getUint16(entryOffset, littleEndian) === 0x0112) {
+            return view.getUint16(entryOffset + 8, littleEndian)
+          }
+        }
+        return 1
+      } else if ((marker & 0xFF00) !== 0xFF00) {
+        break
+      } else {
+        offset += view.getUint16(offset)
+      }
+    }
+  } catch { /* silencioso */ }
+  return 1
+}
+
+// ── Normaliza orientación EXIF pasando la imagen por canvas ──────────────────
+// Recibe un Blob, devuelve data URL con la imagen derecha (PNG)
+async function normalizarOrientacionImagen(blob) {
+  return new Promise((resolve) => {
+    // Leer EXIF solo en JPEG
+    const esJpeg = blob.type === 'image/jpeg' || blob.type === 'image/jpg'
+
+    const procesarConOrientation = (orientation, dataUrl) => {
+      // Orientación 1 = normal, no necesita canvas
+      if (orientation === 1) return resolve(dataUrl)
+
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        const w = img.naturalWidth
+        const h = img.naturalHeight
+
+        // Orientaciones 5-8 intercambian ejes
+        if (orientation >= 5) {
+          canvas.width = h
+          canvas.height = w
+        } else {
+          canvas.width = w
+          canvas.height = h
+        }
+
+        switch (orientation) {
+          case 2: ctx.transform(-1, 0, 0,  1,  w, 0); break
+          case 3: ctx.transform(-1, 0, 0, -1,  w, h); break
+          case 4: ctx.transform( 1, 0, 0, -1,  0, h); break
+          case 5: ctx.transform( 0, 1, 1,  0,  0, 0); break
+          case 6: ctx.transform( 0, 1,-1,  0,  h, 0); break
+          case 7: ctx.transform( 0,-1,-1,  0,  h, w); break
+          case 8: ctx.transform( 0,-1, 1,  0,  0, w); break
+          default: break
+        }
+
+        ctx.drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = () => resolve(dataUrl)
+      img.src = dataUrl
+    }
+
+    const reader = new FileReader()
+    reader.onerror = () => resolve(null)
+
+    if (esJpeg) {
+      // Leer como ArrayBuffer primero para extraer EXIF
+      const readerBuf = new FileReader()
+      readerBuf.onerror = () => resolve(null)
+      readerBuf.onloadend = () => {
+        const orientation = leerExifOrientation(readerBuf.result)
+        // Si es normal, devolver data URL sin pasar por canvas
+        if (orientation === 1) {
+          reader.onloadend = () => resolve(reader.result)
+          reader.readAsDataURL(blob)
+          return
+        }
+        // Si necesita corrección, leer como dataURL y corregir
+        reader.onloadend = () => procesarConOrientation(orientation, reader.result)
+        reader.readAsDataURL(blob)
+      }
+      readerBuf.readAsArrayBuffer(blob)
+    } else {
+      // PNG u otros: sin EXIF, leer directo
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    }
+  })
+}
+
 async function cargarImagenBase64(url) {
   if (!url) return null
   if (url.startsWith('data:')) return url
@@ -42,12 +150,8 @@ async function cargarImagenBase64(url) {
     const response = await fetch(urlAbsoluta, { mode: 'cors', cache: 'no-store' })
     if (!response.ok) return null
     const blob = await response.blob()
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result)
-      reader.onerror = () => resolve(null)
-      reader.readAsDataURL(blob)
-    })
+    // Normaliza orientación EXIF — solo actúa en JPEG con orientación != 1
+    return await normalizarOrientacionImagen(blob)
   } catch {
     return null
   }
@@ -255,7 +359,6 @@ export async function generarPdfCotizacion(
     doc.setDrawColor(...GRIS_CLARO)
     doc.line(MARGEN, y + FILA_H, MARGEN + ANCHO, y + FILA_H)
 
-    // Imagen producto — placeholder hasta que backend entregue URLs
     // Imagen producto
     const imgUrl = imagenesPorCodRef[item.cod_ref]
     if (imgUrl) {

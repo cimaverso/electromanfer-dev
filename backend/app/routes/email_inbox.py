@@ -8,19 +8,19 @@ from typing import Optional, List
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
 @router.get("/inbox")
-def inbox(limit: int = 10, _: TokenData = Depends(require_auth)):
+def inbox(limit: int = 10, page_token: str = None, _: TokenData = Depends(require_auth)):
     try:
-        return get_inbox(limit=limit)
+        return get_inbox(limit=limit, page_token=page_token)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @router.get("/sent")
-def sent(limit: int = 10, _: TokenData = Depends(require_auth)):
+def sent(limit: int = 10, page_token: str = None, _: TokenData = Depends(require_auth)):
     try:
-        return get_sent(limit=limit)
+        return get_sent(limit=limit, page_token=page_token)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @router.get("/hilo/{message_id:path}")
 def hilo(message_id: str, _: TokenData = Depends(require_auth)):
     try:
@@ -91,14 +91,14 @@ async def responder_adjuntos(
     
 
 @router.delete("/hilo/{thread_id}")
-def eliminar_hilo(thread_id: str, _: TokenData = Depends(require_auth)):
+def borrar_hilo(thread_id: str, _: TokenData = Depends(require_auth)):
     try:
         return eliminar_hilo(thread_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/mensaje/{message_id}")
-def eliminar_mensaje(message_id: str, _: TokenData = Depends(require_auth)):
+def borrar_mensaje(message_id: str, _: TokenData = Depends(require_auth)):
     try:
         return eliminar_mensaje(message_id)
     except Exception as e:
