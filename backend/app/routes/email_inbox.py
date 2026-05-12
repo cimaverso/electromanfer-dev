@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
-from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos, eliminar_hilo, eliminar_mensaje
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Response
+from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos, eliminar_hilo, eliminar_mensaje, get_attachment
 from app.core.security import require_auth
 from app.schemas.auth import TokenData
 from app.schemas.envios import ResponderHiloSchema
@@ -89,7 +89,6 @@ async def responder_adjuntos(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
 @router.delete("/hilo/{thread_id}")
 def borrar_hilo(thread_id: str, _: TokenData = Depends(require_auth)):
     try:
@@ -101,5 +100,23 @@ def borrar_hilo(thread_id: str, _: TokenData = Depends(require_auth)):
 def borrar_mensaje(message_id: str, _: TokenData = Depends(require_auth)):
     try:
         return eliminar_mensaje(message_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{message_id}/adjunto/{attachment_id}")
+def descargar_adjunto(
+    message_id: str,
+    attachment_id: str,
+    nombre: str = "adjunto",
+    tipo: str = "application/octet-stream",
+    _: TokenData = Depends(require_auth),
+):
+    try:
+        data = get_attachment(message_id, attachment_id)
+        return Response(
+            content=data,
+            media_type=tipo,
+            headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

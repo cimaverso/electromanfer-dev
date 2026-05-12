@@ -92,10 +92,12 @@ def _parsear_completo(msg):
             filename = part.get("filename", "")
             if filename and filename != "noname" and "." in filename:
                 size = part.get("body", {}).get("size", 0)
+                attachment_id = part.get("body", {}).get("attachmentId", "")
                 adjuntos.append({
                     "nombre": filename,
                     "tipo": mime,
                     "tamanio": f"{round(size / 1024, 1)} KB",
+                    "attachment_id": attachment_id,
                 })
             elif mime == "text/plain" and not cuerpo_plain:
                 cuerpo_plain = _decode_body(part)
@@ -296,3 +298,12 @@ def eliminar_mensaje(message_id: str) -> dict:
         id=message_id
     ).execute()
     return {"ok": True, "message_id": message_id}
+
+def get_attachment(message_id: str, attachment_id: str) -> bytes:
+    service = _get_service()
+    result = service.users().messages().attachments().get(
+        userId="me",
+        messageId=message_id,
+        id=attachment_id
+    ).execute()
+    return base64.urlsafe_b64decode(result["data"])

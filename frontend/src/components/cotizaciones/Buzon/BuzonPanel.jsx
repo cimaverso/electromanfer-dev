@@ -7,6 +7,8 @@ import './BuzonPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+
 function iniciales(nombre = '') {
   return nombre.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
@@ -63,6 +65,195 @@ function buildSrcDoc(htmlOriginal, enviado = false) {
     return htmlOriginal.replace(/<head([\s>])/i, `<head$1${style}`)
   }
   return `<!DOCTYPE html><html><head>${style}</head><body>${htmlOriginal}</body></html>`
+}
+
+// ─── Helper fetch adjunto ─────────────────────────────────────────────────────
+
+async function fetchAdjuntoBlobUrl(mensajeId, attachmentId, nombre, tipo) {
+  const token = localStorage.getItem('access_token')
+  const url = `${BASE_URL}/emails/${mensajeId}/adjunto/${attachmentId}?nombre=${encodeURIComponent(nombre)}&tipo=${encodeURIComponent(tipo)}`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  const arrayBuffer = await res.arrayBuffer()
+  // Inferir Content-Type correcto según extensión si el backend devuelve octet-stream
+  let mimeReal = tipo
+  if (!mimeReal || mimeReal === 'application/octet-stream') {
+    if (/\.pdf$/i.test(nombre)) mimeReal = 'application/pdf'
+    else if (/\.(jpg|jpeg)$/i.test(nombre)) mimeReal = 'image/jpeg'
+    else if (/\.png$/i.test(nombre)) mimeReal = 'image/png'
+    else if (/\.gif$/i.test(nombre)) mimeReal = 'image/gif'
+    else if (/\.webp$/i.test(nombre)) mimeReal = 'image/webp'
+  }
+  const blob = new Blob([arrayBuffer], { type: mimeReal })
+  return URL.createObjectURL(blob)
+}
+
+// ─── Modal visor de adjuntos ──────────────────────────────────────────────────
+
+function ModalVisorAdjunto({ blobUrl, nombre, tipo, onClose }) {
+  const esImagen = tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(nombre)
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div className="badj-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="badj-modal">
+        <div className="badj-modal__header">
+          <div className="badj-modal__titulo">
+            <span className={`badj-modal__tipo-icon ${esImagen ? 'badj-modal__tipo-icon--img' : 'badj-modal__tipo-icon--pdf'}`}>
+              {esImagen ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              )}
+            </span>
+            <span className="badj-modal__nombre">{nombre}</span>
+          </div>
+          <div className="badj-modal__acciones">
+            <a href={blobUrl} download={nombre} className="badj-btn badj-btn--dl" title="Descargar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Descargar
+            </a>
+            <button type="button" className="badj-btn badj-btn--cerrar" onClick={onClose} title="Cerrar (Esc)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="badj-modal__cuerpo">
+          {esImagen ? (
+            <img src={blobUrl} alt={nombre} className="badj-modal__imagen" />
+          ) : (
+            <iframe src={blobUrl} className="badj-modal__pdf" title={nombre} sandbox="allow-scripts allow-same-origin allow-forms" />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── AdjuntoItem ──────────────────────────────────────────────────────────────
+
+function AdjuntoItem({ adj, mensajeId }) {
+  const [estado, setEstado] = useState('idle') // idle | cargando | error
+  const [blobUrl, setBlobUrl] = useState(null)
+  const [modalAbierto, setModalAbierto] = useState(false)
+
+  const tieneAttachmentId = !!adj.attachment_id
+  const esImagen = adj.tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombre)
+  const esPdf = adj.tipo === 'application/pdf' || /\.pdf$/i.test(adj.nombre)
+  const esVisualizable = esImagen || esPdf
+
+  useEffect(() => {
+    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl) }
+  }, [blobUrl])
+
+  const handleClick = async () => {
+    if (!tieneAttachmentId || estado === 'cargando') return
+
+    if (esVisualizable) {
+      if (blobUrl) { setModalAbierto(true); return }
+      setEstado('cargando')
+      try {
+        const url = await fetchAdjuntoBlobUrl(mensajeId, adj.attachment_id, adj.nombre, adj.tipo)
+        setBlobUrl(url)
+        setModalAbierto(true)
+        setEstado('idle')
+      } catch { setEstado('error') }
+      return
+    }
+
+    // Otros tipos: descarga directa
+    setEstado('cargando')
+    try {
+      const url = await fetchAdjuntoBlobUrl(mensajeId, adj.attachment_id, adj.nombre, adj.tipo)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = adj.nombre
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+      setEstado('idle')
+    } catch { setEstado('error') }
+  }
+
+  const iconoTipo = esImagen ? (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  )
+
+  const iconoAccion = estado === 'cargando' ? (
+    <span className="badj-spinner" />
+  ) : estado === 'error' ? (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, color: 'var(--color-danger, #e55)' }}>
+      <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  ) : tieneAttachmentId ? (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, opacity: 0.5 }}>
+      {esVisualizable
+        ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
+        : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>
+      }
+    </svg>
+  ) : null
+
+  return (
+    <>
+      <div
+        className={[
+          'buzon-msg__adjunto',
+          tieneAttachmentId ? 'buzon-msg__adjunto--clickable' : '',
+          estado === 'error' ? 'buzon-msg__adjunto--error' : '',
+        ].filter(Boolean).join(' ')}
+        onClick={handleClick}
+        title={
+          !tieneAttachmentId ? adj.nombre
+          : estado === 'error' ? 'Error al obtener el archivo'
+          : esVisualizable ? `Ver ${adj.nombre}`
+          : `Descargar ${adj.nombre}`
+        }
+      >
+        <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>
+          {iconoTipo}
+        </span>
+        <span className="buzon-msg__adjunto-nombre">{adj.nombre}</span>
+        <span className="buzon-msg__adjunto-size">{adj.tamanio}</span>
+        <span className="buzon-msg__adjunto-accion">{iconoAccion}</span>
+      </div>
+
+      {modalAbierto && blobUrl && (
+        <ModalVisorAdjunto
+          blobUrl={blobUrl}
+          nombre={adj.nombre}
+          tipo={adj.tipo}
+          onClose={() => setModalAbierto(false)}
+        />
+      )}
+    </>
+  )
 }
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
@@ -147,29 +338,9 @@ function MensajeBurbuja({ mensaje }) {
 
       {mensaje.adjuntos?.length > 0 && (
         <div className="buzon-msg__adjuntos">
-          {mensaje.adjuntos.map((adj, i) => {
-            const esImagen = adj.tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombre)
-            return (
-              <div key={i} className="buzon-msg__adjunto">
-                <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>
-                  {esImagen ? (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                  )}
-                </span>
-                <span className="buzon-msg__adjunto-nombre">{adj.nombre}</span>
-                <span className="buzon-msg__adjunto-size">{adj.tamanio}</span>
-              </div>
-            )
-          })}
+          {mensaje.adjuntos.map((adj, i) => (
+            <AdjuntoItem key={i} adj={adj} mensajeId={mensaje.id} />
+          ))}
         </div>
       )}
     </div>
@@ -219,7 +390,6 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
     const b64 = await cargarBase64(firma.url)
     setFirmaB64(b64)
     setFirmaLoading(false)
-    // Guardar preferencia en BD (silencioso)
     try {
       await guardarFirmaPreferida(firma.id)
     } catch { /* silencioso */ }
@@ -503,10 +673,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     sincronizar,
     cerrarHilo,
     enviarConAdjuntos,
-      paginaActual,           // +
-  hayPaginaSiguiente,     // +
-  irPaginaSiguiente,      // +
-  irPaginaAnterior, 
+    paginaActual,
+    hayPaginaSiguiente,
+    irPaginaSiguiente,
+    irPaginaAnterior,
   } = useBuzon()
 
   const hilos = hilosReales
@@ -518,7 +688,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   const [sidebarColapsado, setSidebarColapsado] = useState(false)
   const [adjuntoReply, setAdjuntoReply] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
-  const [vistaMovil, setVistaMovil] = useState('lista') // 'lista' | 'hilo'
+  const [vistaMovil, setVistaMovil] = useState('lista')
 
   const mensajesEndRef = useRef(null)
 
@@ -653,14 +823,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           <IconEnviados />
           <span>Enviados</span>
         </button>
-        {/* <button
-          className="buzon-mobile-nav__tab"
-          onClick={() => setModalRedactar(true)}
-          type="button"
-        >
-          <IconRedactar />
-          <span>Redactar</span>
-        </button> */}
         <button
           className="buzon-mobile-nav__sync"
           onClick={() => sincronizar()}
@@ -693,9 +855,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         </nav>
         <div className="buzon-sidebar__divider" />
         <div className="buzon-sidebar__acciones">
-          {/* <button className="buzon-nav-item" onClick={() => setModalRedactar(true)} type="button" title="Redactar">
-            <IconRedactar />{!sidebarColapsado && <span>Redactar</span>}
-          </button> */}
           <button className="buzon-nav-item buzon-nav-item--cot" onClick={() => setModalCotizacion(true)} type="button" title="Nueva cotización">
             <IconCotizacion />{!sidebarColapsado && <span>Nueva cotización</span>}
           </button>
@@ -712,7 +871,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           {sinLeerTotal > 0 && bandejaActiva === 'inbox' && <span className="buzon-lista__sin-leer">{sinLeerTotal} sin leer</span>}
         </div>
         <input className="buzon-lista__search" placeholder="Buscar correos..." onChange={(e) => cargarHilos(bandejaActiva, { q: e.target.value })} />
-       
+
         {loadingHilos ? (
           <div className="buzon-lista__empty">Cargando...</div>
         ) : hilos.length === 0 ? (
