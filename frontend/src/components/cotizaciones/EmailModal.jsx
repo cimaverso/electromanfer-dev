@@ -64,7 +64,11 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
   // ── PDF de cotización en base64 ───────────────────────────────────────────
   const pdfB64Ref = useRef(null)
   const fileInputRef = useRef(null)
+  const adjuntarInputRef = useRef(null)
   const [subiendoFirma, setSubiendoFirma] = useState(false)
+
+  // ── Archivos locales adjuntos desde PC ────────────────────────────────────
+  const [archivosLocales, setArchivosLocales] = useState([])
 
   // Cierra con Escape
   useEffect(() => {
@@ -214,6 +218,11 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
 
     const fichasUrls = pdfsAdj.map(a => ({ url: a.url, nombre: a.nombre })).filter(a => a.url)
     if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
+
+    // Archivos locales adjuntados desde PC
+    if (archivosLocales.length > 0) {
+      archivosLocales.forEach((adj) => formData.append('archivos_extra', adj.archivo, adj.nombreArchivo))
+    }
 
     onEnviar(cotizacion.id, formData)
   }
@@ -516,6 +525,65 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
                 Sin imágenes ni fichas técnicas. Agrégalas desde Productos → Recursos.
               </p>
             )}
+
+            {/* Archivos adjuntados desde PC */}
+            {archivosLocales.length > 0 && (
+              <>
+                <p className="email-modal__adj-grupo">Archivos adjuntados</p>
+                {archivosLocales.map((adj, i) => {
+                  const esImagen = /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombreArchivo)
+                  return (
+                    <div key={i} className="email-modal__adj-item email-modal__adj-item--on email-modal__adj-item--local">
+                      <span className={`email-modal__adj-icon ${esImagen ? 'email-modal__adj-icon--img' : 'email-modal__adj-icon--pdf'}`}>
+                        {esImagen ? (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="email-modal__adj-nombre">{adj.nombreArchivo}</span>
+                      <button
+                        type="button"
+                        className="email-modal__adj-quitar"
+                        onClick={() => setArchivosLocales((prev) => prev.filter((_, idx) => idx !== i))}
+                        title="Quitar archivo"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Input file oculto para adjuntar desde PC */}
+            <input
+              ref={adjuntarInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const archivos = Array.from(e.target.files || [])
+                if (!archivos.length) return
+                // Acumula — no reemplaza los existentes
+                const nuevos = archivos.map((archivo) => ({
+                  archivo,
+                  nombreArchivo: archivo.name,
+                }))
+                setArchivosLocales((prev) => [...prev, ...nuevos])
+                e.target.value = ''
+              }}
+            />
           </div>
         </div>
 
@@ -523,6 +591,18 @@ export default function EmailModal({ cotizacion, onEnviar, onClose, loading = fa
         <div className="email-modal__footer">
           <button className="email-modal__cancel-btn" onClick={onClose} disabled={loading}>
             Cancelar
+          </button>
+          <button
+            type="button"
+            className="email-modal__adjuntar-btn"
+            onClick={() => adjuntarInputRef.current?.click()}
+            disabled={loading}
+            title="Adjuntar archivo desde PC"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+            Adjuntar
           </button>
           <button
             className="email-modal__send-btn"
