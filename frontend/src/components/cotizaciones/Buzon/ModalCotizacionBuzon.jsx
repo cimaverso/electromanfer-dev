@@ -193,6 +193,8 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
     editandoId,
     editandoConsecutivo,
     selectedProducts,
+     notas,              // ← agregar
+  observacionesPdf,
     setClienteDraft,
     clearDraft,
     loadFromHistorial,
@@ -251,8 +253,8 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
 
     const payload = {
       cliente: clienteDraft,
-      notas: '',
-      observaciones_pdf: '',
+  notas: notas || '',
+  observaciones_pdf: observacionesPdf || '',
       items: selectedProducts.map((p) => ({
         cod_ref:   p.cod_ref,
         nom_ref:   p.nom_ref,
