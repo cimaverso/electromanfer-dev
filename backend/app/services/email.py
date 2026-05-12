@@ -16,6 +16,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
 
+
 def _get_gmail_service():
     with open(TOKEN_PATH, "r") as f:
         token_data = json.load(f)
@@ -34,29 +35,35 @@ def _get_gmail_service():
             json.dump(token_data, f)
     return build("gmail", "v1", credentials=creds)
 
+
 def _url_a_base64(url: str):
     try:
-        if url.startswith('/'):
+        if url.startswith("/"):
             url = f"{settings.API_BASE_URL}{url}"
         if settings.API_BASE_URL and url.startswith(settings.API_BASE_URL):
-            ruta_relativa = url.replace(settings.API_BASE_URL, '').lstrip('/')
-            ruta_sin_media = ruta_relativa.removeprefix('media/')
+            ruta_relativa = url.replace(settings.API_BASE_URL, "").lstrip("/")
+            ruta_sin_media = ruta_relativa.removeprefix("media/")
             ruta_disco = os.path.join(settings.MEDIA_BASE, ruta_sin_media)
             if os.path.exists(ruta_disco):
-                with open(ruta_disco, 'rb') as f:
+                with open(ruta_disco, "rb") as f:
                     return f.read(), os.path.basename(ruta_disco)
             logger.warning(f"No encontrado en disco: {ruta_disco}, intentando HTTP...")
         response = httpx.get(url, timeout=10)
         if response.status_code == 200:
-            return response.content, url.split('/')[-1]
+            return response.content, url.split("/")[-1]
     except Exception as e:
         logger.error(f"Error descargando {url}: {e}")
     return None
 
+
 def _construir_html(cuerpo: str, consecutivo: str, firma_url: str = None) -> str:
-    cuerpo_html = cuerpo.replace('\n', '<br>')
+    cuerpo_html = cuerpo.replace("\n", "<br>")
     logo_url = settings.LOGO_URL
-    firma_tag = f'<img src="{firma_url}" style="max-width:380px;margin-top:24px;" />' if firma_url else ''
+    firma_tag = (
+        f'<img src="{firma_url}" style="max-width:380px;margin-top:24px;" />'
+        if firma_url
+        else ""
+    )
 
     return f"""
     <!DOCTYPE html>
@@ -107,10 +114,16 @@ def _construir_html(cuerpo: str, consecutivo: str, firma_url: str = None) -> str
                       <td>
                         <span style="color:#E9CF58;font-size:12px;font-weight:bold;">ELECTROMANFER LTDA.</span><br>
                         <span style="color:#9aa0a8;font-size:11px;">NIT. 800.250.956-1</span><br>
-                        <span style="color:#9aa0a8;font-size:11px;">ventas@electromanfer.com</span>
+                        <a href="mailto:ventas@electromanfer.com"
+                          style="color:#ffffff;font-size:11px;text-decoration:none;">
+                          ventas@electromanfer.com
+                        </a>
                       </td>
                       <td align="right">
-                        <span style="color:#8DAF59;font-size:11px;">www.electromanfer.com</span>
+                        <a href="https://www.electromanferonline.com"
+                          style="color:#ffffff;font-size:11px;text-decoration:none;">
+                          www.electromanferonline.com
+                        </a>
                       </td>
                     </tr>
                   </table>
@@ -123,6 +136,7 @@ def _construir_html(cuerpo: str, consecutivo: str, firma_url: str = None) -> str
     </body>
     </html>
     """
+
 
 def enviar_cotizacion_email(
     destino: str,
@@ -141,41 +155,45 @@ def enviar_cotizacion_email(
         # Resolver URL pública de la firma
         firma_url_publica = None
         if firma_url:
-            if firma_url.startswith('/'):
+            if firma_url.startswith("/"):
                 firma_url_publica = f"{settings.API_BASE_URL}{firma_url}"
             else:
                 firma_url_publica = firma_url
 
-        msg = MIMEMultipart('related')
-        msg['From'] = f"Electromanfer <{settings.GMAIL_USER}>"
-        msg['To'] = destino
+        msg = MIMEMultipart("related")
+        msg["From"] = f"Electromanfer <{settings.GMAIL_USER}>"
+        msg["To"] = destino
         message_id = f"<{uuid.uuid4()}@mail.gmail.com>"
-        msg['Message-ID'] = message_id
-        msg['Subject'] = asunto
+        msg["Message-ID"] = message_id
+        msg["Subject"] = asunto
 
         if in_reply_to:
-            reply_id = in_reply_to if in_reply_to.startswith('<') else f"<{in_reply_to}>"
-            msg['In-Reply-To'] = reply_id
-            msg['References'] = reply_id
+            reply_id = (
+                in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
+            )
+            msg["In-Reply-To"] = reply_id
+            msg["References"] = reply_id
 
         html_content = _construir_html(cuerpo, consecutivo, firma_url=firma_url_publica)
-        msg_alt = MIMEMultipart('alternative')
+        msg_alt = MIMEMultipart("alternative")
         msg.attach(msg_alt)
-        msg_alt.attach(MIMEText(html_content, 'html'))
+        msg_alt.attach(MIMEText(html_content, "html"))
 
         # PDF cotización
         pdf_data_final = None
         if pdf_bytes is not None:
             pdf_data_final = pdf_bytes
         elif pdf_base64:
-            raw = pdf_base64.split(',')[1] if ',' in pdf_base64 else pdf_base64
+            raw = pdf_base64.split(",")[1] if "," in pdf_base64 else pdf_base64
             pdf_data_final = base64.b64decode(raw)
 
         if pdf_data_final is not None:
-            part = MIMEBase('application', 'octet-stream')
+            part = MIMEBase("application", "octet-stream")
             part.set_payload(pdf_data_final)
             encoders.encode_base64(part)
-            part.add_header('Content-Disposition', f'attachment; filename="{nombre_pdf}"')
+            part.add_header(
+                "Content-Disposition", f'attachment; filename="{nombre_pdf}"'
+            )
             msg.attach(part)
 
         # Imágenes y fichas
@@ -183,21 +201,21 @@ def enviar_cotizacion_email(
             for adj in adjuntos_urls:
                 if isinstance(adj, str):
                     url = adj
-                    nombre_original = url.split('/')[-1]
+                    nombre_original = url.split("/")[-1]
                     resultado = _url_a_base64(url)
                     if not resultado:
                         continue
                     data, _ = resultado
                 else:
-                    nombre_original = adj.get('nombre', 'archivo')
-                    data_bytes = adj.get('data', None)
-                    b64 = adj.get('base64', '')
-                    url = adj.get('url', '')
+                    nombre_original = adj.get("nombre", "archivo")
+                    data_bytes = adj.get("data", None)
+                    b64 = adj.get("base64", "")
+                    url = adj.get("url", "")
 
                     if data_bytes is not None:
                         data = data_bytes
                     elif b64:
-                        raw = b64.split(',')[1] if ',' in b64 else b64
+                        raw = b64.split(",")[1] if "," in b64 else b64
                         data = base64.b64decode(raw)
                     elif url:
                         resultado = _url_a_base64(url)
@@ -207,10 +225,12 @@ def enviar_cotizacion_email(
                     else:
                         continue
 
-                part = MIMEBase('application', 'octet-stream')
+                part = MIMEBase("application", "octet-stream")
                 part.set_payload(data)
                 encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f'attachment; filename="{nombre_original}"')
+                part.add_header(
+                    "Content-Disposition", f'attachment; filename="{nombre_original}"'
+                )
                 msg.attach(part)
 
         # Enviar via Gmail API (OAuth)
@@ -221,26 +241,31 @@ def enviar_cotizacion_email(
 
         if in_reply_to:
             try:
-                if not in_reply_to.startswith('<'):
+                if not in_reply_to.startswith("<"):
                     body["threadId"] = in_reply_to
                     logger.info(f"Usando threadId directo: {in_reply_to}")
                 else:
-                    results = service.users().messages().list(
-                        userId="me",
-                        q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}"
-                    ).execute()
+                    results = (
+                        service.users()
+                        .messages()
+                        .list(
+                            userId="me",
+                            q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}",
+                        )
+                        .execute()
+                    )
                     msgs = results.get("messages", [])
                     if msgs:
                         body["threadId"] = msgs[0]["threadId"]
                         logger.info(f"ThreadId encontrado: {msgs[0]['threadId']}")
                     else:
-                        logger.warning(f"No se encontró threadId para in_reply_to: {in_reply_to}")
+                        logger.warning(
+                            f"No se encontró threadId para in_reply_to: {in_reply_to}"
+                        )
             except Exception as e:
                 logger.warning(f"No se pudo encontrar threadId: {e}")
 
-        service.users().messages().send(
-            userId="me", body=body
-        ).execute()
+        service.users().messages().send(userId="me", body=body).execute()
 
         return message_id
 
