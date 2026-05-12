@@ -95,7 +95,7 @@ function VisorPDF({ blobUrl }) {
   const contenedorRef = useRef(null)
   const [paginas, setPaginas] = useState(0)
   const [paginaActual, setPaginaActual] = useState(1)
-  const [escala, setEscala] = useState(1.2)
+  const [escala, setEscala] = useState(0.9)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const pdfRef = useRef(null)
@@ -158,19 +158,46 @@ function VisorPDF({ blobUrl }) {
   return (
     <div className="badj-pdfjs">
       <div className="badj-pdfjs__barra">
-        <div className="badj-pdfjs__nav">
-          <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.max(1, p - 1))} disabled={paginaActual <= 1}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="15 18 9 12 15 6" /></svg>
+        {/* Navegación páginas */}
+        <div className="badj-pdfjs__grupo">
+          <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.max(1, p - 1))} disabled={paginaActual <= 1} title="Página anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <span className="badj-pdfjs__pagina">{paginaActual} / {paginas}</span>
-          <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.min(paginas, p + 1))} disabled={paginaActual >= paginas}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="9 18 15 12 9 6" /></svg>
+          <span className="badj-pdfjs__info">
+            <span className="badj-pdfjs__info-val">{paginaActual}</span>
+            <span className="badj-pdfjs__info-sep">/</span>
+            <span className="badj-pdfjs__info-val">{paginas}</span>
+          </span>
+          <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.min(paginas, p + 1))} disabled={paginaActual >= paginas} title="Página siguiente">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><polyline points="9 18 15 12 9 6" /></svg>
           </button>
         </div>
-        <div className="badj-pdfjs__zoom">
-          <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(-0.1)}>−</button>
-          <span className="badj-pdfjs__pagina">{Math.round(escala * 100)}%</span>
-          <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(0.1)}>+</button>
+
+        <div className="badj-pdfjs__divider" />
+
+        {/* Zoom */}
+        <div className="badj-pdfjs__grupo">
+          <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(-0.1)} disabled={escala <= 0.5} title="Reducir zoom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+          <span className="badj-pdfjs__zoom-val">{Math.round(escala * 100)}%</span>
+          <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(0.1)} disabled={escala >= 3} title="Aumentar zoom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+        </div>
+
+        <div className="badj-pdfjs__divider" />
+
+        {/* Zoom rápido */}
+        <div className="badj-pdfjs__grupo">
+          {[75, 90, 100, 125].map((z) => (
+            <button
+              key={z}
+              type="button"
+              className={`badj-pdfjs__preset ${Math.round(escala * 100) === z ? 'badj-pdfjs__preset--active' : ''}`}
+              onClick={() => setEscala(z / 100)}
+            >{z}%</button>
+          ))}
         </div>
       </div>
       <div className="badj-pdfjs__canvas-wrap">

@@ -1265,3 +1265,356 @@
     min-height: 60vh;
   }
 }
+
+/* ─── Adjuntos interactivos — agregar al final de BuzonPanel.css ─────────────── */
+
+.buzon-msg__adjunto--clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.buzon-msg__adjunto--clickable:hover {
+  background: var(--color-surface-hover, rgba(255,255,255,0.06));
+  border-color: var(--color-primary, #8DAF59);
+}
+.buzon-msg__adjunto--error {
+  border-color: var(--color-danger, #e55) !important;
+  opacity: 0.75;
+}
+.buzon-msg__adjunto-accion {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-left: 6px;
+}
+
+/* Spinner inline */
+.badj-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--color-border, rgba(255,255,255,0.15));
+  border-top-color: var(--color-primary, #8DAF59);
+  border-radius: 50%;
+  animation: buzon-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ─── Overlay del modal ─── */
+.badj-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: badj-fade-in 0.15s ease;
+}
+
+@keyframes badj-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Modal contenedor ─── */
+.badj-modal {
+  background: var(--color-surface, #1a1d2e);
+  border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 900px;
+  max-height: calc(100vh - 48px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  animation: badj-slide-up 0.18s ease;
+}
+
+@keyframes badj-slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Header del modal */
+.badj-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.08));
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.badj-modal__titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.badj-modal__tipo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.badj-modal__tipo-icon--img {
+  background: rgba(141, 175, 89, 0.15);
+  color: var(--color-primary, #8DAF59);
+}
+.badj-modal__tipo-icon--pdf {
+  background: rgba(220, 80, 80, 0.15);
+  color: #e05555;
+}
+
+.badj-modal__nombre {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 500;
+  color: var(--color-text, #f0f4ff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badj-modal__acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Botones del modal */
+.badj-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  border: none;
+  text-decoration: none;
+}
+
+.badj-btn--dl {
+  background: var(--color-primary, #8DAF59);
+  color: #fff;
+}
+.badj-btn--dl:hover {
+  opacity: 0.85;
+}
+
+.badj-btn--cerrar {
+  background: var(--color-surface-raised, rgba(255,255,255,0.07));
+  color: var(--color-text-muted, #888);
+  padding: 6px 8px;
+}
+.badj-btn--cerrar:hover {
+  background: var(--color-surface-hover, rgba(255,255,255,0.12));
+  color: var(--color-text, #f0f4ff);
+}
+
+/* Cuerpo del modal */
+.badj-modal__cuerpo {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg, #13151f);
+  min-height: 0;
+}
+
+/* Imagen */
+.badj-modal__imagen {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* PDF iframe */
+.badj-modal__pdf, object.badj-modal__pdf, embed.badj-modal__pdf {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  border: none;
+  display: block;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .badj-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .badj-modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+  }
+  .badj-modal__pdf, object.badj-modal__pdf, embed.badj-modal__pdf {
+    min-height: 60vh;
+  }
+}
+
+
+/* ─── Visor PDF.js ─────────────────────────────────────────────────────────── */
+.badj-pdfjs {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+}
+
+.badj-pdfjs__barra {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.08));
+  background: var(--color-surface, #1a1d2e);
+  flex-shrink: 0;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badj-pdfjs__grupo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badj-pdfjs__divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border, rgba(255,255,255,0.1));
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.badj-pdfjs__btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--color-text, #f0f4ff);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+.badj-pdfjs__btn:hover:not(:disabled) {
+  background: var(--color-surface-hover, rgba(255,255,255,0.1));
+  border-color: var(--color-border, rgba(255,255,255,0.12));
+}
+.badj-pdfjs__btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.badj-pdfjs__info {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  background: var(--color-surface-raised, rgba(255,255,255,0.05));
+  border: 1px solid var(--color-border, rgba(255,255,255,0.08));
+  border-radius: 5px;
+  height: 26px;
+}
+.badj-pdfjs__info-val {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text, #f0f4ff);
+  font-variant-numeric: tabular-nums;
+  min-width: 14px;
+  text-align: center;
+}
+.badj-pdfjs__info-sep {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #666);
+}
+
+.badj-pdfjs__zoom-val {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text, #f0f4ff);
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+  background: var(--color-surface-raised, rgba(255,255,255,0.05));
+  border: 1px solid var(--color-border, rgba(255,255,255,0.08));
+  border-radius: 5px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Botones de zoom rápido */
+.badj-pdfjs__preset {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--color-text-muted, #888);
+  cursor: pointer;
+  font-size: var(--font-size-xs, 11px);
+  padding: 0 7px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.badj-pdfjs__preset:hover {
+  background: var(--color-surface-hover, rgba(255,255,255,0.08));
+  color: var(--color-text, #f0f4ff);
+  border-color: var(--color-border, rgba(255,255,255,0.1));
+}
+.badj-pdfjs__preset--active {
+  background: var(--color-primary, #8DAF59);
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.badj-pdfjs__canvas-wrap {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: var(--color-bg, #13151f);
+  display: flex;
+  flex-direction: column;
+}
+
+.badj-pdfjs__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px;
+  color: var(--color-text-muted, #888);
+  font-size: var(--font-size-sm, 13px);
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .badj-pdfjs {
+    min-height: 60vh;
+  }
+  .badj-pdfjs__preset {
+    display: none;
+  }
+}
