@@ -67,7 +67,7 @@ def get_current_user_data(token: str = Depends(oauth2_scheme)) -> TokenData:
 
 
 def require_admin(token_data: TokenData = Depends(get_current_user_data)):
-    if token_data.role not in (RoleEnum.ADMINISTRADOR, RoleEnum.GERENTE):
+    if token_data.role not in (RoleEnum.ADMINISTRADOR, RoleEnum.GERENCIA):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para realizar esta acción",
