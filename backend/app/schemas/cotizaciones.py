@@ -24,7 +24,6 @@ class ItemResponse(BaseModel):
     precio_unitario: float
     descuento_unitario: float
     subtotal: float
-    iva: float
     total: float
     imagen_url: Optional[str] = None
     imagenes_urls: Optional[list] = None
@@ -39,6 +38,7 @@ class CotizacionCreate(BaseModel):
     items: list[ItemCreate]
     notas: Optional[str] = None
     observaciones_pdf: Optional[str] = None
+    
 
 class CambiarEstadoSchema(BaseModel):
     estado: str
@@ -50,7 +50,6 @@ class CotizacionResponse(BaseModel):
     estado: str
     subtotal: float
     descuento: float
-    iva: float
     total: float
     notas: Optional[str] = None
     observaciones_pdf: Optional[str] = None
@@ -64,6 +63,7 @@ class CotizacionResponse(BaseModel):
     usuario_nombre: Optional[str] = None  
     clientes: Optional[ClienteResponse] = None
     cotizaciones_items: list[ItemResponse] = []
+    
 
     @model_validator(mode='before')
     @classmethod

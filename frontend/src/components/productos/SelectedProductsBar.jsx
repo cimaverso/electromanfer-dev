@@ -107,10 +107,6 @@ export default function SelectedProductsBar() {
             <span>Subtotal</span>
             <span>{formatCOP(getSubtotal())}</span>
           </div>
-          <div className="sel-bar__total-row">
-            <span>IVA (19%)</span>
-            <span>{formatCOP(getTotal() - getSubtotal())}</span>
-          </div>
           <div className="sel-bar__total-row sel-bar__total-row--total">
             <span>Total estimado</span>
             <span>{formatCOP(getTotal())}</span>

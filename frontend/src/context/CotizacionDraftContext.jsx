@@ -2,7 +2,6 @@ import { createContext, useReducer, useCallback } from 'react'
 
 export const CotizacionDraftContext = createContext(null)
 
-const IVA = 0.19
 
 const initialState = {
   selectedProducts: [],
@@ -156,8 +155,7 @@ export function CotizacionDraftProvider({ children }) {
     state.selectedProducts.reduce((acc, p) => acc + (p.valor_web || 0) * p.cantidad, 0),
     [state.selectedProducts]
   )
-  const getIva   = useCallback(() => getSubtotal() * IVA, [getSubtotal])
-  const getTotal = useCallback(() => getSubtotal() + getIva(), [getSubtotal, getIva])
+  const getTotal = useCallback(() => getSubtotal(), [getSubtotal])
   const getTotalItems = useCallback(() =>
     state.selectedProducts.reduce((acc, p) => acc + p.cantidad, 0),
     [state.selectedProducts]
@@ -179,7 +177,7 @@ export function CotizacionDraftProvider({ children }) {
     addProduct, removeProduct, updateQuantity, updatePrice,
     setClienteDraft, setNotas, setObservacionesPdf, setCondicionesComerciales,
     clearDraft, loadFromHistorial, setBuzonOrigen, clearBuzonOrigen,
-    getSubtotal, getIva, getTotal, getTotalItems, isProductoAgregado,
+    getSubtotal, getTotal, getTotalItems, isProductoAgregado,
   }
 
   return (

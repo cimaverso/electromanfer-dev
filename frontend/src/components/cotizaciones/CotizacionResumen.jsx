@@ -15,7 +15,6 @@ export default function CotizacionResumen({ onGenerar, loading }) {
     selectedProducts = [],
     clienteDraft,
     getSubtotal,
-    getIva,
     getTotal,
     editandoId,
   } = useCotizacionDraft()
@@ -44,10 +43,6 @@ export default function CotizacionResumen({ onGenerar, loading }) {
         <div className="cot-resumen__row">
           <span className="cot-resumen__row-label">Subtotal</span>
           <span className="cot-resumen__row-value">{formatCOP(getSubtotal())}</span>
-        </div>
-        <div className="cot-resumen__row">
-          <span className="cot-resumen__row-label">IVA (19%)</span>
-          <span className="cot-resumen__row-value">{formatCOP(getIva())}</span>
         </div>
         <div className="cot-resumen__row cot-resumen__row--total">
           <span className="cot-resumen__row-label">Total estimado</span>

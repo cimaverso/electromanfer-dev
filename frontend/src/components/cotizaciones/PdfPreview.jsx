@@ -141,9 +141,6 @@ export default function PdfPreview({
               <span className="pdf-preview__total-chip">
                 Sub: <strong>{formatCOP(cotizacion.subtotal)}</strong>
               </span>
-              <span className="pdf-preview__total-chip">
-                IVA: <strong>{formatCOP(cotizacion.iva)}</strong>
-              </span>
               <span className="pdf-preview__total-chip pdf-preview__total-chip--main">
                 Total: <strong>{formatCOP(cotizacion.total)}</strong>
               </span>

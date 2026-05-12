@@ -16,7 +16,7 @@ import pytz
 
 logger = logging.getLogger(__name__)
 BOGOTA_TZ = pytz.timezone('America/Bogota')
-IVA = 0.19
+
 
 
 class CotizacionesService:
@@ -40,11 +40,9 @@ class CotizacionesService:
     def _calcular_item(item) -> dict:
         subtotal  = round(item.valor_web * item.cantidad, 2)
         descuento = round(item.descuento_unitario * item.cantidad, 2)
-        base      = round(subtotal - descuento, 2)
-        iva       = round(base * IVA, 2)
-        total     = round(base + iva, 2)
-        return {"subtotal": subtotal, "iva": iva, "total": total}
-
+        total     = round(subtotal - descuento, 2)
+        return {"subtotal": subtotal, "total": total}
+                
     # Snapshot multimedia 
     @staticmethod
     def _imagen_principal(db: Session, cod_ref: str) -> Optional[str]:
@@ -98,21 +96,20 @@ class CotizacionesService:
             estado            = "generada",
             subtotal          = 0,
             descuento         = 0,
-            iva               = 0,
             total             = 0,
             notas             = data.notas,
             observaciones_pdf = data.observaciones_pdf,
         )
         db.add(cotizacion)
         db.flush()
+        db.refresh(cotizacion)
 
-        subtotal_total = descuento_total = iva_total = total_total = 0.0
+        subtotal_total = descuento_total = total_total = 0.0
 
         for item in data.items:
             calc = CotizacionesService._calcular_item(item)
             subtotal_total  += calc["subtotal"]
             descuento_total += round(item.descuento_unitario * item.cantidad, 2)
-            iva_total       += calc["iva"]
             total_total     += calc["total"]
 
             db.add(CotizacionesItem(
@@ -125,7 +122,6 @@ class CotizacionesService:
                 precio_unitario    = item.valor_web,
                 descuento_unitario = item.descuento_unitario,
                 subtotal           = calc["subtotal"],
-                iva                = calc["iva"],
                 total              = calc["total"],
                 imagen_url    = CotizacionesService._imagen_principal(db, item.cod_ref),
                 imagenes_urls = CotizacionesService._imagenes(db, item.cod_ref),
@@ -134,11 +130,9 @@ class CotizacionesService:
 
         cotizacion.subtotal  = round(subtotal_total, 2)
         cotizacion.descuento = round(descuento_total, 2)
-        cotizacion.iva       = round(iva_total, 2)
         cotizacion.total     = round(total_total, 2)
 
         db.commit()
-
         return CotizacionesService.obtener_por_id(db, cotizacion.id)
 
     #Listar
@@ -236,13 +230,12 @@ class CotizacionesService:
         ).delete()
 
         # Agregar nuevos items
-        subtotal_total = descuento_total = iva_total = total_total = 0.0
+        subtotal_total = descuento_total = total_total = 0.0
 
         for item in data.items:
             calc = CotizacionesService._calcular_item(item)
             subtotal_total  += calc["subtotal"]
             descuento_total += round(item.descuento_unitario * item.cantidad, 2)
-            iva_total       += calc["iva"]
             total_total     += calc["total"]
 
             db.add(CotizacionesItem(
@@ -255,7 +248,6 @@ class CotizacionesService:
                 precio_unitario    = item.valor_web,
                 descuento_unitario = item.descuento_unitario,
                 subtotal           = calc["subtotal"],
-                iva                = calc["iva"],
                 total              = calc["total"],
                 imagen_url    = CotizacionesService._imagen_principal(db, item.cod_ref),
                 imagenes_urls = CotizacionesService._imagenes(db, item.cod_ref),
@@ -264,7 +256,6 @@ class CotizacionesService:
 
         cotizacion.subtotal  = round(subtotal_total, 2)
         cotizacion.descuento = round(descuento_total, 2)
-        cotizacion.iva       = round(iva_total, 2)
         cotizacion.total     = round(total_total, 2)
 
         db.commit()

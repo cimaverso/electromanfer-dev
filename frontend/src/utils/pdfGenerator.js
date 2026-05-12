@@ -421,16 +421,6 @@ export async function generarPdfCotizacion(
   doc.text(formatCOP(cotizacion.subtotal), TOTAL_X + TOTAL_W - 3, y + 5.5, { align: 'right' })
   y += 8
 
-  // IVA
-  doc.setFillColor(245, 247, 250)
-  doc.rect(TOTAL_X, y, TOTAL_W, 8, 'F')
-  doc.rect(TOTAL_X, y, TOTAL_W, 8, 'S')
-  doc.setTextColor(...GRIS)
-  doc.text('IVA(19%)', TOTAL_X + 3, y + 5.5)
-  doc.setTextColor(...OSCURO)
-  doc.text(formatCOP(cotizacion.iva), TOTAL_X + TOTAL_W - 3, y + 5.5, { align: 'right' })
-  y += 8
-
   // Total
   doc.setFillColor(...VERDE)
   doc.rect(TOTAL_X, y, TOTAL_W, 10, 'F')

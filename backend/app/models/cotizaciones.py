@@ -55,13 +55,7 @@ class Cotizaciones(Base):
         nullable=False, 
         default=0.00
     )
-    
-    iva: Mapped[float] = mapped_column(
-        Numeric(14, 2), 
-        nullable=False, 
-        default=0.00
-    )
-    
+        
     total: Mapped[float] = mapped_column(
         Numeric(14, 2), 
         nullable=False, 
