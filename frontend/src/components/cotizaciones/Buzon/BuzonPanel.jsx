@@ -90,6 +90,107 @@ async function fetchAdjuntoBlobUrl(mensajeId, attachmentId, nombre, tipo) {
 
 // ─── Modal visor de adjuntos ──────────────────────────────────────────────────
 
+// ─── Visor PDF con pdfjs-dist ────────────────────────────────────────────────
+function VisorPDF({ blobUrl }) {
+  const contenedorRef = useRef(null)
+  const [paginas, setPaginas] = useState(0)
+  const [paginaActual, setPaginaActual] = useState(1)
+  const [escala, setEscala] = useState(1.2)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState(false)
+  const pdfRef = useRef(null)
+  const renderizandoRef = useRef(false)
+
+  const renderizarPagina = async (pdf, numPagina, escalaActual) => {
+    if (renderizandoRef.current) return
+    renderizandoRef.current = true
+    try {
+      const pagina = await pdf.getPage(numPagina)
+      const viewport = pagina.getViewport({ scale: escalaActual })
+      const contenedor = contenedorRef.current
+      if (!contenedor) return
+      contenedor.innerHTML = ''
+      const canvas = document.createElement('canvas')
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+      canvas.style.display = 'block'
+      canvas.style.margin = '0 auto'
+      contenedor.appendChild(canvas)
+      await pagina.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+    } finally {
+      renderizandoRef.current = false
+    }
+  }
+
+  useEffect(() => {
+    let cancelado = false
+    const cargar = async () => {
+      setCargando(true)
+      setError(false)
+      try {
+        const pdfjsLib = await import('pdfjs-dist')
+        // Worker inline via blob para evitar problemas de CORS con blob URLs
+        const workerSrc = await import('pdfjs-dist/build/pdf.worker.mjs?url')
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc.default
+        const pdf = await pdfjsLib.getDocument(blobUrl).promise
+        if (cancelado) return
+        pdfRef.current = pdf
+        setPaginas(pdf.numPages)
+        setPaginaActual(1)
+        await renderizarPagina(pdf, 1, escala)
+        if (!cancelado) setCargando(false)
+      } catch (e) {
+        console.error('VisorPDF error:', e)
+        if (!cancelado) { setError(true); setCargando(false) }
+      }
+    }
+    cargar()
+    return () => { cancelado = true }
+  }, [blobUrl])
+
+  useEffect(() => {
+    if (!pdfRef.current || cargando) return
+    renderizarPagina(pdfRef.current, paginaActual, escala)
+  }, [paginaActual, escala])
+
+  const cambiarEscala = (delta) => setEscala((e) => Math.min(3, Math.max(0.5, +(e + delta).toFixed(1))))
+
+  return (
+    <div className="badj-pdfjs">
+      <div className="badj-pdfjs__barra">
+        <div className="badj-pdfjs__nav">
+          <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.max(1, p - 1))} disabled={paginaActual <= 1}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+          <span className="badj-pdfjs__pagina">{paginaActual} / {paginas}</span>
+          <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.min(paginas, p + 1))} disabled={paginaActual >= paginas}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+        </div>
+        <div className="badj-pdfjs__zoom">
+          <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(-0.1)}>−</button>
+          <span className="badj-pdfjs__pagina">{Math.round(escala * 100)}%</span>
+          <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(0.1)}>+</button>
+        </div>
+      </div>
+      <div className="badj-pdfjs__canvas-wrap">
+        {cargando && (
+          <div className="badj-pdfjs__loading">
+            <span className="badj-spinner" />
+            <span>Cargando PDF...</span>
+          </div>
+        )}
+        {error && (
+          <div className="badj-pdfjs__loading">
+            <span style={{ color: 'var(--color-danger, #e55)' }}>No se pudo cargar el PDF</span>
+          </div>
+        )}
+        <div ref={contenedorRef} style={{ display: cargando || error ? 'none' : 'block', padding: '16px' }} />
+      </div>
+    </div>
+  )
+}
+
 function ModalVisorAdjunto({ blobUrl, nombre, tipo, onClose }) {
   const esImagen = tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(nombre)
 
@@ -140,7 +241,7 @@ function ModalVisorAdjunto({ blobUrl, nombre, tipo, onClose }) {
           {esImagen ? (
             <img src={blobUrl} alt={nombre} className="badj-modal__imagen" />
           ) : (
-            <iframe src={blobUrl} className="badj-modal__pdf" title={nombre} sandbox="allow-scripts allow-same-origin allow-forms" />
+            <VisorPDF blobUrl={blobUrl} />
           )}
         </div>
       </div>
