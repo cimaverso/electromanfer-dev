@@ -14,17 +14,17 @@ function formatCOP(value) {
 }
 
 const ESTADO_CONFIG = {
-  generada:         { label: 'Generada',      cls: 'u-badge u-badge--info' },
-  enviada_email:    { label: 'Email enviado', cls: 'u-badge u-badge--success' },
-  enviada_whatsapp: { label: 'WhatsApp',      cls: 'u-badge u-badge--success' },
-  editada:          { label: 'Editada',       cls: 'u-badge u-badge--warning' },
-  efectiva:         { label: 'Efectiva',      cls: 'u-badge u-badge--primary' },
-  anulada:          { label: 'Anulada',       cls: 'u-badge u-badge--danger' },
+  generada: { label: 'Generada', cls: 'u-badge u-badge--info' },
+  enviada_email: { label: 'Email enviado', cls: 'u-badge u-badge--success' },
+  enviada_whatsapp: { label: 'WhatsApp', cls: 'u-badge u-badge--success' },
+  editada: { label: 'Editada', cls: 'u-badge u-badge--warning' },
+  efectiva: { label: 'Efectiva', cls: 'u-badge u-badge--primary' },
+  anulada: { label: 'Anulada', cls: 'u-badge u-badge--danger' },
 }
 
 // Qué estados permiten editar y marcar efectiva
-const PUEDE_ANULAR   = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
-const EDITABLES      = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
+const PUEDE_ANULAR = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
+const EDITABLES = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 const PUEDE_EFECTIVA = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 
 function EstadoBadge({ estado }) {
@@ -208,7 +208,7 @@ export default function HistorialTable({
                 <th>Notas</th>
                 <th className="u-text-right">Total</th>
                 <th>Estado</th>
-                {esAdmin && <th>Usuario</th>}
+                <th>Usuario</th>
                 <th>Fecha</th>
                 <th>Acciones</th>
               </tr>
@@ -233,18 +233,17 @@ export default function HistorialTable({
                   <td>
                     <EstadoBadge estado={cot.estado} />
                   </td>
-                  {esAdmin && (
-                    <td>
-                      <span className="hist-table__notas">{cot.usuario_nombre || '—'}</span>
-                    </td>
-                  )}
+                  <td>
+                    <span className="hist-table__notas">{cot.usuario_nombre || '—'}</span>
+                  </td>
+
                   <td className="u-text-muted">
                     {cot.created_at
                       ? new Date(cot.created_at).toLocaleDateString('es-CO', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
                       : '—'}
                   </td>
                   <td>
