@@ -23,6 +23,7 @@ class ItemResponse(BaseModel):
     cantidad: float
     precio_unitario: float
     descuento_unitario: float
+    por_iva: float = 0.0
     subtotal: float
     total: float
     imagen_url: Optional[str] = None

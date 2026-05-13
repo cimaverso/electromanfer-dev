@@ -83,6 +83,7 @@ class ProductosService:
                         nom_tip         = item.get("nom_tip"),
                         saldo           = item.get("saldo"),
                         valor_web       = item.get("valor_web"),
+                        por_iva         = item.get("por_iva", 0),
                         
                     ))
                     insertados += 1
@@ -92,6 +93,7 @@ class ProductosService:
                     producto.nom_tip         = item.get("nom_tip", producto.nom_tip)
                     producto.saldo           = item.get("saldo", producto.saldo)
                     producto.valor_web       = item.get("valor_web", producto.valor_web)
+                    producto.por_iva         = item.get("por_iva", producto.por_iva)
                     actualizados += 1
 
             db.commit()

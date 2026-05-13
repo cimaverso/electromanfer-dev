@@ -37,11 +37,13 @@ class CotizacionesService:
 
     # Cálculos
     @staticmethod
-    def _calcular_item(item) -> dict:
+    def _calcular_item(item, por_iva: float = 0.0) -> dict:
         subtotal  = round(item.valor_web * item.cantidad, 2)
         descuento = round(item.descuento_unitario * item.cantidad, 2)
-        total     = round(subtotal - descuento, 2)
-        return {"subtotal": subtotal, "total": total}
+        base      = round(subtotal - descuento, 2)
+        iva       = round(base * (por_iva / 100), 2)
+        total     = round(base + iva, 2)
+        return {"subtotal": subtotal, "iva": iva, "total": total}
                 
     # Snapshot multimedia 
     @staticmethod
@@ -107,7 +109,11 @@ class CotizacionesService:
         subtotal_total = descuento_total = total_total = 0.0
 
         for item in data.items:
-            calc = CotizacionesService._calcular_item(item)
+            producto = db.execute(
+                select(Productos).where(Productos.cod_ref == item.cod_ref)
+            ).scalar_one_or_none()
+            por_iva = float(producto.por_iva or 0) if producto else 0.0
+            calc = CotizacionesService._calcular_item(item, por_iva)
             subtotal_total  += calc["subtotal"]
             descuento_total += round(item.descuento_unitario * item.cantidad, 2)
             total_total     += calc["total"]
@@ -121,6 +127,7 @@ class CotizacionesService:
                 cantidad           = item.cantidad,
                 precio_unitario    = item.valor_web,
                 descuento_unitario = item.descuento_unitario,
+                por_iva            = por_iva,
                 subtotal           = calc["subtotal"],
                 total              = calc["total"],
                 imagen_url    = CotizacionesService._imagen_principal(db, item.cod_ref),
@@ -233,11 +240,16 @@ class CotizacionesService:
         subtotal_total = descuento_total = total_total = 0.0
 
         for item in data.items:
-            calc = CotizacionesService._calcular_item(item)
+            producto = db.execute(
+                select(Productos).where(Productos.cod_ref == item.cod_ref)
+            ).scalar_one_or_none()
+            por_iva = float(producto.por_iva or 0) if producto else 0.0
+            calc = CotizacionesService._calcular_item(item, por_iva)
             subtotal_total  += calc["subtotal"]
             descuento_total += round(item.descuento_unitario * item.cantidad, 2)
             total_total     += calc["total"]
-
+            
+            
             db.add(CotizacionesItem(
                 cotizacion_id      = cotizacion_id,
                 cod_ref            = item.cod_ref,
@@ -247,6 +259,7 @@ class CotizacionesService:
                 cantidad           = item.cantidad,
                 precio_unitario    = item.valor_web,
                 descuento_unitario = item.descuento_unitario,
+                por_iva            = por_iva,
                 subtotal           = calc["subtotal"],
                 total              = calc["total"],
                 imagen_url    = CotizacionesService._imagen_principal(db, item.cod_ref),

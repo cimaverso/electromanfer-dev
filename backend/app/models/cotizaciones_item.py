@@ -27,6 +27,7 @@ class CotizacionesItem(Base):
     cantidad: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=1.00)
     precio_unitario: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0.00)
     descuento_unitario: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0.00)
+    por_iva: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0.00)
     subtotal: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0.00)
     total: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0.00)
 

@@ -49,6 +49,12 @@ class Productos(Base):
         nullable=True
     )
 
+    por_iva: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 2),
+        nullable=True,
+        default=0.00
+    )
+
     origen: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

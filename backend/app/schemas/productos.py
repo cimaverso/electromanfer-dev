@@ -26,6 +26,7 @@ class ProductoResponse(BaseModel):
     nom_tip: Optional[str] = None
     saldo: Optional[float] = None
     valor_web: Optional[float] = None
+    por_iva: Optional[float] = None
     origen: str
     created_at: datetime
     updated_at: datetime
