@@ -235,7 +235,7 @@ export default function DashboardPage() {
                   <td>
                     <button
                       className="dashboard__action-btn"
-                      onClick={() => navigate('/cotizaciones')}
+                      onClick={() => navigate(`/cotizaciones?ver=${cot.id}`)}
                       title="Ver cotización"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

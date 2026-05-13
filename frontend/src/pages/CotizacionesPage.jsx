@@ -17,10 +17,10 @@ import './CotizacionesPage.css'
 
 const TABS_BASE = [
   { id: 'productos', label: 'Productos seleccionados' },
-  { id: 'preview',   label: 'Vista previa / PDF' },
-  { id: 'fichas',    label: 'Fichas técnicas' },
+  { id: 'preview', label: 'Vista previa / PDF' },
+  { id: 'fichas', label: 'Fichas técnicas' },
   { id: 'historial', label: 'Historial' },
-  { id: 'buzon',     label: 'Buzón' },
+  { id: 'buzon', label: 'Buzón' },
 ]
 
 export default function CotizacionesPage() {
@@ -74,17 +74,27 @@ export default function CotizacionesPage() {
     cargarHistorial(filtrosHoy)
   }, [cargarHistorial])
 
+  // ─── Abrir cotización desde Dashboard ────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const verId = params.get('ver')
+    if (verId) {
+      verCotizacion(Number(verId)).then(() => setTabActivo('preview'))
+    }
+  }, [])
+
+
   // ─── Payload compartido entre crear y editar ──────────────────────────────
   const buildPayload = () => ({
     cliente: clienteDraft,
     notas,
     observaciones_pdf: observacionesPdf,
     items: selectedProducts.map((p) => ({
-      cod_ref:   p.cod_ref,
-      nom_ref:   p.nom_ref,
-      cod_tip:   p.cod_tip  || null,
-      nom_tip:   p.nom_tip  || null,
-      cantidad:  p.cantidad,
+      cod_ref: p.cod_ref,
+      nom_ref: p.nom_ref,
+      cod_tip: p.cod_tip || null,
+      nom_tip: p.nom_tip || null,
+      cantidad: p.cantidad,
       valor_web: p.valor_web,
     })),
   })

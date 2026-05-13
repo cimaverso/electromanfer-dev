@@ -64,10 +64,8 @@ export default function HistorialTable({
   onFiltrar,
   onVerDetalle,
   onDescargar,
-  onReenviar,
   onEditar,
   onMarcarEfectiva,
-  onAnular,
 }) {
   const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
 
@@ -300,33 +298,8 @@ export default function HistorialTable({
                         </a>
                       )}
 
-                      {/* Anular — generada, enviada_email, enviada_whatsapp, editada */}
-                      {onAnular && PUEDE_ANULAR.has(cot.estado) && (
-                        <button
-                          className="hist-table__accion-btn hist-table__accion-btn--anular"
-                          onClick={() => onAnular(cot.id)}
-                          title="Anular cotización"
-                        >
-                          <IconoAnular />
-                        </button>
-                      )}
-
-                      {/* Reenviar — solo si es editable (no efectiva ni anulada) */}
-                      {EDITABLES.has(cot.estado) && (
-                        <button
-                          className="hist-table__accion-btn"
-                          onClick={() => onReenviar(cot)}
-                          title="Reenviar"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13" />
-                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                          </svg>
-                        </button>
-                      )}
-
                     </div>
-                  </td>                </tr>
+                  </td></tr>
               ))}
             </tbody>
           </table>
