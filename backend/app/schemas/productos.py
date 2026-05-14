@@ -9,6 +9,7 @@ class ProductoInternoCreate(BaseModel):
     nom_tip: Optional[str] = None
     saldo: Optional[float] = None
     valor_web: Optional[float] = None
+    por_iva: Optional[float] = 0.0 
 
 
 class ProductoInternoUpdate(BaseModel):
@@ -17,6 +18,7 @@ class ProductoInternoUpdate(BaseModel):
     nom_tip: Optional[str] = None
     saldo: Optional[float] = None
     valor_web: Optional[float] = None
+    por_iva: Optional[float] = None
 
 class ProductoResponse(BaseModel):
     id: int

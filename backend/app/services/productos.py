@@ -135,6 +135,7 @@ class ProductosService:
             nom_tip   = data.nom_tip,
             saldo     = data.saldo,
             valor_web = data.valor_web,
+            por_iva   = data.por_iva or 0,
             origen    = 'interno'
         )
         db.add(producto)
@@ -160,6 +161,7 @@ class ProductosService:
         producto.nom_tip   = data.nom_tip
         producto.saldo     = data.saldo
         producto.valor_web = data.valor_web
+        producto.por_iva   = data.por_iva if data.por_iva is not None else producto.por_iva
         db.commit()
         db.refresh(producto)
         return producto

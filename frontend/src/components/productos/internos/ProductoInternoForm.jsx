@@ -7,6 +7,7 @@ const EMPTY = {
   tipo: '',
   saldo: '',
   valor_web: '',
+  por_iva: '',
 }
 
 export default function ProductoInternoForm({ producto, loading, onGuardar, onCerrar }) {
@@ -23,6 +24,7 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
         tipo: producto.nom_tip || '',
         saldo: producto.saldo != null ? String(producto.saldo) : '',
         valor_web: producto.valor_web != null ? String(producto.valor_web) : '',
+        por_iva: producto.por_iva != null ? String(producto.por_iva) : '',
       })
     } else {
       setForm(EMPTY)
@@ -56,6 +58,7 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
       nom_tip: form.tipo.trim().toUpperCase() || null,
       saldo: Number(form.saldo) || 0,
       valor_web: Number(form.valor_web) || 0,
+      por_iva: Number(form.por_iva) || 0,
     })
   }
 
@@ -151,6 +154,19 @@ export default function ProductoInternoForm({ producto, loading, onGuardar, onCe
                 <span className="pi-form__error-msg">{errors.valor_web}</span>
               )}
             </div>
+          </div>
+
+          <div className="pi-form__field pi-form__field--iva">
+            <label className="pi-form__label">IVA (%)</label>
+            <input
+              type="number"
+              className="pi-form__input"
+              placeholder="0"
+              min="0"
+              max="100"
+              value={form.por_iva}
+              onChange={(e) => handleChange('por_iva', e.target.value)}
+            />
           </div>
         </div>
 

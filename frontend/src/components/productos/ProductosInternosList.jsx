@@ -112,6 +112,7 @@ export default function ProductosInternosList() {
       tipo: producto.tipo || 'GENERAL',
       saldo: producto.saldo || 0,
       valor_web: producto.valor_web || 0,
+      por_iva: producto.por_iva ?? 0,
     })
   }
 
@@ -189,6 +190,7 @@ export default function ProductosInternosList() {
                     <th>TIPO</th>
                     <th>SALDO</th>
                     <th>PRECIO</th>
+                    <th>IVA</th>
                     <th>ACCIONES</th>
                   </tr>
                 </thead>
@@ -204,6 +206,7 @@ export default function ProductosInternosList() {
                       </td>
                       <td>{p.saldo ?? 0}</td>
                       <td className="pi-list__precio">{formatPrecio(p.valor_web)}</td>
+                      <td>{p.por_iva != null ? `${p.por_iva}%` : '—'}</td>
                       <td>
                         <div className="pi-list__actions">
                           <button
