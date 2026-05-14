@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useProductos } from '../../../hooks/useProductos'
+import { useProductosInternos } from '../../../hooks/useProductosInternos'
 import { useCotizacionDraft } from '../../../hooks/useCotizacionDraft'
 import { useCotizaciones } from '../../../hooks/useCotizaciones'
 import { getRecursos } from '../../../api/recursosApi'
@@ -217,9 +218,34 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
   const [generandoPdf, setGenerandoPdf] = useState(false)
   const [tabBuscador, setTabBuscador] = useState('buscar')
 
-  // Refs para scroll por arrastre en las dos tablas
+  // Refs para scroll por arrastre en las tres tablas
   const dragRefBuscar = useDragScroll()
   const dragRefSeleccionados = useDragScroll()
+  const dragRefInternos = useDragScroll()
+
+  // ── Productos internos ────────────────────────────────────────────────────
+  const {
+    resultados: resultadosInternos,
+    loading: loadingInternos,
+    error: errorInternos,
+    query: queryInternos,
+    setQuery: setQueryInternos,
+    buscar: buscarInternos,
+  } = useProductosInternos()
+
+  // Carga inicial cuando se activa la tab de internos
+  useEffect(() => {
+    if (tabBuscador === 'internos') {
+      buscarInternos(queryInternos)
+    }
+  }, [tabBuscador]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Búsqueda reactiva con debounce en internos
+  useEffect(() => {
+    if (tabBuscador !== 'internos') return
+    const t = setTimeout(() => buscarInternos(queryInternos), 300)
+    return () => clearTimeout(t)
+  }, [queryInternos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasBuscado = !loadingBusqueda && (resultados.length > 0 || errorBusqueda !== null || query.trim() !== '')
 
@@ -374,6 +400,13 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                   Buscar productos
                 </button>
                 <button
+                  className={`mcb-col__tab ${tabBuscador === 'internos' ? 'mcb-col__tab--active' : ''}`}
+                  onClick={() => setTabBuscador('internos')}
+                  type="button"
+                >
+                  Internos
+                </button>
+                <button
                   className={`mcb-col__tab ${tabBuscador === 'seleccionados' ? 'mcb-col__tab--active' : ''}`}
                   onClick={() => setTabBuscador('seleccionados')}
                   type="button"
@@ -383,6 +416,7 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                     <span className="mcb-col__tab-badge">{selectedProducts.length}</span>
                   )}
                 </button>
+                
               </div>
 
               {/* ── Tab: Buscar productos ── */}
@@ -429,6 +463,40 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                 <div className="mcb-tabla-wrap" ref={dragRefSeleccionados}>
                   <CotizacionTable onIrAProductos={() => setTabBuscador('buscar')} />
                 </div>
+              )}
+
+              {/* ── Tab: Internos ── */}
+              {tabBuscador === 'internos' && (
+                <>
+                  <div className="mcb-search-wrap">
+                    <SearchInput
+                      value={queryInternos}
+                      onChange={(v) => setQueryInternos(v)}
+                      onSearch={() => buscarInternos(queryInternos)}
+                      loading={loadingInternos}
+                      placeholder="Buscar producto interno..."
+                    />
+                  </div>
+
+                  {loadingInternos && <LoadingSpinner size="sm" text="Cargando internos..." />}
+
+                  {!loadingInternos && errorInternos && (
+                    <div className="mcb-empty">⚠️ {errorInternos}</div>
+                  )}
+
+                  {!loadingInternos && !errorInternos && resultadosInternos.length === 0 && (
+                    <div className="mcb-empty">Sin productos internos registrados</div>
+                  )}
+
+                  {!loadingInternos && !errorInternos && resultadosInternos.length > 0 && (
+                    <div className="mcb-tabla-wrap" ref={dragRefInternos}>
+                      <ProductosTable
+                        productos={resultadosInternos}
+                        onVerDetalle={null}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
