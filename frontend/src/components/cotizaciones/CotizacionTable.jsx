@@ -85,6 +85,7 @@ export default function CotizacionTable({ onIrAProductos }) {
             <th>Código</th>
             <th>Descripción</th>
             <th className="u-text-right">Precio unit.</th>
+            <th className="u-text-right">IVA</th>
             <th>Cantidad</th>
             <th className="u-text-right">Subtotal</th>
             <th></th>
@@ -111,6 +112,11 @@ export default function CotizacionTable({ onIrAProductos }) {
                     valorWeb={p.valor_web}
                     updatePrice={updatePrice}
                   />
+                </td>
+                <td className="u-text-right">
+                  <span className="cot-table__iva">
+                    {p.por_iva != null ? `${p.por_iva}%` : '—'}
+                  </span>
                 </td>
                 <td>
                   <div className="cot-table__qty">
@@ -201,6 +207,12 @@ export default function CotizacionTable({ onIrAProductos }) {
                   valorWeb={p.valor_web}
                   updatePrice={updatePrice}
                 />
+              </div>
+              <div className="cot-card__iva-wrapper">
+                <span className="cot-card__iva-label">IVA</span>
+                <span className="cot-card__iva-value">
+                  {p.por_iva != null ? `${p.por_iva}%` : '—'}
+                </span>
               </div>
               <div className="cot-table__qty">
                 <button

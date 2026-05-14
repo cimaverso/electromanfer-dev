@@ -70,6 +70,7 @@ export default function ProductosTable({ productos = [], onVerDetalle }) {
               <th>Tipo</th>
               <th className="u-text-right">Saldo</th>
               <th className="u-text-right">Precio</th>
+              <th className="u-text-right">IVA</th>
               <th>Recursos</th>
               <th>Acción</th>
             </tr>
@@ -109,6 +110,11 @@ export default function ProductosTable({ productos = [], onVerDetalle }) {
                   <td className="u-text-right">
                     <span className="productos-table__precio">
                       {formatCOP(producto.valor_web)}
+                    </span>
+                  </td>
+                  <td className="u-text-right">
+                    <span className="productos-table__iva">
+                      {producto.por_iva != null ? `${producto.por_iva}%` : '—'}
                     </span>
                   </td>
 

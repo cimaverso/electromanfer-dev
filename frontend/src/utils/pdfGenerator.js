@@ -269,12 +269,13 @@ export async function generarPdfCotizacion(
 
   // ── Helper: cabecera tabla ────────────────────────────────────────────────
   const COL = {
-    img: { x: MARGEN + 2 },
-    item: { x: MARGEN + 16 },
-    cant: { x: MARGEN + 26 },
-    nom: { x: MARGEN + 38, w: 80 },
-    precio: { x: MARGEN + 118 },
-    sub: { x: MARGEN + 144 },
+    img:    { x: MARGEN + 2 },
+    item:   { x: MARGEN + 16 },
+    cant:   { x: MARGEN + 26 },
+    nom:    { x: MARGEN + 38, w: 72 },
+    precio: { x: MARGEN + 112 },
+    iva:    { x: MARGEN + 136 },
+    sub:    { x: MARGEN + 152 },
   }
 
   const dibujarCabeceraTabla = (yPos) => {
@@ -288,6 +289,7 @@ export async function generarPdfCotizacion(
     doc.text('CANT', COL.cant.x, yPos + 5.5)
     doc.text('DESCRIPCION', COL.nom.x, yPos + 5.5)
     doc.text('V/UNIT.', COL.precio.x, yPos + 5.5)
+    doc.text('IVA', COL.iva.x, yPos + 5.5)
     doc.text('V/TOTAL', COL.sub.x, yPos + 5.5)
     return yPos + 8
   }
@@ -373,6 +375,7 @@ export async function generarPdfCotizacion(
     }
 
     const subtotal = (item.precio_unitario || 0) * (item.cantidad || 0)
+    const porIva = item.por_iva ?? 0
     const yTexto = y + 7
 
     doc.setTextColor(...OSCURO)
@@ -391,7 +394,8 @@ export async function generarPdfCotizacion(
     doc.setTextColor(...OSCURO)
     doc.setFontSize(7.5)
     doc.text(formatCOP(item.precio_unitario || 0), COL.precio.x, yTexto)
-    doc.text(formatCOP(subtotal), COL.sub.x, yTexto)
+    doc.text(porIva > 0 ? `${porIva}%` : '0%', COL.iva.x, yTexto)
+    doc.text(formatCOP(item.total || subtotal), COL.sub.x, yTexto)
 
     y += FILA_H
   }
