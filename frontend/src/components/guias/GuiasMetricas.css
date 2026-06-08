@@ -1,0 +1,210 @@
+.guias-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.guias-metricas--loading {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.guias-metricas__skeleton {
+  flex: 1;
+  height: 110px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  animation: guias-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes guias-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ── Tarjeta base ── */
+.guias-metricas__card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  transition: var(--transition-base);
+}
+
+.guias-metricas__card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.guias-metricas__card-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.guias-metricas__card-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.guias-metricas__card-value--muted {
+  color: var(--color-text-soft);
+}
+
+.guias-metricas__card-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.guias-metricas__variacion {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  margin-top: var(--space-1);
+}
+
+.guias-metricas__variacion--up {
+  color: var(--color-danger);
+}
+
+.guias-metricas__variacion--down {
+  color: var(--color-success);
+}
+
+/* ── Estados ── */
+.guias-metricas__card--estados {
+  grid-column: span 2;
+}
+
+.guias-metricas__estados-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.guias-metricas__estado-row {
+  display: grid;
+  grid-template-columns: 8px 90px 1fr 28px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.guias-metricas__estado-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.guias-metricas__estado-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-soft);
+}
+
+.guias-metricas__estado-bar-wrap {
+  height: 6px;
+  background: var(--color-surface-3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.guias-metricas__estado-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s ease;
+  min-width: 4px;
+}
+
+.guias-metricas__estado-count {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* ── Top transportadoras ── */
+.guias-metricas__card--top {
+  grid-column: span 2;
+}
+
+.guias-metricas__top-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.guias-metricas__top-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.guias-metricas__top-rank {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.guias-metricas__top-nombre {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
+}
+
+.guias-metricas__top-cantidad {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.guias-metricas__top-total {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .guias-metricas {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .guias-metricas__card--estados,
+  .guias-metricas__card--top {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .guias-metricas {
+    grid-template-columns: 1fr;
+  }
+
+  .guias-metricas__card--estados,
+  .guias-metricas__card--top {
+    grid-column: span 1;
+  }
+
+  .guias-metricas__estado-row {
+    grid-template-columns: 8px 80px 1fr 24px;
+  }
+
+  .guias-metricas__top-row {
+    grid-template-columns: 20px 1fr auto;
+  }
+
+  .guias-metricas__top-cantidad {
+    display: none;
+  }
+}

@@ -40,6 +40,18 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    path: '/guias',
+    label: 'Guías',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="3" width="15" height="13" rx="1" />
+        <path d="M16 8h4l3 3v5h-7V8z" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </svg>
+    ),
+  },
 ]
 
 const NAV_ITEMS_PROXIMOS = [
@@ -49,16 +61,6 @@ const NAV_ITEMS_PROXIMOS = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Envíos',
-    tooltip: 'Próximamente — historial de envíos',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-        <polyline points="22,6 12,13 2,6" />
       </svg>
     ),
   },
@@ -75,7 +77,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
     try { return localStorage.getItem('sidebar_collapsed') === 'true' } catch { return false }
   })
 
-  // Cierra sidebar mobile al cambiar de ruta
   useEffect(() => {
     if (onMobileClose) onMobileClose()
   }, [location.pathname])

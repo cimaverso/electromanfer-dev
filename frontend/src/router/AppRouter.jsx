@@ -5,6 +5,7 @@ import LoginPage from '../pages/LoginPage'
 import DashboardPage from '../pages/DashboardPage'
 import ProductosPage from '../pages/ProductosPage'
 import CotizacionesPage from '../pages/CotizacionesPage'
+import GuiasPage from '../pages/GuiasPage'
 import NotFoundPage from '../pages/NotFoundPage'
 
 function PrivateRoute({ children }) {
@@ -56,8 +57,6 @@ function RootRedirect() {
 }
 
 export default function AppRouter() {
-  
-
   return (
     <BrowserRouter>
       <Routes>
@@ -89,6 +88,16 @@ export default function AppRouter() {
             <PrivateRoute>
               <MainLayout>
                 <CotizacionesPage />
+              </MainLayout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/guias"
+          element={
+            <PrivateRoute>
+              <MainLayout>
+                <GuiasPage />
               </MainLayout>
             </PrivateRoute>
           }
