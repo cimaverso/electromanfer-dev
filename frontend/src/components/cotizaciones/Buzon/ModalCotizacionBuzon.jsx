@@ -52,9 +52,7 @@ async function cargarAdjuntosSeleccionados(items = []) {
   return { adjuntosImagenes, adjuntosPdfs }
 }
 
-// ─── Hook: scroll por arrastre (mouse drag to scroll) ────────────────────────
-// Usa getBoundingClientRect() para coordenadas absolutas correctas dentro del modal.
-// Los listeners de move/up van en document para no perder el drag al salir del elemento.
+// ─── Hook: scroll por arrastre ────────────────────────────────────────────────
 function useDragScroll() {
   const ref = useRef(null)
   const state = useRef({ dragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 })
@@ -64,7 +62,6 @@ function useDragScroll() {
     if (!el) return
 
     const onMouseDown = (e) => {
-      // No activar en elementos interactivos
       if (['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(e.target.tagName)) return
       const rect = el.getBoundingClientRect()
       state.current = {
@@ -95,7 +92,6 @@ function useDragScroll() {
       el.style.userSelect = ''
     }
 
-    // mousedown en el elemento, move/up en document para no perder el drag
     el.addEventListener('mousedown', onMouseDown)
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
@@ -139,10 +135,10 @@ function ModalHistorial({ onSeleccionar, onClose }) {
     iso ? new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
   const estadoBadge = (e) => ({
-    generada:         { label: 'Generada',  cls: 'badge--info' },
-    enviada:          { label: 'Enviada',   cls: 'badge--warning' },
-    efectiva:         { label: 'Efectiva',  cls: 'badge--success' },
-    anulada:          { label: 'Anulada',   cls: 'badge--danger' },
+    generada:  { label: 'Generada',  cls: 'badge--info' },
+    enviada:   { label: 'Enviada',   cls: 'badge--warning' },
+    efectiva:  { label: 'Efectiva',  cls: 'badge--success' },
+    anulada:   { label: 'Anulada',   cls: 'badge--danger' },
   }[e] || { label: e, cls: '' })
 
   return (
@@ -194,8 +190,8 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
     editandoId,
     editandoConsecutivo,
     selectedProducts,
-     notas,              // ← agregar
-  observacionesPdf,
+    notas,
+    observacionesPdf,
     setClienteDraft,
     clearDraft,
     loadFromHistorial,
@@ -213,12 +209,12 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
     verDetalle,
   } = useProductos()
 
+  const [minimized, setMinimized] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [errorMsg, setErrorMsg] = useState(null)
   const [generandoPdf, setGenerandoPdf] = useState(false)
   const [tabBuscador, setTabBuscador] = useState('buscar')
 
-  // Refs para scroll por arrastre en las tres tablas
   const dragRefBuscar = useDragScroll()
   const dragRefSeleccionados = useDragScroll()
   const dragRefInternos = useDragScroll()
@@ -233,14 +229,12 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
     buscar: buscarInternos,
   } = useProductosInternos()
 
-  // Carga inicial cuando se activa la tab de internos
   useEffect(() => {
     if (tabBuscador === 'internos') {
       buscarInternos(queryInternos)
     }
   }, [tabBuscador]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Búsqueda reactiva con debounce en internos
   useEffect(() => {
     if (tabBuscador !== 'internos') return
     const t = setTimeout(() => buscarInternos(queryInternos), 300)
@@ -249,7 +243,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
 
   const hasBuscado = !loadingBusqueda && (resultados.length > 0 || errorBusqueda !== null || query.trim() !== '')
 
-  // Pre-llenar datos del cliente desde el hilo del buzón
   useEffect(() => {
     if (!hilo?.emailRemitente) return
     if (!clienteDraft?.email && !clienteDraft?.nombre_razon_social) {
@@ -279,8 +272,8 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
 
     const payload = {
       cliente: clienteDraft,
-  notas: notas || '',
-  observaciones_pdf: observacionesPdf || '',
+      notas: notas || '',
+      observaciones_pdf: observacionesPdf || '',
       items: selectedProducts.map((p) => ({
         cod_ref:   p.cod_ref,
         nom_ref:   p.nom_ref,
@@ -352,9 +345,43 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
     ? `Editando ${editandoConsecutivo || `#${editandoId}`}`
     : `Nueva cotización · ${hilo?.remitente || ''}`
 
+  // ── Barra minimizada ──────────────────────────────────────────────────────
+  if (minimized) {
+    return (
+      <div className="mcb-minimized" role="dialog" aria-label="Cotización minimizada">
+        <div className="mcb-minimized__left">
+          <span className="mcb-minimized__icon">📋</span>
+          <span className="mcb-minimized__title">{tituloModal}</span>
+          {selectedProducts.length > 0 && (
+            <span className="mcb-minimized__badge">{selectedProducts.length} producto{selectedProducts.length !== 1 ? 's' : ''}</span>
+          )}
+        </div>
+        <div className="mcb-minimized__actions">
+          <button
+            className="mcb-minimized__btn"
+            onClick={() => setMinimized(false)}
+            type="button"
+            aria-label="Restaurar modal de cotización"
+          >
+            ↑ Abrir
+          </button>
+          <button
+            className="mcb-minimized__btn mcb-minimized__btn--close"
+            onClick={onClose}
+            type="button"
+            aria-label="Cerrar cotización"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Modal expandido ───────────────────────────────────────────────────────
   return (
     <>
-      <div className="mcb-overlay" onClick={onClose}>
+      <div className="mcb-overlay" onClick={() => setMinimized(true)}>
         <div className="mcb-modal" onClick={(e) => e.stopPropagation()}>
 
           {/* ── Header ── */}
@@ -382,7 +409,17 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                   + Nueva
                 </button>
               )}
-              <button className="mcb-close" onClick={onClose} type="button">✕</button>
+              {/* Botón minimizar */}
+              <button
+                className="mcb-close"
+                onClick={() => setMinimized(true)}
+                type="button"
+                title="Minimizar para ver el correo"
+                aria-label="Minimizar"
+              >
+                —
+              </button>
+              <button className="mcb-close" onClick={onClose} type="button" aria-label="Cerrar">✕</button>
             </div>
           </div>
 
@@ -416,7 +453,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                     <span className="mcb-col__tab-badge">{selectedProducts.length}</span>
                   )}
                 </button>
-                
               </div>
 
               {/* ── Tab: Buscar productos ── */}
@@ -446,7 +482,6 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
                     <div className="mcb-empty">📦 Escribe un producto y presiona Buscar</div>
                   )}
 
-                  {/* Tabla con scroll H+V y arrastre — 10 ítems visibles */}
                   {!loadingBusqueda && !errorBusqueda && resultados.length > 0 && (
                     <div className="mcb-tabla-wrap" ref={dragRefBuscar}>
                       <ProductosTable

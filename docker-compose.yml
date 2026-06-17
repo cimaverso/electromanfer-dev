@@ -3,6 +3,8 @@ services:
     image: postgres:16
     container_name: electromanfer_db
     restart: always
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_USER: electromanfer
       POSTGRES_PASSWORD: mi_password_seguro_2026

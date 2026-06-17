@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useGuias } from '../hooks/useGuias'
 import { useToast } from '../hooks/useToast'
+import { redactarCorreo } from '../api/buzonApi'
 import GuiasMetricas from '../components/guias/GuiasMetricas'
 import GuiaFormModal from '../components/guias/GuiaFormModal'
 import GuiaDetalleModal from '../components/guias/GuiaDetalleModal'
@@ -33,7 +34,7 @@ const FILTROS_INIT = { estado: '', transportadora: '', fecha_inicio: '', fecha_f
 
 export default function GuiasPage() {
   const { user } = useAuth()
-const isAdmin = ['admin', 'ADMIN', 'ADMINISTRADOR'].includes(user?.rol)
+  const isAdmin = ['admin', 'ADMIN', 'ADMINISTRADOR'].includes(user?.rol)
   const { toast, showToast, hideToast } = useToast()
 
   const {
@@ -53,19 +54,19 @@ const isAdmin = ['admin', 'ADMIN', 'ADMINISTRADOR'].includes(user?.rol)
   const [guiaEditando, setGuiaEditando]         = useState(null)
   const [modalDetalle, setModalDetalle]         = useState(false)
   const [modalConsolidado, setModalConsolidado] = useState(false)
+  const [loadingEmail, setLoadingEmail]         = useState(false)
 
-  // Mes actual para métricas
   const hoy = new Date()
   const [mesMet, setMesMet] = useState(hoy.getMonth() + 1)
   const [anioMet, setAnioMet] = useState(hoy.getFullYear())
 
   useEffect(() => {
-  cargarGuias()
-}, [])
+    cargarGuias()
+  }, [])
 
-useEffect(() => {
-  if (isAdmin) cargarMetricas({ mes: mesMet, anio: anioMet })
-}, [isAdmin])
+  useEffect(() => {
+    if (isAdmin) cargarMetricas({ mes: mesMet, anio: anioMet })
+  }, [isAdmin])
 
   useEffect(() => {
     if (error) {
@@ -118,9 +119,7 @@ useEffect(() => {
       showToast('Guía actualizada correctamente', 'success')
       setModalForm(false)
       setGuiaEditando(null)
-      if (modalDetalle) {
-        await cargarDetalle(res.data.id)
-      }
+      if (modalDetalle) await cargarDetalle(res.data.id)
     } else {
       showToast(res.error || 'Error al actualizar la guía', 'error')
     }
@@ -152,15 +151,17 @@ useEffect(() => {
     }
   }
 
-  // ── Enviar por correo — abre Buzón en cotizaciones ────────────────────────
-  const handleEnviarCorreo = (guia) => {
-    // Por ahora abre un mailto básico con los datos de la guía
-    // Cuando se integre con el Buzón se pasa el guia como adjunto al EmailModal
-    const asunto = encodeURIComponent(`Guía de envío ${guia.numero_guia} - ELECTROMANFER`)
-    const cuerpo = encodeURIComponent(
-      `Estimado cliente,\n\nAdjunto encontrará la información de su envío:\n\nGuía: ${guia.numero_guia}\nTransportadora: ${guia.transportadora}\nFecha de despacho: ${fmtFecha(guia.fecha_despacho)}\nDestinatario: ${guia.destinatario || ''}\nCiudad destino: ${guia.ciudad_destino || ''}\nEstado: ${ESTADOS_CONFIG[guia.estado]?.label || guia.estado}\n\nAtentamente,\nElectromanfer Ltda.`
-    )
-    window.open(`mailto:?subject=${asunto}&body=${cuerpo}`, '_blank')
+  // ── Enviar guía por correo via Buzón ─────────────────────────────────────
+  const handleEnviarCorreo = async (_guiaId, formData) => {
+    setLoadingEmail(true)
+    try {
+      await redactarCorreo(formData)
+      showToast('Correo enviado correctamente', 'success')
+    } catch {
+      showToast('Error al enviar el correo', 'error')
+    } finally {
+      setLoadingEmail(false)
+    }
   }
 
   // ── Métricas — cambiar mes ────────────────────────────────────────────────
@@ -180,31 +181,6 @@ useEffect(() => {
         <div className="guias-page__header-left">
           <h1 className="guias-page__title">Guías de envío</h1>
           <span className="guias-page__count">{guias.length} registro{guias.length !== 1 ? 's' : ''}</span>
-        </div>
-        <div className="guias-page__header-right">
-          {isAdmin && (
-            <button
-              className="guias-page__consolidado-btn"
-              onClick={() => setModalConsolidado(true)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Exportar consolidado
-            </button>
-          )}
-          <button
-            className="guias-page__nueva-btn"
-            onClick={() => { setGuiaEditando(null); setModalForm(true) }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Nueva guía
-          </button>
         </div>
       </div>
 
@@ -235,7 +211,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ── Filtros ── */}
+      {/* ── Filtros + acciones ── */}
       <div className="guias-page__filtros">
         <div className="guias-page__buscar">
           <input
@@ -272,6 +248,33 @@ useEffect(() => {
             Limpiar filtros
           </button>
         )}
+
+        {/* Botones de acción — junto a los filtros */}
+        <div className="guias-page__filtros-actions">
+          {isAdmin && (
+            <button
+              className="guias-page__consolidado-btn"
+              onClick={() => setModalConsolidado(true)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Exportar consolidado</span>
+            </button>
+          )}
+          <button
+            className="guias-page__nueva-btn"
+            onClick={() => { setGuiaEditando(null); setModalForm(true) }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nueva guía
+          </button>
+        </div>
       </div>
 
       {/* ── Tabla ── */}

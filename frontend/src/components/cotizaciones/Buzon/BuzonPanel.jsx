@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import ModalCotizacionBuzon from './ModalCotizacionBuzon'
+import ModalGuiaBuzon from './ModalGuiaBuzon'
 import { useBuzon } from '../../../hooks/useBuzon'
 import axiosClient from '../../../api/axiosClient'
 import { listarFirmas, guardarFirmaPreferida } from '../../../api/firmasApi'
@@ -43,39 +44,96 @@ function cargarBase64(url) {
   })
 }
 
+// ─── Neutraliza colores hardcodeados ANTES de meter el HTML al iframe ─────────
+function neutralizarColoresDark(html) {
+  // ── 1. Atributos style="" inline ──────────────────────────────────────────
+  html = html.replace(/style="([^"]*)"/gi, (_match, estilos) => {
+    let s = estilos
+
+    // background / background-color claro → transparent
+    s = s.replace(
+      /background(?:-color)?\s*:\s*(?:#(?:[fFeEdDcCbB][0-9a-fA-F]{2}|[fFeEdDcCbB]{2}[0-9a-fA-F]{4}|[fF]{3,6})|white|rgb\(\s*(?:1[89]\d|2\d{2})\s*,\s*(?:1[89]\d|2\d{2})\s*,\s*(?:1[89]\d|2\d{2})\s*\))\s*(?:!important\s*)?/gi,
+      'background: transparent '
+    )
+
+    // color oscuro → inherit
+    s = s.replace(
+      /(?<![a-zA-Z-])color\s*:\s*(?:#[0-3][0-9a-fA-F]{2}|#[0-3][0-9a-fA-F]{5}|black|rgb\(\s*[0-6]?\d\s*,\s*[0-6]?\d\s*,\s*[0-6]?\d\s*\)|rgba\(\s*[0-6]?\d\s*,\s*[0-6]?\d\s*,\s*[0-6]?\d\s*,\s*[01](?:\.\d+)?\s*\))\s*(?:!important\s*)?/gi,
+      'color: inherit '
+    )
+
+    return `style="${s.trim()}"`
+  })
+
+  // ── 2. Bloques <style> internos del correo ────────────────────────────────
+  html = html.replace(/<style([^>]*)>([\s\S]*?)<\/style>/gi, (_match, attrs, css) => {
+    let c = css
+
+    c = c.replace(
+      /(?<![a-zA-Z-])color\s*:\s*(?:#[0-3][0-9a-fA-F]{2}|#[0-3][0-9a-fA-F]{5}|black|rgb\(\s*[0-6]?\d\s*,\s*[0-6]?\d\s*,\s*[0-6]?\d\s*\))\s*(?:!important\s*)?/gi,
+      'color: inherit '
+    )
+
+    c = c.replace(
+      /background(?:-color)?\s*:\s*(?:#(?:[fFeEdDcCbB][0-9a-fA-F]{2}|[fF]{3,6})|white|rgb\(\s*(?:1[89]\d|2\d{2})\s*,\s*(?:1[89]\d|2\d{2})\s*,\s*(?:1[89]\d|2\d{2})\s*\))\s*(?:!important\s*)?/gi,
+      'background: transparent '
+    )
+
+    return `<style${attrs}>${c}</style>`
+  })
+
+  return html
+}
+
 // ─── Inyección de estilos en el iframe del correo ────────────────────────────
 function buildSrcDoc(htmlOriginal, enviado = false) {
   if (!htmlOriginal) return null
   const dark = document.documentElement.getAttribute('data-theme') !== 'light'
-  const style = dark
-    ? `<style>
-        html, body { background: transparent !important; margin: 0; padding: 0; }
-        a { color: #9DBE5A !important; }
-        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; ${!enviado ? 'color: #F0F4FF;' : ''} }
-        table, td, th { border-color: rgba(255,255,255,0.1) !important; }
-        img { max-width: 100%; }
-      </style>`
-    : `<style>
-        html, body { background: transparent !important; margin: 0; padding: 0; }
-        body { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; ${!enviado ? 'color: #111827;' : ''} }
-        a { color: #5E8A1A; }
-        img { max-width: 100%; }
-      </style>`
-  if (/<head[\s>]/i.test(htmlOriginal)) {
-    return htmlOriginal.replace(/<head([\s>])/i, `<head$1${style}`)
+
+  const html = dark ? neutralizarColoresDark(htmlOriginal) : htmlOriginal
+
+  const styleDark = `<style>
+    html, body {
+      background: transparent !important;
+      margin: 0; padding: 0;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #E2E8F0;
+    }
+    a { color: #9DBE5A !important; }
+    table, td, th { border-color: rgba(255,255,255,0.1) !important; }
+    img { max-width: 100%; }
+  </style>`
+
+  const styleLight = `<style>
+    html, body {
+      background: transparent !important;
+      margin: 0; padding: 0;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #111827;
+    }
+    a { color: #5E8A1A; }
+    img { max-width: 100%; }
+  </style>`
+
+  const style = dark ? styleDark : styleLight
+
+  if (/<head[\s>]/i.test(html)) {
+    return html.replace(/<head([\s>])/i, `<head$1${style}`)
   }
-  return `<!DOCTYPE html><html><head>${style}</head><body>${htmlOriginal}</body></html>`
+  return `<!DOCTYPE html><html><head>${style}</head><body>${html}</body></html>`
 }
 
 // ─── Helper fetch adjunto ─────────────────────────────────────────────────────
-
 async function fetchAdjuntoBlobUrl(mensajeId, attachmentId, nombre, tipo) {
   const token = localStorage.getItem('access_token')
   const url = `${BASE_URL}/emails/${mensajeId}/adjunto/${attachmentId}?nombre=${encodeURIComponent(nombre)}&tipo=${encodeURIComponent(tipo)}`
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) throw new Error(`Error ${res.status}`)
   const arrayBuffer = await res.arrayBuffer()
-  // Inferir Content-Type correcto según extensión si el backend devuelve octet-stream
   let mimeReal = tipo
   if (!mimeReal || mimeReal === 'application/octet-stream') {
     if (/\.pdf$/i.test(nombre)) mimeReal = 'application/pdf'
@@ -87,8 +145,6 @@ async function fetchAdjuntoBlobUrl(mensajeId, attachmentId, nombre, tipo) {
   const blob = new Blob([arrayBuffer], { type: mimeReal })
   return URL.createObjectURL(blob)
 }
-
-// ─── Modal visor de adjuntos ──────────────────────────────────────────────────
 
 // ─── Visor PDF con pdfjs-dist ────────────────────────────────────────────────
 function VisorPDF({ blobUrl }) {
@@ -129,7 +185,6 @@ function VisorPDF({ blobUrl }) {
       setError(false)
       try {
         const pdfjsLib = await import('pdfjs-dist')
-        // Worker inline via blob para evitar problemas de CORS con blob URLs
         const workerSrc = await import('pdfjs-dist/build/pdf.worker.mjs?url')
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc.default
         const pdf = await pdfjsLib.getDocument(blobUrl).promise
@@ -158,7 +213,6 @@ function VisorPDF({ blobUrl }) {
   return (
     <div className="badj-pdfjs">
       <div className="badj-pdfjs__barra">
-        {/* Navegación páginas */}
         <div className="badj-pdfjs__grupo">
           <button type="button" className="badj-pdfjs__btn" onClick={() => setPaginaActual((p) => Math.max(1, p - 1))} disabled={paginaActual <= 1} title="Página anterior">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><polyline points="15 18 9 12 15 6" /></svg>
@@ -172,10 +226,7 @@ function VisorPDF({ blobUrl }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><polyline points="9 18 15 12 9 6" /></svg>
           </button>
         </div>
-
         <div className="badj-pdfjs__divider" />
-
-        {/* Zoom */}
         <div className="badj-pdfjs__grupo">
           <button type="button" className="badj-pdfjs__btn" onClick={() => cambiarEscala(-0.1)} disabled={escala <= 0.5} title="Reducir zoom">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -185,33 +236,16 @@ function VisorPDF({ blobUrl }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           </button>
         </div>
-
         <div className="badj-pdfjs__divider" />
-
-        {/* Zoom rápido */}
         <div className="badj-pdfjs__grupo">
           {[75, 90, 100, 125].map((z) => (
-            <button
-              key={z}
-              type="button"
-              className={`badj-pdfjs__preset ${Math.round(escala * 100) === z ? 'badj-pdfjs__preset--active' : ''}`}
-              onClick={() => setEscala(z / 100)}
-            >{z}%</button>
+            <button key={z} type="button" className={`badj-pdfjs__preset ${Math.round(escala * 100) === z ? 'badj-pdfjs__preset--active' : ''}`} onClick={() => setEscala(z / 100)}>{z}%</button>
           ))}
         </div>
       </div>
       <div className="badj-pdfjs__canvas-wrap">
-        {cargando && (
-          <div className="badj-pdfjs__loading">
-            <span className="badj-spinner" />
-            <span>Cargando PDF...</span>
-          </div>
-        )}
-        {error && (
-          <div className="badj-pdfjs__loading">
-            <span style={{ color: 'var(--color-danger, #e55)' }}>No se pudo cargar el PDF</span>
-          </div>
-        )}
+        {cargando && <div className="badj-pdfjs__loading"><span className="badj-spinner" /><span>Cargando PDF...</span></div>}
+        {error && <div className="badj-pdfjs__loading"><span style={{ color: 'var(--color-danger, #e55)' }}>No se pudo cargar el PDF</span></div>}
         <div ref={contenedorRef} style={{ display: cargando || error ? 'none' : 'block', padding: '16px' }} />
       </div>
     </div>
@@ -220,13 +254,11 @@ function VisorPDF({ blobUrl }) {
 
 function ModalVisorAdjunto({ blobUrl, nombre, tipo, onClose }) {
   const esImagen = tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(nombre)
-
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
-
   return (
     <div className="badj-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="badj-modal">
@@ -234,42 +266,25 @@ function ModalVisorAdjunto({ blobUrl, nombre, tipo, onClose }) {
           <div className="badj-modal__titulo">
             <span className={`badj-modal__tipo-icon ${esImagen ? 'badj-modal__tipo-icon--img' : 'badj-modal__tipo-icon--pdf'}`}>
               {esImagen ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
               )}
             </span>
             <span className="badj-modal__nombre">{nombre}</span>
           </div>
           <div className="badj-modal__acciones">
             <a href={blobUrl} download={nombre} className="badj-btn badj-btn--dl" title="Descargar">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
               Descargar
             </a>
             <button type="button" className="badj-btn badj-btn--cerrar" onClick={onClose} title="Cerrar (Esc)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
         </div>
         <div className="badj-modal__cuerpo">
-          {esImagen ? (
-            <img src={blobUrl} alt={nombre} className="badj-modal__imagen" />
-          ) : (
-            <VisorPDF blobUrl={blobUrl} />
-          )}
+          {esImagen ? <img src={blobUrl} alt={nombre} className="badj-modal__imagen" /> : <VisorPDF blobUrl={blobUrl} />}
         </div>
       </div>
     </div>
@@ -277,164 +292,85 @@ function ModalVisorAdjunto({ blobUrl, nombre, tipo, onClose }) {
 }
 
 // ─── AdjuntoItem ──────────────────────────────────────────────────────────────
-
 function AdjuntoItem({ adj, mensajeId }) {
-  const [estado, setEstado] = useState('idle') // idle | cargando | error
+  const [estado, setEstado] = useState('idle')
   const [blobUrl, setBlobUrl] = useState(null)
   const [modalAbierto, setModalAbierto] = useState(false)
-
   const tieneAttachmentId = !!adj.attachment_id
   const esImagen = adj.tipo?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombre)
   const esPdf = adj.tipo === 'application/pdf' || /\.pdf$/i.test(adj.nombre)
   const esVisualizable = esImagen || esPdf
-
-  useEffect(() => {
-    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl) }
-  }, [blobUrl])
-
+  useEffect(() => { return () => { if (blobUrl) URL.revokeObjectURL(blobUrl) } }, [blobUrl])
   const handleClick = async () => {
     if (!tieneAttachmentId || estado === 'cargando') return
-
     if (esVisualizable) {
       if (blobUrl) { setModalAbierto(true); return }
       setEstado('cargando')
       try {
         const url = await fetchAdjuntoBlobUrl(mensajeId, adj.attachment_id, adj.nombre, adj.tipo)
-        setBlobUrl(url)
-        setModalAbierto(true)
-        setEstado('idle')
+        setBlobUrl(url); setModalAbierto(true); setEstado('idle')
       } catch { setEstado('error') }
       return
     }
-
-    // Otros tipos: descarga directa
     setEstado('cargando')
     try {
       const url = await fetchAdjuntoBlobUrl(mensajeId, adj.attachment_id, adj.nombre, adj.tipo)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = adj.nombre
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 5000)
-      setEstado('idle')
+      const a = document.createElement('a'); a.href = url; a.download = adj.nombre; a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 5000); setEstado('idle')
     } catch { setEstado('error') }
   }
-
   const iconoTipo = esImagen ? (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <polyline points="21 15 16 10 5 21" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
   ) : (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
   )
-
-  const iconoAccion = estado === 'cargando' ? (
-    <span className="badj-spinner" />
-  ) : estado === 'error' ? (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, color: 'var(--color-danger, #e55)' }}>
-      <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
-  ) : tieneAttachmentId ? (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, opacity: 0.5 }}>
-      {esVisualizable
-        ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
-        : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>
-      }
-    </svg>
-  ) : null
-
+  const iconoAccion = estado === 'cargando' ? <span className="badj-spinner" />
+    : estado === 'error' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, color: 'var(--color-danger, #e55)' }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+    : tieneAttachmentId ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, opacity: 0.5 }}>{esVisualizable ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></> : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>}</svg>
+    : null
   return (
     <>
-      <div
-        className={[
-          'buzon-msg__adjunto',
-          tieneAttachmentId ? 'buzon-msg__adjunto--clickable' : '',
-          estado === 'error' ? 'buzon-msg__adjunto--error' : '',
-        ].filter(Boolean).join(' ')}
-        onClick={handleClick}
-        title={
-          !tieneAttachmentId ? adj.nombre
-          : estado === 'error' ? 'Error al obtener el archivo'
-          : esVisualizable ? `Ver ${adj.nombre}`
-          : `Descargar ${adj.nombre}`
-        }
-      >
-        <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>
-          {iconoTipo}
-        </span>
+      <div className={['buzon-msg__adjunto', tieneAttachmentId ? 'buzon-msg__adjunto--clickable' : '', estado === 'error' ? 'buzon-msg__adjunto--error' : ''].filter(Boolean).join(' ')} onClick={handleClick} title={!tieneAttachmentId ? adj.nombre : estado === 'error' ? 'Error al obtener el archivo' : esVisualizable ? `Ver ${adj.nombre}` : `Descargar ${adj.nombre}`}>
+        <span className={`buzon-msg__adjunto-icon ${esImagen ? 'buzon-msg__adjunto-icon--img' : 'buzon-msg__adjunto-icon--pdf'}`}>{iconoTipo}</span>
         <span className="buzon-msg__adjunto-nombre">{adj.nombre}</span>
         <span className="buzon-msg__adjunto-size">{adj.tamanio}</span>
         <span className="buzon-msg__adjunto-accion">{iconoAccion}</span>
       </div>
-
-      {modalAbierto && blobUrl && (
-        <ModalVisorAdjunto
-          blobUrl={blobUrl}
-          nombre={adj.nombre}
-          tipo={adj.tipo}
-          onClose={() => setModalAbierto(false)}
-        />
-      )}
+      {modalAbierto && blobUrl && <ModalVisorAdjunto blobUrl={blobUrl} nombre={adj.nombre} tipo={adj.tipo} onClose={() => setModalAbierto(false)} />}
     </>
   )
 }
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
-
 function Avatar({ nombre, tipo = 'cliente' }) {
   return <div className={`buzon-avatar buzon-avatar--${tipo}`}>{iniciales(nombre)}</div>
 }
 
 function HiloItem({ hilo, activo, onClick }) {
   return (
-    <div
-      className={[
-        'buzon-hilo-item',
-        activo ? 'buzon-hilo-item--activo' : '',
-        !hilo.leido ? 'buzon-hilo-item--no-leido' : '',
-      ].filter(Boolean).join(' ')}
-      onClick={() => onClick(hilo)}
-    >
+    <div className={['buzon-hilo-item', activo ? 'buzon-hilo-item--activo' : '', !hilo.leido ? 'buzon-hilo-item--no-leido' : ''].filter(Boolean).join(' ')} onClick={() => onClick(hilo)}>
       {!hilo.leido && <span className="buzon-hilo-item__dot" />}
       <div className="buzon-hilo-item__row">
         <span className="buzon-hilo-item__remitente">{hilo.remitente}</span>
-        {hilo.mensajes_count > 1 && (
-          <span className="buzon-hilo-item__count">{hilo.mensajes_count}</span>
-        )}
+        {hilo.mensajes_count > 1 && <span className="buzon-hilo-item__count">{hilo.mensajes_count}</span>}
         <span className="buzon-hilo-item__fecha">{formatFecha(hilo.fecha)}</span>
       </div>
       <div className="buzon-hilo-item__asunto">{hilo.asunto}</div>
-      {hilo.cotizacion_consecutivo && (
-        <span className="buzon-hilo-item__cot-tag">{hilo.cotizacion_consecutivo}</span>
-      )}
+      {hilo.cotizacion_consecutivo && <span className="buzon-hilo-item__cot-tag">{hilo.cotizacion_consecutivo}</span>}
     </div>
   )
 }
 
 function MensajeBurbuja({ mensaje }) {
   const enviado = mensaje.direccion === 'enviado'
-  const [tema, setTema] = useState(
-    document.documentElement.getAttribute('data-theme') || 'dark'
-  )
-
+  const [tema, setTema] = useState(document.documentElement.getAttribute('data-theme') || 'dark')
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setTema(document.documentElement.getAttribute('data-theme') || 'dark')
-    })
+    const observer = new MutationObserver(() => { setTema(document.documentElement.getAttribute('data-theme') || 'dark') })
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
     return () => observer.disconnect()
   }, [])
-
   const tieneCid = mensaje.cuerpo_html && /src=["']cid:/i.test(mensaje.cuerpo_html)
-  const srcDocFinal = mensaje.cuerpo_html
-    ? (tieneCid ? mensaje.cuerpo_html : buildSrcDoc(mensaje.cuerpo_html, enviado))
-    : null
-
+  const srcDocFinal = mensaje.cuerpo_html ? buildSrcDoc(mensaje.cuerpo_html, enviado) : null
   return (
     <div className={`buzon-msg ${enviado ? 'buzon-msg--enviado' : 'buzon-msg--recibido'}`}>
       <div className="buzon-msg__header">
@@ -442,45 +378,32 @@ function MensajeBurbuja({ mensaje }) {
         <span className="buzon-msg__nombre">{mensaje.remitente}</span>
         <span className="buzon-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
-
       {srcDocFinal ? (
-        <iframe
-          key={tema}
-          srcDoc={srcDocFinal}
-          className="buzon-msg__iframe"
-          sandbox="allow-same-origin"
-          title="correo"
-          onLoad={(e) => {
-            try {
-              const doc = e.target.contentDocument
-              if (doc) {
-                const h = doc.documentElement.scrollHeight
-                e.target.style.height = Math.min(Math.max(h, 60), 500) + 'px'
-              }
-            } catch { }
-          }}
-        />
+        <iframe key={tema} srcDoc={srcDocFinal} className="buzon-msg__iframe" sandbox="allow-same-origin" title="correo" onLoad={(e) => { try { const doc = e.target.contentDocument; if (doc) { const h = doc.documentElement.scrollHeight; e.target.style.height = Math.min(Math.max(h, 60), 500) + 'px' } } catch { } }} />
       ) : (
         <div className="buzon-msg__cuerpo">{mensaje.cuerpo}</div>
       )}
-
       {mensaje.adjuntos?.length > 0 && (
         <div className="buzon-msg__adjuntos">
-          {mensaje.adjuntos.map((adj, i) => (
-            <AdjuntoItem key={i} adj={adj} mensajeId={mensaje.id} />
-          ))}
+          {mensaje.adjuntos.map((adj, i) => <AdjuntoItem key={i} adj={adj} mensajeId={mensaje.id} />)}
         </div>
       )}
     </div>
   )
 }
 
-function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion, adjuntoPrevio = null, onQuitarAdjunto }) {
+// ─── BarraRespuesta ───────────────────────────────────────────────────────────
+function BarraRespuesta({
+  onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion,
+  adjuntoPrevio = null, onQuitarAdjunto,
+  onEnviarGuia,
+  textoInicial = '',
+  onTextoInicialUsado,
+}) {
   const [texto, setTexto] = useState('')
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const firmaFileRef = useRef(null)
-
   const [adjuntosAbierto, setAdjuntosAbierto] = useState(true)
   const [firmaAbierta, setFirmaAbierta] = useState(false)
   const [firmas, setFirmas] = useState([])
@@ -511,6 +434,14 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
     return () => { cancelado = true }
   }, [])
 
+  // Aplica texto inicial cuando llega una guía seleccionada
+  useEffect(() => {
+    if (!textoInicial) return
+    setTexto(textoInicial)
+    onTextoInicialUsado?.()
+    textareaRef.current?.focus()
+  }, [textoInicial]) // eslint-disable-line
+
   const handleSeleccionarFirma = async (firma) => {
     setFirmaSeleccionada(firma)
     setSelectorFirmaAbierto(false)
@@ -518,9 +449,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
     const b64 = await cargarBase64(firma.url)
     setFirmaB64(b64)
     setFirmaLoading(false)
-    try {
-      await guardarFirmaPreferida(firma.id)
-    } catch { /* silencioso */ }
+    try { await guardarFirmaPreferida(firma.id) } catch { /* silencioso */ }
   }
 
   const handleNuevaFirma = async (e) => {
@@ -536,9 +465,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
       const nueva = await subirFirma(formData)
       setFirmas((prev) => [...prev, nueva])
       handleSeleccionarFirma(nueva)
-    } catch { /* silencioso */ } finally {
-      setSubiendoFirma(false)
-    }
+    } catch { /* silencioso */ } finally { setSubiendoFirma(false) }
   }
 
   const handleEnviar = () => {
@@ -569,21 +496,11 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
         <div className="buzon-acordeon">
           <button type="button" className="buzon-acordeon__header" onClick={() => setAdjuntosAbierto((v) => !v)}>
             <span className="buzon-acordeon__icon buzon-acordeon__icon--pdf">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
             </span>
-            <span className="buzon-acordeon__label">
-              Adjuntos <span className="buzon-acordeon__badge">{totalAdjuntos}</span>
-            </span>
-            <button type="button" className="buzon-acordeon__quitar"
-              onClick={(e) => { e.stopPropagation(); onQuitarAdjunto() }}
-              title="Quitar todos"
-            >✕</button>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              className="buzon-acordeon__chevron"
-              style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}
-            ><polyline points="6 9 12 15 18 9" /></svg>
+            <span className="buzon-acordeon__label">Adjuntos <span className="buzon-acordeon__badge">{totalAdjuntos}</span></span>
+            <button type="button" className="buzon-acordeon__quitar" onClick={(e) => { e.stopPropagation(); onQuitarAdjunto() }} title="Quitar todos">✕</button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buzon-acordeon__chevron" style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           <div className={`buzon-acordeon__body ${adjuntosAbierto ? 'buzon-acordeon__body--open' : ''}`}>
             <div className="buzon-acordeon__content">
@@ -622,9 +539,7 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
                     const esImagen = /\.(jpg|jpeg|png|gif|webp)$/i.test(adj.nombreArchivo)
                     return (
                       <div key={i} className="buzon-reply__ficha-item">
-                        <span className={`buzon-reply__adjunto-icon ${esImagen ? 'buzon-reply__adjunto-icon--img-sm' : 'buzon-reply__adjunto-icon--sm'}`}>
-                          {esImagen ? 'IMG' : 'PDF'}
-                        </span>
+                        <span className={`buzon-reply__adjunto-icon ${esImagen ? 'buzon-reply__adjunto-icon--img-sm' : 'buzon-reply__adjunto-icon--sm'}`}>{esImagen ? 'IMG' : 'PDF'}</span>
                         <span className="buzon-reply__ficha-nombre" title={adj.nombreArchivo}>{adj.nombreArchivo}</span>
                       </div>
                     )
@@ -640,41 +555,29 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
       <div className="buzon-acordeon">
         <button type="button" className="buzon-acordeon__header" onClick={() => setFirmaAbierta((v) => !v)}>
           <span className="buzon-acordeon__icon buzon-acordeon__icon--firma">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
-              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
           </span>
           <span className="buzon-acordeon__label">
             Firma del correo
             {firmaSeleccionada && !firmaLoading && <span className="buzon-acordeon__firma-nombre">{firmaSeleccionada.nombre}</span>}
             {firmaLoading && <span className="buzon-acordeon__dot-loading" />}
           </span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            className="buzon-acordeon__chevron"
-            style={{ transform: firmaAbierta ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          ><polyline points="6 9 12 15 18 9" /></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buzon-acordeon__chevron" style={{ transform: firmaAbierta ? 'rotate(180deg)' : 'rotate(0deg)' }}><polyline points="6 9 12 15 18 9" /></svg>
         </button>
         <div className={`buzon-acordeon__body ${firmaAbierta ? 'buzon-acordeon__body--open' : ''}`}>
           <div className="buzon-acordeon__content buzon-acordeon__content--firma">
             {firmaLoading ? (
-              <div className="buzon-acordeon__firma-placeholder">
-                <span className="buzon-acordeon__spinner" /><span>Cargando firma...</span>
-              </div>
+              <div className="buzon-acordeon__firma-placeholder"><span className="buzon-acordeon__spinner" /><span>Cargando firma...</span></div>
             ) : firmaB64 ? (
               <div className="buzon-acordeon__firma-preview" onClick={() => setSelectorFirmaAbierto((v) => !v)} title="Clic para cambiar firma">
                 <img src={firmaB64} alt={firmaSeleccionada?.nombre || 'Firma'} className="buzon-acordeon__firma-img" />
                 <div className="buzon-acordeon__firma-overlay">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                   <span>Cambiar firma</span>
                 </div>
               </div>
             ) : firmas.length === 0 ? (
-              <div className="buzon-acordeon__firma-placeholder">
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>No hay firmas disponibles.</span>
-              </div>
+              <div className="buzon-acordeon__firma-placeholder"><span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>No hay firmas disponibles.</span></div>
             ) : (
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)', margin: 0 }}>No se pudo cargar la imagen.</p>
             )}
@@ -682,17 +585,10 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
               <div className="buzon-acordeon__firma-selector">
                 <p className="buzon-acordeon__firma-selector-title">Selecciona una firma</p>
                 {firmas.map((firma) => (
-                  <button key={firma.id} type="button"
-                    className={`buzon-acordeon__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'buzon-acordeon__firma-opcion--active' : ''}`}
-                    onClick={() => handleSeleccionarFirma(firma)}
-                  >
+                  <button key={firma.id} type="button" className={`buzon-acordeon__firma-opcion ${firmaSeleccionada?.id === firma.id ? 'buzon-acordeon__firma-opcion--active' : ''}`} onClick={() => handleSeleccionarFirma(firma)}>
                     <img src={firma.url} alt={firma.nombre} className="buzon-acordeon__firma-opcion-img" onError={(e) => { e.target.style.display = 'none' }} />
                     <span className="buzon-acordeon__firma-opcion-nombre">{firma.nombre}</span>
-                    {firmaSeleccionada?.id === firma.id && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--color-primary)', flexShrink: 0 }}>
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
+                    {firmaSeleccionada?.id === firma.id && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--color-primary)', flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>}
                   </button>
                 ))}
                 <button type="button" className="buzon-acordeon__firma-agregar" onClick={() => firmaFileRef.current?.click()} disabled={subiendoFirma}>
@@ -714,6 +610,11 @@ function BarraRespuesta({ onEnviar, loading, onNuevaCotizacion, onAdjuntarCotiza
           <button className="buzon-btn buzon-btn--cot" onClick={onNuevaCotizacion} type="button">
             <IconCotizacion /> Generar cotización
           </button>
+          {onEnviarGuia && (
+            <button className="buzon-btn buzon-btn--guia" onClick={onEnviarGuia} type="button">
+              <IconGuia /> Guía
+            </button>
+          )}
           <button className="buzon-btn buzon-btn--ghost" onClick={() => fileInputRef.current?.click()} type="button">
             <IconAdjuntar /> Adjuntar
           </button>
@@ -743,6 +644,7 @@ function IconBandeja() { return <svg width="18" height="18" viewBox="0 0 16 16" 
 function IconEnviados() { return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2L2 8l4 2 2 4 6-12z" /></svg> }
 function IconRedactar() { return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 3v10M3 8h10" /></svg> }
 function IconCotizacion() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="2" /><path d="M5 8h6M5 5h4M5 11h3" /></svg> }
+function IconGuia() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2L2 9l5 1 1 5 6-13z" /><path d="M8 8l4-4" /></svg> }
 function IconAdjuntar() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 8V5a4 4 0 118 0v6a2 2 0 01-4 0V6" /></svg> }
 function IconSync({ spin }) {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={spin ? { animation: 'buzon-spin 1s linear infinite' } : {}}><path d="M13 8A5 5 0 112 5.5" /><path d="M2 3v3h3" /></svg>
@@ -759,7 +661,6 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
   const [destinatario, setDestinatario] = useState('')
   const [asunto, setAsunto] = useState('')
   const [cuerpo, setCuerpo] = useState('')
-
   return (
     <div className="buzon-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="buzon-modal">
@@ -783,40 +684,56 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
   )
 }
 
+// ─── Helper: construye texto de guía para pre-rellenar el textarea ────────────
+function buildTextoGuia(guia) {
+  const ESTADO_LABELS = {
+    generada: 'Generada', despachada: 'Despachada', en_transito: 'En tránsito',
+    entregada: 'Entregada', novedad: 'Novedad',
+  }
+  const fecha = guia.fecha_despacho
+    ? new Date(guia.fecha_despacho + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—'
+  return `Estimado cliente,
+
+Le informamos que su pedido ha sido despachado. A continuación los detalles del envío:
+
+──────────────────────────────
+Número de guía:    ${guia.numero_guia || '—'}
+Transportadora:    ${guia.transportadora || '—'}
+Fecha de despacho: ${fecha}
+Destinatario:      ${guia.destinatario || '—'}
+Ciudad destino:    ${guia.ciudad_destino || '—'}${guia.direccion_destino ? `\nDirección:         ${guia.direccion_destino}` : ''}
+Estado actual:     ${ESTADO_LABELS[guia.estado] || guia.estado || '—'}
+──────────────────────────────
+${guia.observaciones ? `\nObservaciones: ${guia.observaciones}\n` : ''}
+Para rastrear su envío comuníquese con la transportadora indicando el número de guía.
+
+Quedamos atentos a cualquier inquietud.
+
+Atentamente,`
+}
+
 // ─── BuzonPanel principal ─────────────────────────────────────────────────────
 export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, adjuntoPendiente = null, onAdjuntoMontado = null }) {
   const {
-    hilos: hilosReales,
-    hiloActivo: hiloActivoReal,
-    sinLeer,
-    loadingHilos,
-    loadingHilo,
-    loadingEnvio,
-    loadingSync,
-    error,
-    cargarHilos,
-    abrirHilo,
-    responder,
-    redactar,
-    sincronizar,
-    cerrarHilo,
-    enviarConAdjuntos,
-    paginaActual,
-    hayPaginaSiguiente,
-    irPaginaSiguiente,
-    irPaginaAnterior,
+    hilos: hilosReales, hiloActivo: hiloActivoReal, sinLeer,
+    loadingHilos, loadingHilo, loadingEnvio, loadingSync, error,
+    cargarHilos, abrirHilo, responder, redactar, sincronizar, cerrarHilo, enviarConAdjuntos,
+    paginaActual, hayPaginaSiguiente, irPaginaSiguiente, irPaginaAnterior,
   } = useBuzon()
 
   const hilos = hilosReales
   const hiloActivo = hiloActivoReal
 
-  const [bandejaActiva, setBandejaActiva] = useState('inbox')
-  const [modalRedactar, setModalRedactar] = useState(false)
-  const [enviando, setEnviando] = useState(false)
+  const [bandejaActiva, setBandejaActiva]       = useState('inbox')
+  const [modalRedactar, setModalRedactar]       = useState(false)
+  const [enviando, setEnviando]                 = useState(false)
   const [sidebarColapsado, setSidebarColapsado] = useState(false)
-  const [adjuntoReply, setAdjuntoReply] = useState(null)
-  const [modalCotizacion, setModalCotizacion] = useState(false)
-  const [vistaMovil, setVistaMovil] = useState('lista')
+  const [adjuntoReply, setAdjuntoReply]         = useState(null)
+  const [modalCotizacion, setModalCotizacion]   = useState(false)
+  const [modalGuia, setModalGuia]               = useState(false)
+  const [vistaMovil, setVistaMovil]             = useState('lista')
+  const [textoGuia, setTextoGuia]               = useState('')
 
   const mensajesEndRef = useRef(null)
 
@@ -866,8 +783,29 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
     setVistaMovil('lista')
   }
 
+  // ── Selección de guía: pre-rellena textarea + adjunta foto ────────────────
+  const handleSeleccionarGuia = async (guia) => {
+    const texto = buildTextoGuia(guia)
+    const archivosLocales = []
+    if (guia.foto_guia_path) {
+      try {
+        const res = await fetch(guia.foto_guia_path)
+        const blob = await res.blob()
+        const ext = guia.foto_guia_path.split('.').pop() || 'jpg'
+        const archivo = new File([blob], `Foto_guia_${guia.numero_guia}.${ext}`, { type: blob.type })
+        archivosLocales.push({ archivo, nombreArchivo: archivo.name })
+      } catch { /* sin foto, no es bloqueante */ }
+    }
+    if (archivosLocales.length > 0) {
+      setAdjuntoReply((prev) => ({
+        ...prev,
+        archivosLocales: [...(prev?.archivosLocales || []), ...archivosLocales],
+      }))
+    }
+    setTextoGuia(texto)
+  }
+
   const handleResponder = async (texto, firmaSeleccionada) => {
-    console.log('hiloActivo:', JSON.stringify(hiloActivo))
     if (adjuntoReply?.cotizacion?.id) {
       setEnviando(true)
       try {
@@ -926,38 +864,19 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
 
   return (
     <div
-      className={[
-        'buzon-root',
-        vistaMovil === 'hilo' ? 'buzon-root--mobile-hilo' : '',
-      ].filter(Boolean).join(' ')}
+      className={['buzon-root', vistaMovil === 'hilo' ? 'buzon-root--mobile-hilo' : ''].filter(Boolean).join(' ')}
       style={{ gridTemplateColumns: gridColumns }}
     >
       {/* ── Barra navegación mobile ── */}
       <div className="buzon-mobile-nav">
-        <button
-          className={`buzon-mobile-nav__tab ${bandejaActiva === 'inbox' ? 'buzon-mobile-nav__tab--active' : ''}`}
-          onClick={() => handleCambiarBandeja('inbox')}
-          type="button"
-        >
-          <IconBandeja />
-          <span>Recibidos</span>
+        <button className={`buzon-mobile-nav__tab ${bandejaActiva === 'inbox' ? 'buzon-mobile-nav__tab--active' : ''}`} onClick={() => handleCambiarBandeja('inbox')} type="button">
+          <IconBandeja /><span>Recibidos</span>
           {sinLeerTotal > 0 && <span className="buzon-mobile-nav__badge">{sinLeerTotal}</span>}
         </button>
-        <button
-          className={`buzon-mobile-nav__tab ${bandejaActiva === 'sent' ? 'buzon-mobile-nav__tab--active' : ''}`}
-          onClick={() => handleCambiarBandeja('sent')}
-          type="button"
-        >
-          <IconEnviados />
-          <span>Enviados</span>
+        <button className={`buzon-mobile-nav__tab ${bandejaActiva === 'sent' ? 'buzon-mobile-nav__tab--active' : ''}`} onClick={() => handleCambiarBandeja('sent')} type="button">
+          <IconEnviados /><span>Enviados</span>
         </button>
-        <button
-          className="buzon-mobile-nav__sync"
-          onClick={() => sincronizar()}
-          disabled={loadingSync}
-          type="button"
-          title="Sincronizar"
-        >
+        <button className="buzon-mobile-nav__sync" onClick={() => sincronizar()} disabled={loadingSync} type="button" title="Sincronizar">
           <IconSync spin={loadingSync} />
         </button>
       </div>
@@ -986,6 +905,9 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           <button className="buzon-nav-item buzon-nav-item--cot" onClick={() => setModalCotizacion(true)} type="button" title="Nueva cotización">
             <IconCotizacion />{!sidebarColapsado && <span>Nueva cotización</span>}
           </button>
+          <button className="buzon-nav-item buzon-nav-item--guia" onClick={() => setModalGuia(true)} type="button" title="Enviar guía">
+            <IconGuia />{!sidebarColapsado && <span>Enviar guía</span>}
+          </button>
           <button className="buzon-nav-item buzon-nav-item--sync" onClick={() => sincronizar()} disabled={loadingSync} type="button" title="Sincronizar">
             <IconSync spin={loadingSync} />{!sidebarColapsado && <span>Sincronizar</span>}
           </button>
@@ -999,7 +921,6 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           {sinLeerTotal > 0 && bandejaActiva === 'inbox' && <span className="buzon-lista__sin-leer">{sinLeerTotal} sin leer</span>}
         </div>
         <input className="buzon-lista__search" placeholder="Buscar correos..." onChange={(e) => cargarHilos(bandejaActiva, { q: e.target.value })} />
-
         {loadingHilos ? (
           <div className="buzon-lista__empty">Cargando...</div>
         ) : hilos.length === 0 ? (
@@ -1007,32 +928,14 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         ) : (
           hilos.map((hilo) => <HiloItem key={hilo.id} hilo={hilo} activo={hiloEsActivo(hilo)} onClick={handleAbrirHilo} />)
         )}
-
-        {/* ── Paginación ── */}
         {!loadingHilos && (paginaActual > 1 || hayPaginaSiguiente) && (
           <div className="buzon-paginacion">
-            <button
-              className="buzon-paginacion__btn"
-              onClick={irPaginaAnterior}
-              disabled={paginaActual <= 1}
-              title="Página anterior"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
+            <button className="buzon-paginacion__btn" onClick={irPaginaAnterior} disabled={paginaActual <= 1} title="Página anterior" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
             </button>
             <span className="buzon-paginacion__pagina">{paginaActual}</span>
-            <button
-              className="buzon-paginacion__btn"
-              onClick={irPaginaSiguiente}
-              disabled={!hayPaginaSiguiente}
-              title="Página siguiente"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+            <button className="buzon-paginacion__btn" onClick={irPaginaSiguiente} disabled={!hayPaginaSiguiente} title="Página siguiente" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
             </button>
           </div>
         )}
@@ -1048,9 +951,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         ) : (
           <>
             <div className="buzon-hilo__header">
-              <button className="buzon-hilo__volver" onClick={handleVolverALista} type="button">
-                <IconAtras /> Volver
-              </button>
+              <button className="buzon-hilo__volver" onClick={handleVolverALista} type="button"><IconAtras /> Volver</button>
               <div className="buzon-hilo__asunto">{hiloActivo.asunto}</div>
               <div className="buzon-hilo__meta">
                 {hiloActivo.remitente} · {hiloActivo.mensajes?.length || 0} mensaje{hiloActivo.mensajes?.length !== 1 ? 's' : ''}
@@ -1071,6 +972,9 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
               onNuevaCotizacion={() => setModalCotizacion(true)}
+              onEnviarGuia={() => setModalGuia(true)}
+              textoInicial={textoGuia}
+              onTextoInicialUsado={() => setTextoGuia('')}
               onAdjuntarCotizacion={(adjuntos) => {
                 const lista = Array.isArray(adjuntos) ? adjuntos : [adjuntos]
                 setAdjuntoReply((prev) => ({ ...prev, archivosLocales: [...(prev?.archivosLocales || []), ...lista] }))
@@ -1090,6 +994,12 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
       )}
       {modalRedactar && (
         <ModalRedactar onEnviar={async (p) => { const r = await redactar(p); if (r.success) setModalRedactar(false) }} onClose={() => setModalRedactar(false)} loading={loadingEnvio} />
+      )}
+      {modalGuia && (
+        <ModalGuiaBuzon
+          onClose={() => setModalGuia(false)}
+          onSeleccionar={handleSeleccionarGuia}
+        />
       )}
       {error && <div className="buzon-error">{error}</div>}
     </div>

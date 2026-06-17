@@ -1618,3 +1618,10 @@
     display: none;
   }
 }
+
+.buzon-nav-item--guia {
+  color: var(--color-info);
+}
+.buzon-nav-item--guia:hover {
+  background: var(--color-info-soft);
+}
