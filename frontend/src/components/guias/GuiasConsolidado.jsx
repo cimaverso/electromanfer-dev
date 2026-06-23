@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useGuias } from '../../hooks/useGuias'
 import './GuiasConsolidado.css'
+import * as XLSX from 'xlsx'
+
 
 const ESTADOS_LABEL = {
   generada: 'Generada', despachada: 'Despachada', en_transito: 'En tránsito',
@@ -12,13 +14,13 @@ function fmt(v) {
   return new Intl.NumberFormat('es-CO').format(v)
 }
 
-const MESES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_LABEL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 export default function GuiasConsolidado({ onClose }) {
   const { consolidado, loadingConsolidado, cargarConsolidado } = useGuias()
 
   const hoy = new Date()
-  const [mes,  setMes]  = useState(hoy.getMonth() + 1)
+  const [mes, setMes] = useState(hoy.getMonth() + 1)
   const [anio, setAnio] = useState(hoy.getFullYear())
   const [trans, setTrans] = useState('')
   const [estado, setEstado] = useState('')
@@ -34,84 +36,116 @@ export default function GuiasConsolidado({ onClose }) {
   const totalFlete = consolidado.reduce((acc, r) => acc + (Number(r.costo_flete) || 0), 0)
   const totalGuias = consolidado.length
 
-  // ── Exportar CSV ────────────────────────────────────────────────────────
-  const exportarCSV = () => {
-    const cols = ['Guía','Fecha','Cotización','Transportadora','Destinatario','Ciudad','Unidades','Peso kg','Valor declarado','Valor recaudo','Costo flete','Estado','Ref. interna']
-    const filas = consolidado.map((r) => [
-      r.numero_guia, r.fecha_despacho, r.cotizacion, r.transportadora,
-      r.destinatario, r.ciudad_destino, r.unidades, r.peso_kg,
-      r.valor_declarado, r.valor_recaudo, r.costo_flete, ESTADOS_LABEL[r.estado] || r.estado,
-      r.referencia_interna,
-    ])
+  // ── Exportar XLSX ────────────────────────────────────────────────────────
+  const exportarXLSX = () => {
+    const filas = consolidado.map((r) => ({
+      'Guía': r.numero_guia,
+      'Fecha': r.fecha_despacho,
+      'Cotización': r.cotizacion || '',
+      'Transportadora': r.transportadora,
+      'Destinatario': r.destinatario || '',
+      'Ciudad': r.ciudad_destino || '',
+      'Unidades': r.unidades ?? '',
+      'Peso kg': r.peso_kg ?? '',
+      'Valor declarado': r.valor_declarado ?? '',
+      'Valor recaudo': r.valor_recaudo ?? '',
+      'Costo flete': r.costo_flete ?? '',
+      'Estado': ESTADOS_LABEL[r.estado] || r.estado,
+      'Ref. interna': r.referencia_interna || '',
+    }))
 
-    const esc = (v) => {
-      if (v === null || v === undefined) return ''
-      const s = String(v)
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-    }
-
-    const csv = [cols, ...filas].map((row) => row.map(esc).join(',')).join('\r\n')
-    const bom  = '\uFEFF'
-    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href     = url
-    a.download = `consolidado_guias_${MESES_LABEL[mes - 1]}_${anio}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const hoja = XLSX.utils.json_to_sheet(filas)
+    const libro = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(libro, hoja, 'Consolidado')
+    XLSX.writeFile(libro, `consolidado_guias_${MESES_LABEL[mes - 1]}_${anio}.xlsx`)
   }
 
   // ── Exportar PDF (texto simple via jsPDF si está disponible, sino HTML print) ──
   const exportarPDF = () => {
     const contenido = `
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Consolidado guías ${MESES_LABEL[mes - 1]} ${anio}</title>
-        <style>
-          body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 20px; }
-          h2   { font-size: 14px; margin-bottom: 4px; }
-          p    { margin: 2px 0 10px; color: #666; }
-          table { width: 100%; border-collapse: collapse; }
-          th   { background: #5E8A1A; color: #fff; padding: 5px 8px; text-align: left; font-size: 10px; }
-          td   { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
-          tr:nth-child(even) td { background: #f9fafb; }
-          .total { font-weight: bold; background: #f0f4e8 !important; }
-          .right { text-align: right; }
-        </style>
-      </head>
-      <body>
-        <h2>Consolidado de guías — ${MESES_LABEL[mes - 1]} ${anio}</h2>
-        <p>${totalGuias} guía${totalGuias !== 1 ? 's' : ''} · Total fletes: $${new Intl.NumberFormat('es-CO').format(totalFlete)} COP</p>
-        <table>
-          <thead>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Consolidado guías ${MESES_LABEL[mes - 1]} ${anio}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 10px; color: #1a1a1a; padding: 24px; }
+        .header { background: #4a7c10; color: white; padding: 16px 20px; border-radius: 6px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 15px; font-weight: bold; }
+        .header p { font-size: 10px; opacity: 0.85; margin-top: 2px; }
+        .logo { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
+        .resumen { display: flex; gap: 16px; margin-bottom: 14px; }
+        .resumen-card { background: #f0f4e8; border-left: 3px solid #4a7c10; padding: 8px 14px; border-radius: 4px; }
+        .resumen-card span { display: block; }
+        .resumen-card .label { color: #666; font-size: 9px; text-transform: uppercase; }
+        .resumen-card .value { font-size: 14px; font-weight: bold; color: #4a7c10; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        thead tr { background: #4a7c10; color: white; }
+        th { padding: 6px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; font-size: 9px; }
+        tr:nth-child(even) td { background: #f9fafb; }
+        .total-row td { background: #f0f4e8 !important; font-weight: bold; border-top: 2px solid #4a7c10; }
+        .right { text-align: right; }
+        .footer { margin-top: 16px; color: #999; font-size: 8px; text-align: right; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="logo">⚡ ELECTROMANFER</div>
+          <p>Consolidado de guías de envío</p>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:bold">${MESES_LABEL[mes - 1]} ${anio}</div>
+          <div style="font-size:9px;opacity:0.8">Generado: ${new Date().toLocaleDateString('es-CO')}</div>
+        </div>
+      </div>
+
+      <div class="resumen">
+        <div class="resumen-card">
+          <span class="label">Total guías</span>
+          <span class="value">${totalGuias}</span>
+        </div>
+        <div class="resumen-card">
+          <span class="label">Total fletes</span>
+          <span class="value">${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalFlete)}</span>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Guía</th>
+            <th>Fecha</th>
+            <th>Transportadora</th>
+            <th>Destinatario</th>
+            <th>Ciudad</th>
+            <th class="right">Flete</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${consolidado.map((r) => `
             <tr>
-              <th>Guía</th><th>Fecha</th><th>Transportadora</th>
-              <th>Destinatario</th><th>Ciudad</th>
-              <th class="right">Flete ($)</th><th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${consolidado.map((r) => `
-              <tr>
-                <td>${r.numero_guia}</td>
-                <td>${r.fecha_despacho}</td>
-                <td>${r.transportadora}</td>
-                <td>${r.destinatario || ''}</td>
-                <td>${r.ciudad_destino || ''}</td>
-                <td class="right">${fmt(r.costo_flete)}</td>
-                <td>${ESTADOS_LABEL[r.estado] || r.estado}</td>
-              </tr>`).join('')}
-            <tr class="total">
-              <td colspan="5">TOTAL</td>
-              <td class="right">${fmt(totalFlete)}</td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `
+              <td>${r.numero_guia}</td>
+              <td>${r.fecha_despacho}</td>
+              <td>${r.transportadora}</td>
+              <td>${r.destinatario || '—'}</td>
+              <td>${r.ciudad_destino || '—'}</td>
+              <td class="right">${r.costo_flete ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(r.costo_flete) : '—'}</td>
+              <td>${ESTADOS_LABEL[r.estado] || r.estado}</td>
+            </tr>`).join('')}
+          <tr class="total-row">
+            <td colspan="5">TOTAL</td>
+            <td class="right">${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalFlete)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="footer">Electromanfer Ltda. — Sistema de Gestión Comercial</div>
+    </body>
+    </html>
+  `
     const ventana = window.open('', '_blank')
     ventana.document.write(contenido)
     ventana.document.close()
@@ -223,12 +257,12 @@ export default function GuiasConsolidado({ onClose }) {
         {/* ── Footer exportar ── */}
         <div className="consolidado__footer">
           <button className="consolidado__cancel-btn" onClick={onClose}>Cerrar</button>
-          <button className="consolidado__export-btn consolidado__export-btn--csv" onClick={exportarCSV} disabled={consolidado.length === 0}>
+          <button className="consolidado__export-btn consolidado__export-btn--csv" onClick={exportarXLSX} disabled={consolidado.length === 0}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Exportar CSV
+            Exportar XLSX
           </button>
           <button className="consolidado__export-btn consolidado__export-btn--pdf" onClick={exportarPDF} disabled={consolidado.length === 0}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
