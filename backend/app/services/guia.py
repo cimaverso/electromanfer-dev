@@ -4,10 +4,10 @@ from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
-
 from app.models.guia import Guia, GuiaHistorial
+from app.core.config import settings
 
-MEDIA_BASE = os.getenv("MEDIA_BASE", "/app/media")
+MEDIA_BASE = settings.MEDIA_BASE
 
 
 class GuiaService:
