@@ -10,16 +10,16 @@ import {
 } from '../api/guiasApi'
 
 export function useGuias() {
-  const [guias, setGuias]               = useState([])
-  const [guiaActual, setGuiaActual]     = useState(null)
-  const [metricas, setMetricas]         = useState(null)
-  const [consolidado, setConsolidado]   = useState([])
+  const [guias, setGuias] = useState([])
+  const [guiaActual, setGuiaActual] = useState(null)
+  const [metricas, setMetricas] = useState(null)
+  const [consolidado, setConsolidado] = useState([])
 
-  const [loadingLista, setLoadingLista]         = useState(false)
-  const [loadingDetalle, setLoadingDetalle]     = useState(false)
-  const [loadingGuardar, setLoadingGuardar]     = useState(false)
-  const [loadingEstado, setLoadingEstado]       = useState(false)
-  const [loadingMetricas, setLoadingMetricas]   = useState(false)
+  const [loadingLista, setLoadingLista] = useState(false)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
+  const [loadingGuardar, setLoadingGuardar] = useState(false)
+  const [loadingEstado, setLoadingEstado] = useState(false)
+  const [loadingMetricas, setLoadingMetricas] = useState(false)
   const [loadingConsolidado, setLoadingConsolidado] = useState(false)
 
   const [error, setError] = useState(null)
@@ -120,8 +120,51 @@ export function useGuias() {
   const cargarMetricas = useCallback(async (params = {}) => {
     setLoadingMetricas(true)
     try {
-      const data = await getMetricasGuias(params)
-      setMetricas(data)
+      // Trae todas las guías sin filtro para calcular métricas
+      const todasGuias = await getGuias({})
+
+      const { mes, anio } = params
+      const hoy = new Date()
+      const mesActual = mes || hoy.getMonth() + 1
+      const anioActual = anio || hoy.getFullYear()
+
+      // Mes anterior
+      const mesAnt = mesActual === 1 ? 12 : mesActual - 1
+      const anioAnt = mesActual === 1 ? anioActual - 1 : anioActual
+
+      const enMes = (g, m, a) => {
+        const f = new Date(g.fecha_despacho + 'T00:00:00')
+        return f.getMonth() + 1 === m && f.getFullYear() === a
+      }
+
+      const guiasMes = todasGuias.filter((g) => enMes(g, mesActual, anioActual))
+      const guiasMesAnt = todasGuias.filter((g) => enMes(g, mesAnt, anioAnt))
+      const guiasAnio = todasGuias.filter((g) => new Date(g.fecha_despacho + 'T00:00:00').getFullYear() === anioActual)
+
+      const sumar = (lista) => lista.reduce((acc, g) => acc + (g.costo_flete || 0), 0)
+
+      const por_estado = { generada: 0, despachada: 0, en_transito: 0, entregada: 0, novedad: 0 }
+      guiasMes.forEach((g) => { if (por_estado[g.estado] !== undefined) por_estado[g.estado]++ })
+
+      const porTransp = {}
+      guiasMes.forEach((g) => {
+        if (!porTransp[g.transportadora]) porTransp[g.transportadora] = { total: 0, cantidad: 0 }
+        porTransp[g.transportadora].total += g.costo_flete || 0
+        porTransp[g.transportadora].cantidad++
+      })
+      const top_transportadoras = Object.entries(porTransp)
+        .map(([nombre, v]) => ({ nombre, ...v }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 3)
+
+      setMetricas({
+        total_mes: sumar(guiasMes),
+        total_mes_anterior: sumar(guiasMesAnt),
+        total_anio: sumar(guiasAnio),
+        cantidad_mes: guiasMes.length,
+        por_estado,
+        top_transportadoras,
+      })
     } catch {
       setMetricas(null)
     } finally {

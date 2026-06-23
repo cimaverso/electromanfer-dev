@@ -1,7 +1,7 @@
 import axiosClient from './axiosClient'
 
 // ─── FLAG: cambiar a false cuando Jair tenga los endpoints ───────────────────
-const USE_MOCK = true
+const USE_MOCK = false
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 let _mockGuias = [
