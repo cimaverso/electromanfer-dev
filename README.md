@@ -75,18 +75,9 @@ Control de acceso basado en roles para garantizar la seguridad de la informació
 
 ---
 
-## 🛡️ Documentación de la API
-
-Una vez el backend esté corriendo, puedes acceder a la documentación interactiva en:
-* **Swagger UI:** `http://localhost:8000/docs`
-* **ReDoc:** `http://localhost:8000/redoc`
-
----
-
 ## 📈 Roadmap / Próximas Mejoras
 - [ ] Integración de moculo de seguimiento para envío de paquterí.
 - [ ] Módulo de WhatsApp integrado en la aplicación.
-- [ ] Módulo de correo integrado en la aplicación.
 
 ---
 **Desarrollado para Electromanfer LTDA.**
