@@ -176,7 +176,37 @@ export function useGuias() {
   const cargarConsolidado = useCallback(async (filtros = {}) => {
     setLoadingConsolidado(true)
     try {
-      const data = await getConsolidado(filtros)
+      const todasGuias = await getGuias({})
+      const { mes, anio, transportadora, estado } = filtros
+
+      let resultado = todasGuias
+
+      if (mes && anio) {
+        resultado = resultado.filter((g) => {
+          const f = new Date(g.fecha_despacho + 'T00:00:00')
+          return f.getMonth() + 1 === Number(mes) && f.getFullYear() === Number(anio)
+        })
+      }
+      if (transportadora) resultado = resultado.filter((g) => g.transportadora === transportadora)
+      if (estado) resultado = resultado.filter((g) => g.estado === estado)
+
+      // Mapear al formato que espera GuiasConsolidado
+      const data = resultado.map((g) => ({
+        numero_guia: g.numero_guia,
+        fecha_despacho: g.fecha_despacho,
+        cotizacion: g.cotizacion_consecutivo,
+        transportadora: g.transportadora,
+        destinatario: g.destinatario,
+        ciudad_destino: g.ciudad_destino,
+        unidades: g.unidades,
+        peso_kg: g.peso_kg,
+        valor_declarado: g.valor_declarado,
+        valor_recaudo: g.valor_recaudo,
+        costo_flete: g.costo_flete,
+        estado: g.estado,
+        referencia_interna: g.referencia_interna,
+      }))
+
       setConsolidado(data)
       return data
     } catch {
