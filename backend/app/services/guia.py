@@ -1,5 +1,4 @@
 import os
-import time
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -7,7 +6,7 @@ from fastapi import UploadFile
 from app.models.guia import Guia, GuiaHistorial
 from app.core.config import settings
 import pytz
-
+import uuid
 MEDIA_BASE = settings.MEDIA_BASE
 BOGOTA_TZ = pytz.timezone("America/Bogota")
 
@@ -16,15 +15,14 @@ class GuiaService:
     @staticmethod
     def _guardar_foto(foto: UploadFile, numero_guia: str) -> str:
         ext = foto.filename.rsplit(".", 1)[-1] if "." in foto.filename else "jpg"
-        numero_limpio = numero_guia.replace("-", "").replace("/", "")
-        nombre_archivo = f"foto_{numero_limpio}_{int(time.time())}.{ext}"
+        nombre_archivo = f"{uuid.uuid4().hex}.{ext}"
         carpeta = os.path.join(MEDIA_BASE, "guias")
         os.makedirs(carpeta, exist_ok=True)
         ruta = os.path.join(carpeta, nombre_archivo)
         with open(ruta, "wb") as f:
             f.write(foto.file.read())
         return f"media/guias/{nombre_archivo}"
-
+    
     @staticmethod
     def crear(db: Session, datos: dict, usuario_id: int, foto: Optional[UploadFile] = None):
         foto_path = None
