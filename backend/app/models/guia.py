@@ -1,21 +1,14 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, DateTime, BigInteger, Numeric, Integer, Text, Date, ForeignKey
 from app.db.base import Base
-from datetime import datetime, date
+from datetime import datetime, timezone, date
 from typing import Optional
-import pytz
-
-BOGOTA_TZ = pytz.timezone("America/Bogota")
-
-def ahora_bogota():
-    return datetime.now(BOGOTA_TZ)
 
 
 class Guia(Base):
     __tablename__ = "guias"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
     cotizacion_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, ForeignKey("cotizaciones.id", ondelete="SET NULL"), nullable=True
     )
@@ -36,18 +29,16 @@ class Guia(Base):
     observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     foto_guia_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     estado: Mapped[str] = mapped_column(String(30), nullable=False, default="generada")
-
     usuario_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
     )
-
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: ahora_bogota()
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False,
-        default=lambda: ahora_bogota(),
-        onupdate=lambda: ahora_bogota()
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
     )
 
     historial: Mapped[list["GuiaHistorial"]] = relationship(
@@ -68,7 +59,7 @@ class GuiaHistorial(Base):
         Integer, ForeignKey("usuarios.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: ahora_bogota()
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
 
     guia: Mapped["Guia"] = relationship("Guia", back_populates="historial")

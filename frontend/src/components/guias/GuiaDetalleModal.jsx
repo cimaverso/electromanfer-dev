@@ -22,9 +22,15 @@ function fmtFecha(str) {
   return new Date(str).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+
 function fmtHora(str) {
   if (!str) return ''
-  return new Date(str).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return new Date(str + 'Z').toLocaleString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default function GuiaDetalleModal({
