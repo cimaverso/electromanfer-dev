@@ -1,14 +1,15 @@
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
 from app.models.guia import Guia, GuiaHistorial
 from app.core.config import settings
+import pytz
 
 MEDIA_BASE = settings.MEDIA_BASE
-
+BOGOTA_TZ = pytz.timezone("America/Bogota")
 
 class GuiaService:
 
@@ -102,7 +103,7 @@ class GuiaService:
         for campo, valor in datos.items():
             if hasattr(guia, campo):
                 setattr(guia, campo, valor)
-        guia.updated_at = datetime.now(timezone.utc)
+        guia.updated_at = datetime.now(BOGOTA_TZ)
         db.commit()
         db.refresh(guia)
         return guia
@@ -110,7 +111,7 @@ class GuiaService:
     @staticmethod
     def cambiar_estado(db: Session, guia: Guia, estado: str, nota: Optional[str], usuario_id: int):
         guia.estado = estado
-        guia.updated_at = datetime.now(timezone.utc)
+        guia.updated_at = datetime.now(BOGOTA_TZ)
         db.add(GuiaHistorial(
             guia_id=guia.id,
             estado=estado,

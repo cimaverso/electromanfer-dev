@@ -1,8 +1,14 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, DateTime, BigInteger, Numeric, Integer, Text, Date, ForeignKey
 from app.db.base import Base
-from datetime import datetime, timezone, date
+from datetime import datetime, date
 from typing import Optional
+import pytz
+
+BOGOTA_TZ = pytz.timezone("America/Bogota")
+
+def ahora_bogota():
+    return datetime.now(BOGOTA_TZ)
 
 
 class Guia(Base):
@@ -36,12 +42,12 @@ class Guia(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+        DateTime, nullable=False, default=lambda: ahora_bogota()
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        default=lambda: ahora_bogota(),
+        onupdate=lambda: ahora_bogota()
     )
 
     historial: Mapped[list["GuiaHistorial"]] = relationship(
@@ -62,7 +68,7 @@ class GuiaHistorial(Base):
         Integer, ForeignKey("usuarios.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+        DateTime, nullable=False, default=lambda: ahora_bogota()
     )
 
     guia: Mapped["Guia"] = relationship("Guia", back_populates="historial")
