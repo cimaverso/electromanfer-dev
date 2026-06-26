@@ -57,7 +57,10 @@
   box-shadow: var(--shadow-primary);
 }
 
-.guias-page__nueva-btn svg { width: 16px; height: 16px; }
+.guias-page__nueva-btn svg {
+  width: 16px;
+  height: 16px;
+}
 
 .guias-page__nueva-btn:hover {
   background: var(--color-primary-hover);
@@ -77,7 +80,10 @@
   transition: var(--transition-fast);
 }
 
-.guias-page__consolidado-btn svg { width: 15px; height: 15px; }
+.guias-page__consolidado-btn svg {
+  width: 15px;
+  height: 15px;
+}
 
 .guias-page__consolidado-btn:hover {
   border-color: var(--color-primary);
@@ -162,7 +168,9 @@
   outline: none;
 }
 
-.guias-page__buscar-input::placeholder { color: var(--color-text-muted); }
+.guias-page__buscar-input::placeholder {
+  color: var(--color-text-muted);
+}
 
 .guias-page__buscar-btn {
   padding: 0 var(--space-3);
@@ -175,8 +183,14 @@
   transition: var(--transition-fast);
 }
 
-.guias-page__buscar-btn svg { width: 15px; height: 15px; }
-.guias-page__buscar-btn:hover { color: var(--color-primary); }
+.guias-page__buscar-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.guias-page__buscar-btn:hover {
+  color: var(--color-primary);
+}
 
 .guias-page__filtro-select,
 .guias-page__filtro-input {
@@ -221,7 +235,18 @@
   text-decoration: underline;
 }
 
-.guias-page__limpiar-btn:hover { color: var(--color-danger); }
+.guias-page__limpiar-btn:hover {
+  color: var(--color-danger);
+}
+
+/* ── Acciones al final de la fila de filtros ── */
+.guias-page__filtros-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
 
 /* ── Card contenedor ── */
 .guias-page__card {
@@ -243,7 +268,9 @@
   overflow-x: auto;
 }
 
-.guias-page__cards { display: none; }
+.guias-page__cards {
+  display: none;
+}
 
 .guias-page__table {
   width: 100%;
@@ -273,9 +300,13 @@
   transition: background 0.15s;
 }
 
-.guias-page__table-row:last-child { border-bottom: none; }
+.guias-page__table-row:last-child {
+  border-bottom: none;
+}
 
-.guias-page__table-row:hover { background: var(--color-surface-2); }
+.guias-page__table-row:hover {
+  background: var(--color-surface-2);
+}
 
 .guias-page__table td {
   padding: var(--space-3) var(--space-4);
@@ -328,7 +359,10 @@
   transition: var(--transition-fast);
 }
 
-.guias-page__action-btn svg { width: 13px; height: 13px; }
+.guias-page__action-btn svg {
+  width: 13px;
+  height: 13px;
+}
 
 .guias-page__action-btn:hover {
   background: var(--color-surface-3);
@@ -340,7 +374,7 @@
 .guias-page__detalle-loading {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -354,8 +388,20 @@
     gap: var(--space-4);
   }
 
-  .guias-page__table-wrap { display: none; }
-  .guias-page__cards { display: flex; flex-direction: column; }
+  .guias-page__filtros-actions {
+    margin-left: 0;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  .guias-page__table-wrap {
+    display: none;
+  }
+
+  .guias-page__cards {
+    display: flex;
+    flex-direction: column;
+  }
 
   .guias-page__card-item {
     padding: var(--space-4);
@@ -364,8 +410,13 @@
     transition: background 0.15s;
   }
 
-  .guias-page__card-item:last-child { border-bottom: none; }
-  .guias-page__card-item:hover { background: var(--color-surface-2); }
+  .guias-page__card-item:last-child {
+    border-bottom: none;
+  }
+
+  .guias-page__card-item:hover {
+    background: var(--color-surface-2);
+  }
 
   .guias-page__card-item-header {
     display: flex;
@@ -418,18 +469,29 @@
     flex: 1 1 100%;
   }
 
-  .guias-page__filtro-select { flex: 1; }
+  .guias-page__filtro-select {
+    flex: 1;
+  }
 
   .guias-page__fechas {
     flex: 1 1 100%;
   }
 
-  .guias-page__fechas .guias-page__filtro-input { flex: 1; }
+  .guias-page__fechas .guias-page__filtro-input {
+    flex: 1;
+  }
 }
 
 @media (max-width: 480px) {
-  .guias-page__title { font-size: var(--font-size-xl); }
+  .guias-page__title {
+    font-size: var(--font-size-xl);
+  }
 
-  .guias-page__consolidado-btn span { display: none; }
-  .guias-page__consolidado-btn { padding: var(--space-2); }
+  .guias-page__consolidado-btn span {
+    display: none;
+  }
+
+  .guias-page__consolidado-btn {
+    padding: var(--space-2);
+  }
 }
