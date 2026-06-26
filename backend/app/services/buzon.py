@@ -5,20 +5,19 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from email.utils import parsedate_to_datetime
-from app.services.email import enviar_cotizacion_email
 from bs4 import BeautifulSoup
+from app.services.email import enviar_email
+from app.core.config import settings
 
 TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
-
 METADATA_HEADERS = ["From", "To", "Subject", "Date", "Message-ID", "In-Reply-To", "References"]
 
 
-# ─── Autenticación ────────
+# ─── Autenticación ────────────────────────────────────────────────────────────
 
 def _get_service():
     with open(TOKEN_PATH, "r") as f:
         token_data = json.load(f)
-
     creds = Credentials(
         token=token_data["token"],
         refresh_token=token_data["refresh_token"],
@@ -27,16 +26,15 @@ def _get_service():
         client_secret=token_data["client_secret"],
         scopes=token_data["scopes"],
     )
-
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         token_data["token"] = creds.token
         with open(TOKEN_PATH, "w") as f:
             json.dump(token_data, f)
-
     return build("gmail", "v1", credentials=creds)
 
-# ─── Parseo ─────
+
+# ─── Parseo ───────────────────────────────────────────────────────────────────
 
 def _decode_body(part):
     data = part.get("body", {}).get("data", "")
@@ -72,15 +70,13 @@ def _limpiar_html(html: str) -> str:
         return str(soup)
     except Exception:
         return html
-    
+
 def _headers_dict(msg):
     return {h["name"]: h["value"] for h in msg["payload"].get("headers", [])}
 
 def _parsear_completo(msg):
     headers = _headers_dict(msg)
     label_ids = msg.get("labelIds", [])
-    in_reply_to = headers.get("In-Reply-To", "").strip()
-
     cuerpo_plain = ""
     cuerpo_html = ""
     adjuntos = []
@@ -91,13 +87,11 @@ def _parsear_completo(msg):
             mime = part.get("mimeType", "")
             filename = part.get("filename", "")
             if filename and filename != "noname" and "." in filename:
-                size = part.get("body", {}).get("size", 0)
-                attachment_id = part.get("body", {}).get("attachmentId", "")
                 adjuntos.append({
                     "nombre": filename,
                     "tipo": mime,
-                    "tamanio": f"{round(size / 1024, 1)} KB",
-                    "attachment_id": attachment_id,
+                    "tamanio": f"{round(part.get('body', {}).get('size', 0) / 1024, 1)} KB",
+                    "attachment_id": part.get("body", {}).get("attachmentId", ""),
                 })
             elif mime == "text/plain" and not cuerpo_plain:
                 cuerpo_plain = _decode_body(part)
@@ -117,7 +111,6 @@ def _parsear_completo(msg):
             cuerpo_html = _decode_body(payload)
 
     es_enviado = "SENT" in label_ids
-
     return {
         "id": msg["id"],
         "thread_id": msg.get("threadId", ""),
@@ -126,7 +119,7 @@ def _parsear_completo(msg):
         "asunto": headers.get("Subject", ""),
         "fecha": headers.get("Date", ""),
         "message_id": headers.get("Message-ID", "").strip(),
-        "in_reply_to": in_reply_to,
+        "in_reply_to": headers.get("In-Reply-To", "").strip(),
         "leido": "UNREAD" not in label_ids,
         "direccion": "enviado" if es_enviado else "recibido",
         "cuerpo": _limpiar_cuerpo(cuerpo_plain),
@@ -135,40 +128,32 @@ def _parsear_completo(msg):
     }
 
 
-# ─── Endpoints ─────
+# ─── Inbox / Sent ─────────────────────────────────────────────────────────────
 
 def get_inbox(limit: int = 10, page_token: str = None) -> dict:
     service = _get_service()
-    params = {
-        "userId": "me",
-        "labelIds": ["INBOX"],
-        "maxResults": limit,
-    }
+    params = {"userId": "me", "labelIds": ["INBOX"], "maxResults": limit}
     if page_token:
         params["pageToken"] = page_token
-
     result = service.users().threads().list(**params).execute()
-    next_page_token = result.get("nextPageToken", None)
     threads = result.get("threads", [])
     hilos = []
     for t in threads:
         thread = service.users().threads().get(
-            userId="me", id=t["id"], format="metadata",
-            metadataHeaders=METADATA_HEADERS
+            userId="me", id=t["id"], format="metadata", metadataHeaders=METADATA_HEADERS
         ).execute()
         msgs = thread.get("messages", [])
         if not msgs:
             continue
-        ultimo = msgs[-1]
         primero = msgs[0]
-        headers_ultimo = _headers_dict(ultimo)
+        ultimo = msgs[-1]
         headers_primero = _headers_dict(primero)
+        headers_ultimo = _headers_dict(ultimo)
         tiene_no_leido = any("UNREAD" in m.get("labelIds", []) for m in msgs)
         es_enviado = "SENT" in primero.get("labelIds", [])
         hilos.append({
             "id": t["id"],
             "thread_id": t["id"],
-            "hilo_root_id": t["id"],
             "remitente": headers_primero.get("From", "") if not es_enviado else headers_primero.get("To", ""),
             "destinatario": headers_primero.get("To", ""),
             "asunto": headers_primero.get("Subject", ""),
@@ -178,40 +163,31 @@ def get_inbox(limit: int = 10, page_token: str = None) -> dict:
             "mensajes_count": len(msgs),
             "preview": t.get("snippet", ""),
             "direccion": "recibido",
-            "cotizacion_consecutivo": None,
         })
-    return {"hilos": hilos, "next_page_token": next_page_token}
+    return {"hilos": hilos, "next_page_token": result.get("nextPageToken")}
 
 def get_sent(limit: int = 10, page_token: str = None) -> dict:
     service = _get_service()
-    params = {
-        "userId": "me",
-        "labelIds": ["SENT"],
-        "maxResults": limit,
-    }
+    params = {"userId": "me", "labelIds": ["SENT"], "maxResults": limit}
     if page_token:
         params["pageToken"] = page_token
-
     result = service.users().threads().list(**params).execute()
-    next_page_token = result.get("nextPageToken", None)
     threads = result.get("threads", [])
     hilos = []
     for t in threads:
         thread = service.users().threads().get(
-            userId="me", id=t["id"], format="metadata",
-            metadataHeaders=METADATA_HEADERS
+            userId="me", id=t["id"], format="metadata", metadataHeaders=METADATA_HEADERS
         ).execute()
         msgs = thread.get("messages", [])
         if not msgs:
             continue
-        ultimo = msgs[-1]
         primero = msgs[0]
+        ultimo = msgs[-1]
         headers_primero = _headers_dict(primero)
         headers_ultimo = _headers_dict(ultimo)
         hilos.append({
             "id": t["id"],
             "thread_id": t["id"],
-            "hilo_root_id": t["id"],
             "remitente": headers_primero.get("From", ""),
             "destinatario": headers_primero.get("To", ""),
             "asunto": headers_primero.get("Subject", ""),
@@ -221,20 +197,16 @@ def get_sent(limit: int = 10, page_token: str = None) -> dict:
             "mensajes_count": len(msgs),
             "preview": t.get("snippet", ""),
             "direccion": "enviado",
-            "cotizacion_consecutivo": None,
         })
-    return {"hilos": hilos, "next_page_token": next_page_token}
+    return {"hilos": hilos, "next_page_token": result.get("nextPageToken")}
+
+
+# ─── Hilo ─────────────────────────────────────────────────────────────────────
 
 def get_hilo(thread_id: str) -> list[dict]:
     service = _get_service()
-    thread = service.users().threads().get(
-        userId="me", id=thread_id, format="full"
-    ).execute()
-    mensajes = []
-    msgs = thread.get("messages", [])
-    for msg in msgs:
-        parsed = _parsear_completo(msg)
-        mensajes.append(parsed)
+    thread = service.users().threads().get(userId="me", id=thread_id, format="full").execute()
+    mensajes = [_parsear_completo(msg) for msg in thread.get("messages", [])]
 
     def parse_fecha(m):
         try:
@@ -244,66 +216,73 @@ def get_hilo(thread_id: str) -> list[dict]:
 
     return sorted(mensajes, key=parse_fecha)
 
+
+# ─── Acciones ─────────────────────────────────────────────────────────────────
+
 def marcar_leido(thread_id: str) -> dict:
     service = _get_service()
     service.users().threads().modify(
-        userId="me",
-        id=thread_id,
-        body={"removeLabelIds": ["UNREAD"]}
+        userId="me", id=thread_id, body={"removeLabelIds": ["UNREAD"]}
     ).execute()
     return {"ok": True}
 
 def responder_hilo(destino: str, asunto: str, cuerpo: str, in_reply_to: str = None, references: str = None, firma_url: str = None) -> str | None:
-    return enviar_cotizacion_email(
+    return enviar_email(
         destino=destino,
         asunto=asunto,
         cuerpo=cuerpo,
-        consecutivo="",
         in_reply_to=in_reply_to,
         references=references,
         firma_url=firma_url,
     )
 
 def responder_con_adjuntos(destino: str, asunto: str, cuerpo: str, archivos: list = None, in_reply_to: str = None, references: str = None, firma_url: str = None) -> str | None:
-    adjuntos_procesados = []
-    if archivos:
-        for archivo in archivos:
-            adjuntos_procesados.append({
-                'nombre': archivo.get('nombre', 'archivo'),
-                'data': archivo.get('data', b''),
-            })
-    return enviar_cotizacion_email(
+    adjuntos = [{"nombre": a.get("nombre", "archivo"), "data": a.get("data", b"")} for a in archivos] if archivos else None
+    return enviar_email(
         destino=destino,
         asunto=asunto,
         cuerpo=cuerpo,
-        consecutivo="",
+        adjuntos=adjuntos,
         in_reply_to=in_reply_to,
         references=references,
         firma_url=firma_url,
-        adjuntos_urls=adjuntos_procesados if adjuntos_procesados else None,
+    )
+
+def enviar_correo_guia(destino: str, asunto: str, cuerpo: str, firma_url: str = None, adjuntos_urls: list = None, archivos_extra: list = None) -> str | None:
+    adjuntos = []
+    if adjuntos_urls:
+        for item in adjuntos_urls:
+            url = item.get('url') if isinstance(item, dict) else item
+            nombre = item.get('nombre', url.split('/')[-1]) if isinstance(item, dict) else url.split('/')[-1]
+            try:
+                ruta = os.path.join(settings.MEDIA_BASE, url.replace('media/', ''))
+                with open(ruta, 'rb') as f:
+                    adjuntos.append({'nombre': nombre, 'data': f.read()})
+            except Exception:
+                pass
+    if archivos_extra:
+        adjuntos.extend(archivos_extra)
+    return enviar_email(
+        destino=destino,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        adjuntos=adjuntos if adjuntos else None,
+        firma_url=firma_url,
     )
 
 def eliminar_hilo(thread_id: str) -> dict:
     service = _get_service()
-    service.users().threads().trash(
-        userId="me",
-        id=thread_id
-    ).execute()
+    service.users().threads().trash(userId="me", id=thread_id).execute()
     return {"ok": True, "thread_id": thread_id}
 
 def eliminar_mensaje(message_id: str) -> dict:
     service = _get_service()
-    service.users().messages().trash(
-        userId="me",
-        id=message_id
-    ).execute()
+    service.users().messages().trash(userId="me", id=message_id).execute()
     return {"ok": True, "message_id": message_id}
 
 def get_attachment(message_id: str, attachment_id: str) -> bytes:
     service = _get_service()
     result = service.users().messages().attachments().get(
-        userId="me",
-        messageId=message_id,
-        id=attachment_id
+        userId="me", messageId=message_id, id=attachment_id
     ).execute()
     return base64.urlsafe_b64decode(result["data"])

@@ -6,7 +6,7 @@ import json
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
 from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema
-from app.services.email import enviar_cotizacion_email
+from app.services.email import enviar_email
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
 
@@ -53,7 +53,7 @@ def detalle_cotizacion(
     return cotizacion
 
 @router.post("/{cotizacion_id}/enviar-email")
-async def enviar_email(
+async def enviar_cotizacion_email(
     cotizacion_id: int,
     destino: str = Form(...),
     asunto: str = Form(...),
@@ -95,7 +95,7 @@ async def enviar_email(
         contenido = await archivo.read()
         adjuntos_urls.append({'nombre': archivo.filename, 'data': contenido})
 
-    enviado = enviar_cotizacion_email(
+    enviado = enviar_email(
         destino=destino,
         asunto=asunto,
         cuerpo=cuerpo,

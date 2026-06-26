@@ -5,12 +5,13 @@ from fastapi.responses import RedirectResponse, FileResponse
 import app.models
 import os
 import mimetypes
-from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, email_inbox, google_auth, guias, transportadoras
+from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, google_auth, guias, transportadoras, buzon
 from app.db.base import Base
 from app.core.db import engine
 from app.routes import usuarios
 from app.scheduler import iniciar_scheduler, detener_scheduler
 from app.core.config import settings
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,7 +50,7 @@ app.include_router(multimedia.router, prefix="/api")
 app.include_router(cotizaciones.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
 app.include_router(firmas.router, prefix="/api")
-app.include_router(email_inbox.router, prefix="/api")
+app.include_router(buzon.router, prefix="/api")
 app.include_router(guias.router, prefix="/api")
 app.include_router(transportadoras.router, prefix="/api")
 app.include_router(google_auth.router)

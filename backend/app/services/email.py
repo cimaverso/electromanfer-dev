@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "gmail_token.json")
 
 
+# ─── Autenticación ────────────────────────────────────────────────────────────
+
 def _get_gmail_service():
     with open(TOKEN_PATH, "r") as f:
         token_data = json.load(f)
@@ -36,7 +38,10 @@ def _get_gmail_service():
     return build("gmail", "v1", credentials=creds)
 
 
-def _url_a_base64(url: str):
+# ─── Utilidades ───────────────────────────────────────────────────────────────
+
+def _url_a_bytes(url: str):
+    """Descarga un archivo desde URL o disco. Retorna (bytes, nombre) o None."""
     try:
         if url.startswith("/"):
             url = f"{settings.API_BASE_URL}{url}"
@@ -56,109 +61,105 @@ def _url_a_base64(url: str):
     return None
 
 
-def _construir_html(cuerpo: str, consecutivo: str, firma_url: str = None) -> str:
+def _construir_html(cuerpo: str, consecutivo: str = "", firma_url: str = None) -> str:
     cuerpo_html = cuerpo.replace("\n", "<br>")
     logo_url = settings.LOGO_URL
     firma_tag = (
         f'<img src="{firma_url}" style="max-width:380px;margin-top:24px;" />'
-        if firma_url
-        else ""
+        if firma_url else ""
     )
+    etiqueta = consecutivo if consecutivo else ""
 
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:32px 0;">
-        <tr>
-          <td align="center">
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              <tr>
-                <td style="background:#1E2130;padding:28px 32px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td><img src="{logo_url}" style="max-height:55px;" /></td>
-                      <td align="right">
-                        <span style="background:#8DAF59;color:#ffffff;padding:6px 16px;border-radius:4px;font-size:13px;font-weight:bold;">{consecutivo}</span>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="background:#E9CF58;padding:8px 32px;">
-                  <span style="color:#1E2130;font-size:11px;font-weight:bold;letter-spacing:2px;">COTIZACIÓN</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:36px 32px;">
-                  <p style="color:#1E2130;font-size:15px;line-height:1.8;margin:0;">
-                    {cuerpo_html}
-                  </p>
-                  {firma_tag}
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0 32px;">
-                  <hr style="border:none;border-top:2px solid #E9CF58;margin:0;">
-                </td>
-              </tr>
-              <tr>
-                <td style="background:#1E2130;padding:20px 32px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td>
-                        <span style="color:#E9CF58;font-size:12px;font-weight:bold;">ELECTROMANFER LTDA.</span><br>
-                        <span style="color:#9aa0a8;font-size:11px;">NIT. 800.250.956-1</span><br>
-                        <a href="mailto:ventas@electromanfer.com"
-                          style="color:#ffffff;font-size:11px;text-decoration:none;">
-                          ventas@electromanfer.com
-                        </a>
-                      </td>
-                      <td align="right">
-                        <a href="https://www.electromanferonline.com"
-                          style="color:#ffffff;font-size:11px;text-decoration:none;">
-                          www.electromanferonline.com
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
-    """
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background:#1E2130;padding:28px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td><img src="{logo_url}" style="max-height:55px;" /></td>
+                  <td align="right">
+                    <span style="background:#8DAF59;color:#ffffff;padding:6px 16px;border-radius:4px;font-size:13px;font-weight:bold;">{etiqueta}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#E9CF58;padding:8px 32px;">
+              <span style="color:#1E2130;font-size:11px;font-weight:bold;letter-spacing:2px;">ELECTROMANFER LTDA.</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:36px 32px;">
+              <p style="color:#1E2130;font-size:15px;line-height:1.8;margin:0;">
+                {cuerpo_html}
+              </p>
+              {firma_tag}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px;">
+              <hr style="border:none;border-top:2px solid #E9CF58;margin:0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#1E2130;padding:20px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="color:#E9CF58;font-size:12px;font-weight:bold;">ELECTROMANFER LTDA.</span><br>
+                    <span style="color:#9aa0a8;font-size:11px;">NIT. 800.250.956-1</span><br>
+                    <a href="mailto:ventas@electromanfer.com" style="color:#ffffff;font-size:11px;text-decoration:none;">ventas@electromanfer.com</a>
+                  </td>
+                  <td align="right">
+                    <a href="https://www.electromanferonline.com" style="color:#ffffff;font-size:11px;text-decoration:none;">www.electromanferonline.com</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
 
 
-def enviar_cotizacion_email(
+# ─── Envío principal ──────────────────────────────────────────────────────────
+
+def enviar_email(
     destino: str,
     asunto: str,
     cuerpo: str,
+    consecutivo: str = "",
+    firma_url: str = None,
+    # PDF (cotizaciones)
     pdf_base64: str = None,
     pdf_bytes: bytes = None,
     nombre_pdf: str = "cotizacion.pdf",
-    adjuntos_urls: list = None,
-    firma_url: str = None,
-    consecutivo: str = "",
+    # Adjuntos genéricos: lista de dicts {nombre, data} o {url} o str url
+    adjuntos: list = None,
+    # Threading (respuestas de buzón)
     in_reply_to: str = None,
     references: str = None,
-) -> None:
+) -> str | None:
     try:
-        # Resolver URL pública de la firma
         firma_url_publica = None
         if firma_url:
-            if firma_url.startswith("/"):
-                firma_url_publica = f"{settings.API_BASE_URL}{firma_url}"
-            else:
-                firma_url_publica = firma_url
+            firma_url_publica = (
+                f"{settings.API_BASE_URL}{firma_url}"
+                if firma_url.startswith("/") else firma_url
+            )
 
         msg = MIMEMultipart("related")
         msg["From"] = f"Electromanfer <{settings.GMAIL_USER}>"
@@ -168,57 +169,46 @@ def enviar_cotizacion_email(
         msg["Subject"] = asunto
 
         if in_reply_to:
-            reply_id = (
-                in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
-            )
+            reply_id = in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
             msg["In-Reply-To"] = reply_id
             msg["References"] = reply_id
 
-        html_content = _construir_html(cuerpo, consecutivo, firma_url=firma_url_publica)
         msg_alt = MIMEMultipart("alternative")
         msg.attach(msg_alt)
-        msg_alt.attach(MIMEText(html_content, "html"))
+        msg_alt.attach(MIMEText(_construir_html(cuerpo, consecutivo, firma_url_publica), "html"))
 
-        # PDF cotización
-        pdf_data_final = None
+        # ── PDF ──
+        pdf_data = None
         if pdf_bytes is not None:
-            pdf_data_final = pdf_bytes
+            pdf_data = pdf_bytes
         elif pdf_base64:
             raw = pdf_base64.split(",")[1] if "," in pdf_base64 else pdf_base64
-            pdf_data_final = base64.b64decode(raw)
+            pdf_data = base64.b64decode(raw)
 
-        if pdf_data_final is not None:
+        if pdf_data:
             part = MIMEBase("application", "octet-stream")
-            part.set_payload(pdf_data_final)
+            part.set_payload(pdf_data)
             encoders.encode_base64(part)
-            part.add_header(
-                "Content-Disposition", f'attachment; filename="{nombre_pdf}"'
-            )
+            part.add_header("Content-Disposition", f'attachment; filename="{nombre_pdf}"')
             msg.attach(part)
 
-        # Imágenes y fichas
-        if adjuntos_urls:
-            for adj in adjuntos_urls:
+        # ── Adjuntos genéricos ──
+        if adjuntos:
+            for adj in adjuntos:
                 if isinstance(adj, str):
-                    url = adj
-                    nombre_original = url.split("/")[-1]
-                    resultado = _url_a_base64(url)
+                    resultado = _url_a_bytes(adj)
                     if not resultado:
                         continue
-                    data, _ = resultado
+                    data, nombre = resultado
                 else:
-                    nombre_original = adj.get("nombre", "archivo")
-                    data_bytes = adj.get("data", None)
-                    b64 = adj.get("base64", "")
-                    url = adj.get("url", "")
-
-                    if data_bytes is not None:
-                        data = data_bytes
-                    elif b64:
-                        raw = b64.split(",")[1] if "," in b64 else b64
+                    nombre = adj.get("nombre", "archivo")
+                    if adj.get("data") is not None:
+                        data = adj["data"]
+                    elif adj.get("base64"):
+                        raw = adj["base64"].split(",")[1] if "," in adj["base64"] else adj["base64"]
                         data = base64.b64decode(raw)
-                    elif url:
-                        resultado = _url_a_base64(url)
+                    elif adj.get("url"):
+                        resultado = _url_a_bytes(adj["url"])
                         if not resultado:
                             continue
                         data, _ = resultado
@@ -228,47 +218,32 @@ def enviar_cotizacion_email(
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(data)
                 encoders.encode_base64(part)
-                part.add_header(
-                    "Content-Disposition", f'attachment; filename="{nombre_original}"'
-                )
+                part.add_header("Content-Disposition", f'attachment; filename="{nombre}"')
                 msg.attach(part)
 
-        # Enviar via Gmail API (OAuth)
+        # ── Enviar ──
         raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
         body = {"raw": raw_message}
-
         service = _get_gmail_service()
 
         if in_reply_to:
             try:
                 if not in_reply_to.startswith("<"):
                     body["threadId"] = in_reply_to
-                    logger.info(f"Usando threadId directo: {in_reply_to}")
                 else:
-                    results = (
-                        service.users()
-                        .messages()
-                        .list(
-                            userId="me",
-                            q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}",
-                        )
-                        .execute()
-                    )
+                    results = service.users().messages().list(
+                        userId="me",
+                        q=f"rfc822msgid:{in_reply_to.strip('<>').strip()}",
+                    ).execute()
                     msgs = results.get("messages", [])
                     if msgs:
                         body["threadId"] = msgs[0]["threadId"]
-                        logger.info(f"ThreadId encontrado: {msgs[0]['threadId']}")
-                    else:
-                        logger.warning(
-                            f"No se encontró threadId para in_reply_to: {in_reply_to}"
-                        )
             except Exception as e:
                 logger.warning(f"No se pudo encontrar threadId: {e}")
 
         service.users().messages().send(userId="me", body=body).execute()
-
         return message_id
 
     except Exception as e:
-        logger.error(f"Error enviando email via Gmail: {e}")
+        logger.error(f"Error enviando email: {e}")
         return None

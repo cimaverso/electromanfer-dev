@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Response
-from app.services.email_inbox import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos, eliminar_hilo, eliminar_mensaje, get_attachment
+from app.services.buzon import get_inbox, get_sent, get_hilo, marcar_leido, responder_hilo, responder_con_adjuntos, eliminar_hilo, eliminar_mensaje, get_attachment, enviar_correo_guia
 from app.core.security import require_auth
 from app.schemas.auth import TokenData
 from app.schemas.envios import ResponderHiloSchema
@@ -89,6 +89,39 @@ async def responder_adjuntos(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+@router.post("/enviar")
+async def enviar(
+    destino: str = Form(...),
+    asunto: str = Form(...),
+    cuerpo: str = Form(...),
+    firma_url: Optional[str] = Form(None),
+    adjuntos_imagenes_urls: Optional[str] = Form(None),
+    archivos_extra: List[UploadFile] = File(default=[]),
+    _: TokenData = Depends(require_auth),
+):
+    try:
+        import json
+        archivos = []
+        for archivo in archivos_extra:
+            contenido = await archivo.read()
+            archivos.append({'nombre': archivo.filename, 'data': contenido})
+
+        urls = json.loads(adjuntos_imagenes_urls) if adjuntos_imagenes_urls and adjuntos_imagenes_urls.strip() else None
+
+        message_id = enviar_correo_guia(
+            destino=destino,
+            asunto=asunto,
+            cuerpo=cuerpo,
+            firma_url=firma_url,
+            adjuntos_urls=urls,
+            archivos_extra=archivos,
+        )
+        if not message_id:
+            raise HTTPException(status_code=500, detail="Error al enviar")
+        return {"ok": True, "message_id": message_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/hilo/{thread_id}")
 def borrar_hilo(thread_id: str, _: TokenData = Depends(require_auth)):
     try:
