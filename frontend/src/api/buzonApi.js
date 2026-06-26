@@ -28,7 +28,7 @@ function correoAHilo(correo, bandeja) {
     fecha: correo.fecha,
     cotizacion_consecutivo: cotMatch ? cotMatch[0] : null,
     mensajes_count: correo.mensajes_count || 1,
-    hilo_message_id: correo.hilo_root_id || correo.message_id || '',
+    hilo_message_id: correo.thread_id || correo.id || '',
     mensajes: [],
   }
 }
