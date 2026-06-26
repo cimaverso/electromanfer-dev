@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Boolean, DateTime
-from app.db.base import Base
+from app.core.db import Base
 from app.enums import RoleEnum
 from datetime import datetime, timezone
 

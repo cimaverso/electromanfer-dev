@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer, Boolean
-from app.db.base import Base
+from app.core.db import Base
 
 
 class Transportadora(Base):

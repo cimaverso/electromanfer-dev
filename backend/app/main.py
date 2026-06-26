@@ -6,7 +6,7 @@ import app.models
 import os
 import mimetypes
 from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, google_auth, guias, transportadoras, buzon
-from app.db.base import Base
+from app.core.db import Base
 from app.core.db import engine
 from app.routes import usuarios
 from app.scheduler import iniciar_scheduler, detener_scheduler
