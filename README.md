@@ -76,7 +76,6 @@ Control de acceso basado en roles para garantizar la seguridad de la informació
 ---
 
 ## 📈 Roadmap / Próximas Mejoras
-- [ ] Integración de moculo de seguimiento para envío de paquterí.
 - [ ] Módulo de WhatsApp integrado en la aplicación.
 
 ---
