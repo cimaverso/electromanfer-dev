@@ -52,29 +52,6 @@ Control de acceso basado en roles para garantizar la seguridad de la informació
 
 ---
 
-## 🚀 Instalación y Uso
-
-### Requisitos
-* Docker y Docker Compose instalado.
-
-### Despliegue Rápido
-1.  Clonar el repositorio:
-    ```bash
-    git clone https://github.com/tu-usuario/electromanfer-cotizaciones.git
-    cd electromanfer-cotizaciones
-    ```
-2.  Configurar variables de entorno:
-    ```bash
-    cp .env.example .env
-    # Editar .env con las credenciales de DB y API keys
-    ```
-3.  Levantar el entorno con Docker:
-    ```bash
-    docker-compose up -d --build
-    ```
-
----
-
 ## 📈 Roadmap / Próximas Mejoras
 - [ ] Módulo de WhatsApp integrado en la aplicación.
 
