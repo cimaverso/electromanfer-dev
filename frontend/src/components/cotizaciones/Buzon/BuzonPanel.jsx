@@ -151,7 +151,7 @@ function VisorPDF({ blobUrl }) {
   const contenedorRef = useRef(null)
   const [paginas, setPaginas] = useState(0)
   const [paginaActual, setPaginaActual] = useState(1)
-  const [escala, setEscala] = useState(0.9)
+  const [escala, setEscala] = useState(0.75)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const pdfRef = useRef(null)
@@ -238,7 +238,7 @@ function VisorPDF({ blobUrl }) {
         </div>
         <div className="badj-pdfjs__divider" />
         <div className="badj-pdfjs__grupo">
-          {[75, 90, 100, 125].map((z) => (
+          {[75, 90].map((z) => (
             <button key={z} type="button" className={`badj-pdfjs__preset ${Math.round(escala * 100) === z ? 'badj-pdfjs__preset--active' : ''}`} onClick={() => setEscala(z / 100)}>{z}%</button>
           ))}
         </div>
@@ -326,8 +326,8 @@ function AdjuntoItem({ adj, mensajeId }) {
   )
   const iconoAccion = estado === 'cargando' ? <span className="badj-spinner" />
     : estado === 'error' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, color: 'var(--color-danger, #e55)' }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-    : tieneAttachmentId ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, opacity: 0.5 }}>{esVisualizable ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></> : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>}</svg>
-    : null
+      : tieneAttachmentId ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, opacity: 0.5 }}>{esVisualizable ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></> : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>}</svg>
+        : null
   return (
     <>
       <div className={['buzon-msg__adjunto', tieneAttachmentId ? 'buzon-msg__adjunto--clickable' : '', estado === 'error' ? 'buzon-msg__adjunto--error' : ''].filter(Boolean).join(' ')} onClick={handleClick} title={!tieneAttachmentId ? adj.nombre : estado === 'error' ? 'Error al obtener el archivo' : esVisualizable ? `Ver ${adj.nombre}` : `Descargar ${adj.nombre}`}>
@@ -725,15 +725,15 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   const hilos = hilosReales
   const hiloActivo = hiloActivoReal
 
-  const [bandejaActiva, setBandejaActiva]       = useState('inbox')
-  const [modalRedactar, setModalRedactar]       = useState(false)
-  const [enviando, setEnviando]                 = useState(false)
+  const [bandejaActiva, setBandejaActiva] = useState('inbox')
+  const [modalRedactar, setModalRedactar] = useState(false)
+  const [enviando, setEnviando] = useState(false)
   const [sidebarColapsado, setSidebarColapsado] = useState(false)
-  const [adjuntoReply, setAdjuntoReply]         = useState(null)
-  const [modalCotizacion, setModalCotizacion]   = useState(false)
-  const [modalGuia, setModalGuia]               = useState(false)
-  const [vistaMovil, setVistaMovil]             = useState('lista')
-  const [textoGuia, setTextoGuia]               = useState('')
+  const [adjuntoReply, setAdjuntoReply] = useState(null)
+  const [modalCotizacion, setModalCotizacion] = useState(false)
+  const [modalGuia, setModalGuia] = useState(false)
+  const [vistaMovil, setVistaMovil] = useState('lista')
+  const [textoGuia, setTextoGuia] = useState('')
 
   const mensajesEndRef = useRef(null)
 
