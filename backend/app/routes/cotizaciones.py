@@ -103,7 +103,7 @@ async def enviar_cotizacion_email(
         nombre_pdf=f"{cotizacion.consecutivo}.pdf",
         firma_url=firma_url,
         consecutivo=cotizacion.consecutivo,
-        adjuntos_urls=adjuntos_urls if adjuntos_urls else None,
+        adjuntos=adjuntos_urls if adjuntos_urls else None,
         in_reply_to=in_reply_to,
         references=references,
     )
