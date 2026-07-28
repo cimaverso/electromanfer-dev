@@ -8,16 +8,16 @@ from typing import Optional, List
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
 @router.get("/inbox")
-def inbox(limit: int = 10, page_token: str = None, _: TokenData = Depends(require_auth)):
+def inbox(limit: int = 10, page_token: str = None, q: str = None, _: TokenData = Depends(require_auth)):
     try:
-        return get_inbox(limit=limit, page_token=page_token)
+        return get_inbox(limit=limit, page_token=page_token, q=q)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/sent")
-def sent(limit: int = 10, page_token: str = None, _: TokenData = Depends(require_auth)):
+def sent(limit: int = 10, page_token: str = None, q: str = None, _: TokenData = Depends(require_auth)):
     try:
-        return get_sent(limit=limit, page_token=page_token)
+        return get_sent(limit=limit, page_token=page_token, q=q)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

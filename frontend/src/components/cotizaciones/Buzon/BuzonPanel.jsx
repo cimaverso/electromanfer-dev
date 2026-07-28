@@ -735,9 +735,25 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
   const [vistaMovil, setVistaMovil] = useState('lista')
   const [textoGuia, setTextoGuia] = useState('')
 
+  const [terminoBusqueda, setTerminoBusqueda] = useState('')
+  const busquedaTimeoutRef = useRef(null)
+  const primerRenderBusqueda = useRef(true)
+
   const mensajesEndRef = useRef(null)
 
   useEffect(() => { cargarHilos('inbox') }, [])
+
+  useEffect(() => {
+    if (primerRenderBusqueda.current) {
+      primerRenderBusqueda.current = false
+      return
+    }
+    if (busquedaTimeoutRef.current) clearTimeout(busquedaTimeoutRef.current)
+    busquedaTimeoutRef.current = setTimeout(() => {
+      cargarHilos(bandejaActiva, terminoBusqueda ? { q: terminoBusqueda } : {})
+    }, 400)
+    return () => clearTimeout(busquedaTimeoutRef.current)
+  }, [terminoBusqueda]) // eslint-disable-line
 
   useEffect(() => {
     if (!hiloInicialId) return
@@ -778,6 +794,7 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
 
   const handleCambiarBandeja = (b) => {
     setBandejaActiva(b)
+    setTerminoBusqueda('')
     cargarHilos(b)
     cerrarHilo()
     setVistaMovil('lista')
@@ -920,7 +937,12 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
           <span className="buzon-lista__titulo">{bandejaActiva === 'inbox' ? 'Recibidos' : 'Enviados'}</span>
           {sinLeerTotal > 0 && bandejaActiva === 'inbox' && <span className="buzon-lista__sin-leer">{sinLeerTotal} sin leer</span>}
         </div>
-        <input className="buzon-lista__search" placeholder="Buscar correos..." onChange={(e) => cargarHilos(bandejaActiva, { q: e.target.value })} />
+        <input
+          className="buzon-lista__search"
+          placeholder="Buscar correos..."
+          value={terminoBusqueda}
+          onChange={(e) => setTerminoBusqueda(e.target.value)}
+        />
         {loadingHilos ? (
           <div className="buzon-lista__empty">Cargando...</div>
         ) : hilos.length === 0 ? (

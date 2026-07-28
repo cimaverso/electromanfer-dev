@@ -130,11 +130,13 @@ def _parsear_completo(msg):
 
 # ─── Inbox / Sent ─────────────────────────────────────────────────────────────
 
-def get_inbox(limit: int = 10, page_token: str = None) -> dict:
+def get_inbox(limit: int = 10, page_token: str = None, q: str = None) -> dict:
     service = _get_service()
     params = {"userId": "me", "labelIds": ["INBOX"], "maxResults": limit}
     if page_token:
         params["pageToken"] = page_token
+    if q:
+        params["q"] = q
     result = service.users().threads().list(**params).execute()
     threads = result.get("threads", [])
     hilos = []
@@ -166,11 +168,13 @@ def get_inbox(limit: int = 10, page_token: str = None) -> dict:
         })
     return {"hilos": hilos, "next_page_token": result.get("nextPageToken")}
 
-def get_sent(limit: int = 10, page_token: str = None) -> dict:
+def get_sent(limit: int = 10, page_token: str = None, q: str = None) -> dict:
     service = _get_service()
     params = {"userId": "me", "labelIds": ["SENT"], "maxResults": limit}
     if page_token:
         params["pageToken"] = page_token
+    if q:
+        params["q"] = q
     result = service.users().threads().list(**params).execute()
     threads = result.get("threads", [])
     hilos = []
