@@ -12,6 +12,7 @@ import PdfPreview from '../components/cotizaciones/PdfPreview'
 import FichasPanel from '../components/cotizaciones/FichasPanel'
 import HistorialTable from '../components/cotizaciones/HistorialTable'
 import BuzonPanel from '../components/cotizaciones/Buzon/BuzonPanel'
+import ChatPanel from '../components/whatsapp/ChatPanel'
 import Toast from '../components/common/Toast'
 import './CotizacionesPage.css'
 
@@ -21,6 +22,7 @@ const TABS_BASE = [
   { id: 'fichas', label: 'Fichas técnicas' },
   { id: 'historial', label: 'Historial' },
   { id: 'buzon', label: 'Buzón' },
+  { id: 'chat', label: 'Chat' },
 ]
 
 export default function CotizacionesPage() {
@@ -406,6 +408,8 @@ export default function CotizacionesPage() {
           onGenerarCotizacion={handleGenerarDesdeBuzon}
         />
       )}
+      {/* ── Tab: Chat ── */}
+      {tabActivo === 'chat' && <ChatPanel />}
 
       <Toast
         message={toast.message}
