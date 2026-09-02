@@ -55,7 +55,6 @@ export default function CotizacionesPage() {
     marcarEfectiva,
     cargarHistorial,
     handleEnviarEmail,
-    handleEnviarWhatsapp,
     limpiarCotizacionActual,
     verCotizacion,
   } = useCotizaciones()
@@ -172,16 +171,6 @@ export default function CotizacionesPage() {
     }
   }
 
-  const handleWhatsapp = async (id, payload) => {
-    const result = await handleEnviarWhatsapp(id, payload)
-    if (result.success && result.url) {
-      window.open(result.url, '_blank', 'noopener,noreferrer')
-      showToast('Enlace de WhatsApp generado', 'success')
-      cargarHistorial()
-    } else {
-      showToast('Error al generar el enlace de WhatsApp', 'error')
-    }
-  }
 
   // ─── Adjuntar PDF al hilo y volver al Buzón ─────────────────────────────
   const handleAdjuntarAHilo = ({ blobUrl, nombreArchivo }) => {
@@ -342,7 +331,6 @@ export default function CotizacionesPage() {
             <PdfPreview
               cotizacion={cotizacionActual}
               onEnviarEmail={handleEmail}
-              onEnviarWhatsapp={handleWhatsapp}
               loadingEnvio={loadingEnvio}
               buzonHiloOrigen={buzonHiloOrigen}
               onAdjuntarAHilo={buzonHiloOrigen ? handleAdjuntarAHilo : null}
@@ -365,7 +353,6 @@ export default function CotizacionesPage() {
               items={itemsCotizacion}
               cotizacion={cotizacionActual}
               onEnviarEmail={handleEmail}
-              onEnviarWhatsapp={handleWhatsapp}
               loadingEnvio={loadingEnvio}
             />
           </div>
