@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import EmailGuiaModal from './EmailGuiaModal'
 import WhatsappGuiaModal from './WhatsappGuiaModal'
+import SeleccionarChatModal from '../whatsapp/SeleccionarChatModal'
 import './GuiaDetalleModal.css'
 
 const ESTADOS = ['generada', 'despachada', 'en_transito', 'entregada', 'novedad']
@@ -40,7 +41,7 @@ export default function GuiaDetalleModal({
   onCambiarEstado,
   onEditar,
   onEnviarCorreo,   // se mantiene — recibe (id, formData) desde GuiasPage
-  onEnviarWhatsapp, // recibe (id, formData) desde GuiasPage
+  onEnviarWhatsapp, // recibe (guiaId, chatId, formData) desde GuiasPage
   loadingEstado = false,
 }) {
   const [nuevoEstado, setNuevoEstado] = useState('')
@@ -48,7 +49,8 @@ export default function GuiaDetalleModal({
   const [mostrarCambioEstado, setMostrarCambioEstado] = useState(false)
   const [fotoAmpliada, setFotoAmpliada] = useState(false)
   const [modalEmail, setModalEmail]   = useState(false)   // ← NUEVO
-  const [modalWhatsapp, setModalWhatsapp] = useState(false)
+  const [modalSeleccionarChat, setModalSeleccionarChat] = useState(false)
+  const [chatSeleccionado, setChatSeleccionado] = useState(null)
 
   if (!guia) return null
 
@@ -70,11 +72,16 @@ export default function GuiaDetalleModal({
     if (onEnviarCorreo) onEnviarCorreo(id, formData)
   }
 
-  // Abre el WhatsappGuiaModal — onEnviarWhatsapp lo maneja GuiasPage
-  const handleAbrirWhatsapp = () => setModalWhatsapp(true)
-  const handleEnviarWhatsapp = (id, formData) => {
-    setModalWhatsapp(false)
-    if (onEnviarWhatsapp) onEnviarWhatsapp(id, formData)
+  // Paso 1: elegir el chat destino
+  const handleAbrirWhatsapp = () => setModalSeleccionarChat(true)
+  const handleChatSeleccionado = (chat) => {
+    setModalSeleccionarChat(false)
+    setChatSeleccionado(chat)
+  }
+  // Paso 2: confirmar mensaje y enviar — onEnviarWhatsapp lo maneja GuiasPage
+  const handleEnviarWhatsapp = (id, chatId, formData) => {
+    setChatSeleccionado(null)
+    if (onEnviarWhatsapp) onEnviarWhatsapp(id, chatId, formData)
   }
 
   return (
@@ -343,11 +350,19 @@ export default function GuiaDetalleModal({
         />
       )}
 
-      {modalWhatsapp && (
+      {modalSeleccionarChat && (
+        <SeleccionarChatModal
+          titulo={`Enviar guía ${guia?.numero_guia || ''}`}
+          onSeleccionar={handleChatSeleccionado}
+          onClose={() => setModalSeleccionarChat(false)}
+        />
+      )}
+      {chatSeleccionado && (
         <WhatsappGuiaModal
           guia={guia}
+          chat={chatSeleccionado}
           onEnviar={handleEnviarWhatsapp}
-          onClose={() => setModalWhatsapp(false)}
+          onClose={() => setChatSeleccionado(null)}
         />
       )}
     </>

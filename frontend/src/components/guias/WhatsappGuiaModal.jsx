@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { buildTextoGuia } from '../../utils/guiaMensajes'
 import '../cotizaciones/EmailModal.css'
 
-export default function WhatsappGuiaModal({ guia, onEnviar, onClose, loading = false }) {
+// chat: { id, nombre, telefono } — ya elegido en el paso previo (SeleccionarChatModal)
+export default function WhatsappGuiaModal({ guia, chat, onEnviar, onClose, loading = false }) {
   const numGuia = guia?.numero_guia || ''
 
-  const [telefono, setTelefono] = useState(guia?.telefono_destinatario || '')
-  const [mensaje, setMensaje]   = useState(buildTextoGuia(guia))
+  const [mensaje, setMensaje] = useState(buildTextoGuia(guia))
   const [archivosLocales, setArchivosLocales] = useState([])
 
   useEffect(() => {
@@ -16,10 +16,9 @@ export default function WhatsappGuiaModal({ guia, onEnviar, onClose, loading = f
   }, [onClose])
 
   const handleEnviar = () => {
-    if (!telefono.trim()) return
+    if (!chat?.id) return
 
     const formData = new FormData()
-    formData.append('telefono', telefono.trim())
     formData.append('texto', mensaje)
 
     // Foto de la guía como adjunto si existe
@@ -34,7 +33,7 @@ export default function WhatsappGuiaModal({ guia, onEnviar, onClose, loading = f
       )
     }
 
-    onEnviar(guia.id, formData)
+    onEnviar(guia.id, chat.id, formData)
   }
 
   return (
@@ -45,7 +44,7 @@ export default function WhatsappGuiaModal({ guia, onEnviar, onClose, loading = f
         <div className="email-modal__header">
           <div>
             <h3 className="email-modal__title">Enviar guía por WhatsApp</h3>
-            <p className="email-modal__subtitle">{numGuia}</p>
+            <p className="email-modal__subtitle">{numGuia} · {chat?.nombre}</p>
           </div>
           <button className="email-modal__close" onClick={onClose} aria-label="Cerrar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -58,19 +57,12 @@ export default function WhatsappGuiaModal({ guia, onEnviar, onClose, loading = f
         {/* ── Body ── */}
         <div className="email-modal__body">
 
-          {/* Teléfono */}
+          {/* Destinatario (solo lectura, ya elegido en el paso anterior) */}
           <div className="email-modal__field">
-            <label className="email-modal__label">
-              Teléfono <span className="email-modal__required">*</span>
-            </label>
-            <input
-              type="tel"
-              className="email-modal__input"
-              placeholder="3001234567"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              autoFocus
-            />
+            <label className="email-modal__label">Enviar a</label>
+            <div className="email-modal__input" style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-soft)' }}>
+              {chat?.nombre} · {chat?.telefono}
+            </div>
           </div>
 
           {/* Mensaje */}
@@ -119,7 +111,7 @@ export default function WhatsappGuiaModal({ guia, onEnviar, onClose, loading = f
           <button
             className="email-modal__send-btn"
             onClick={handleEnviar}
-            disabled={!telefono.trim() || loading}
+            disabled={!chat?.id || loading}
           >
             {loading ? (
               <>
