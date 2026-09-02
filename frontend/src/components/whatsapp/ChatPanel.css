@@ -345,6 +345,26 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100vw - var(--space-8));
+}
+
+.wap-error__cerrar {
+  background: transparent;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.wap-error__cerrar:hover {
+  opacity: 1;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

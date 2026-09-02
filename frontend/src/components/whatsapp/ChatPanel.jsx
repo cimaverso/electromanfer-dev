@@ -133,7 +133,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const {
     chats, chatActivo, sinLeer,
     loadingChats, loadingChat, loadingEnvio, error,
-    cargarChats, abrirChat, enviar, enviarConAdjunto, cerrarChat,
+    cargarChats, abrirChat, enviar, enviarConAdjunto, cerrarChat, limpiarError,
   } = useWhatsapp()
 
   const [terminoBusqueda, setTerminoBusqueda] = useState('')
@@ -336,7 +336,19 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
         />
       )}
 
-      {(error || errorEnvio) && <div className="wap-error">{error || errorEnvio}</div>}
+      {(error || errorEnvio) && (
+        <div className="wap-error">
+          <span>{error || errorEnvio}</span>
+          <button
+            className="wap-error__cerrar"
+            onClick={() => { limpiarError(); setErrorEnvio(null) }}
+            type="button"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   )
 }

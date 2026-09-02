@@ -119,6 +119,10 @@ export function useWhatsapp() {
     setError(null)
   }, [])
 
+  const limpiarError = useCallback(() => {
+    setError(null)
+  }, [])
+
   // ─── Polling — simula el webhook mientras no esté conectado el real ─────
   useEffect(() => {
     pollTimerRef.current = setInterval(async () => {
@@ -149,5 +153,6 @@ export function useWhatsapp() {
     enviar,
     enviarConAdjunto,
     cerrarChat,
+    limpiarError,
   }
 }
