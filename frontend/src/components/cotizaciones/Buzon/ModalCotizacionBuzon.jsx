@@ -244,13 +244,13 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
   const hasBuscado = !loadingBusqueda && (resultados.length > 0 || errorBusqueda !== null || query.trim() !== '')
 
   useEffect(() => {
-    if (!hilo?.emailRemitente) return
-    if (!clienteDraft?.email && !clienteDraft?.nombre_razon_social) {
+    if (!hilo?.emailRemitente && !hilo?.telefono) return
+    if (!clienteDraft?.email && !clienteDraft?.telefono && !clienteDraft?.nombre_razon_social) {
       setClienteDraft({
         nombre_razon_social: hilo.remitente || '',
         email: hilo.emailRemitente || '',
         nit_cedula: '',
-        telefono: '',
+        telefono: hilo.telefono || '',
         ciudad: '',
         direccion: '',
         nombre_contacto: '',

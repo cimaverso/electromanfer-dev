@@ -4,6 +4,7 @@ import ModalGuiaBuzon from './ModalGuiaBuzon'
 import { useBuzon } from '../../../hooks/useBuzon'
 import axiosClient from '../../../api/axiosClient'
 import { listarFirmas, guardarFirmaPreferida } from '../../../api/firmasApi'
+import { buildTextoGuia } from '../../../utils/guiaMensajes'
 import './BuzonPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -682,35 +683,6 @@ function ModalRedactar({ onEnviar, onClose, loading }) {
       </div>
     </div>
   )
-}
-
-// ─── Helper: construye texto de guía para pre-rellenar el textarea ────────────
-function buildTextoGuia(guia) {
-  const ESTADO_LABELS = {
-    generada: 'Generada', despachada: 'Despachada', en_transito: 'En tránsito',
-    entregada: 'Entregada', novedad: 'Novedad',
-  }
-  const fecha = guia.fecha_despacho
-    ? new Date(guia.fecha_despacho + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-    : '—'
-  return `Estimado cliente,
-
-Le informamos que su pedido ha sido despachado. A continuación los detalles del envío:
-
-──────────────────────────────
-Número de guía:    ${guia.numero_guia || '—'}
-Transportadora:    ${guia.transportadora || '—'}
-Fecha de despacho: ${fecha}
-Destinatario:      ${guia.destinatario || '—'}
-Ciudad destino:    ${guia.ciudad_destino || '—'}${guia.direccion_destino ? `\nDirección:         ${guia.direccion_destino}` : ''}
-Estado actual:     ${ESTADO_LABELS[guia.estado] || guia.estado || '—'}
-──────────────────────────────
-${guia.observaciones ? `\nObservaciones: ${guia.observaciones}\n` : ''}
-Para rastrear su envío comuníquese con la transportadora indicando el número de guía.
-
-Quedamos atentos a cualquier inquietud.
-
-Atentamente,`
 }
 
 // ─── BuzonPanel principal ─────────────────────────────────────────────────────

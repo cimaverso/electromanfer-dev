@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { listarFirmas, subirFirma, eliminarFirma, guardarFirmaPreferida } from '../../api/firmasApi'
 import '../cotizaciones/EmailModal.css'
+import { buildTextoGuia } from '../../utils/guiaMensajes'
 
 // ── Helper: carga imagen como base64 ─────────────────────────────────────────
 function cargarBase64(url) {
@@ -28,21 +29,13 @@ function fmtFecha(str) {
   })
 }
 
-const ESTADO_LABELS = {
-  generada:    'Generada',
-  despachada:  'Despachada',
-  en_transito: 'En tránsito',
-  entregada:   'Entregada',
-  novedad:     'Novedad',
-}
-
 export default function EmailGuiaModal({ guia, onEnviar, onClose, loading = false }) {
   const numGuia = guia?.numero_guia || ''
 
   // ── Estado del formulario ─────────────────────────────────────────────────
   const [destino, setDestino] = useState('')
   const [asunto, setAsunto] = useState(`Guía de envío ${numGuia} - ELECTROMANFER LTDA.`)
-  const [cuerpo, setCuerpo] = useState(buildCuerpo(guia))
+  const [cuerpo, setCuerpo] = useState(buildTextoGuia(guia))
 
   // ── Firmas ────────────────────────────────────────────────────────────────
   const [firmas, setFirmas]                   = useState([])
@@ -446,32 +439,4 @@ export default function EmailGuiaModal({ guia, onEnviar, onClose, loading = fals
       </div>
     </div>
   )
-}
-
-// ── Cuerpo inicial con datos de la guía ───────────────────────────────────────
-function buildCuerpo(guia) {
-  if (!guia) return ''
-  const estado = ESTADO_LABELS[guia.estado] || guia.estado || '—'
-  const fecha  = guia.fecha_despacho
-    ? new Date(guia.fecha_despacho + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-    : '—'
-
-  return `Estimado cliente,
-
-Le informamos que su pedido ha sido despachado. A continuación los detalles del envío:
-
-──────────────────────────────
-Número de guía:    ${guia.numero_guia || '—'}
-Transportadora:    ${guia.transportadora || '—'}
-Fecha de despacho: ${fecha}
-Destinatario:      ${guia.destinatario || '—'}
-Ciudad destino:    ${guia.ciudad_destino || '—'}${guia.direccion_destino ? `\nDirección:         ${guia.direccion_destino}` : ''}${guia.unidades ? `\nUnidades:          ${guia.unidades}` : ''}
-Estado actual:     ${estado}
-──────────────────────────────
-${guia.observaciones ? `\nObservaciones: ${guia.observaciones}\n` : ''}
-Para rastrear su envío, comuníquese directamente con la transportadora indicando el número de guía.
-
-Quedamos atentos a cualquier inquietud.
-
-Atentamente,`
 }

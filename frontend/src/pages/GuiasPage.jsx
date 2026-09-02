@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useGuias } from '../hooks/useGuias'
 import { useToast } from '../hooks/useToast'
 import { redactarCorreo } from '../api/buzonApi'
+import { buscarOCrearChatPorTelefono, enviarMensaje, enviarConAdjunto } from '../api/whatsappApi'
 import GuiasMetricas from '../components/guias/GuiasMetricas'
 import GuiaFormModal from '../components/guias/GuiaFormModal'
 import GuiaDetalleModal from '../components/guias/GuiaDetalleModal'
@@ -159,6 +160,53 @@ export default function GuiasPage() {
       showToast('Correo enviado correctamente', 'success')
     } catch {
       showToast('Error al enviar el correo', 'error')
+    } finally {
+      setLoadingEmail(false)
+    }
+  }
+
+  // ── Enviar guía por WhatsApp ───────────────────────────────────────────────
+  // formData viene de WhatsappGuiaModal: telefono, texto, foto_guia_url?,
+  // foto_guia_nombre?, archivos_extra[]?
+  const handleEnviarWhatsapp = async (_guiaId, formData) => {
+    setLoadingEmail(true)
+    try {
+      const telefono = formData.get('telefono')
+      const texto = formData.get('texto') || ''
+      const fotoUrl = formData.get('foto_guia_url')
+      const fotoNombre = formData.get('foto_guia_nombre')
+      const archivosExtra = formData.getAll('archivos_extra')
+
+      const chat = await buscarOCrearChatPorTelefono(telefono)
+
+      // Texto primero, como mensaje independiente
+      if (texto.trim()) {
+        await enviarMensaje(chat.id, { texto })
+      }
+
+      // Foto de la guía, si existe — se descarga y se reenvía como adjunto
+      if (fotoUrl) {
+        try {
+          const blob = await fetch(fotoUrl).then((r) => r.blob())
+          const archivo = new File([blob], fotoNombre || 'foto_guia.jpg', { type: blob.type })
+          const fd = new FormData()
+          fd.append('archivo', archivo)
+          fd.append('texto', '')
+          await enviarConAdjunto(chat.id, fd)
+        } catch { /* si falla la foto, no bloquea el resto del envío */ }
+      }
+
+      // Archivos locales adicionales, uno por mensaje
+      for (const archivo of archivosExtra) {
+        const fd = new FormData()
+        fd.append('archivo', archivo)
+        fd.append('texto', '')
+        await enviarConAdjunto(chat.id, fd)
+      }
+
+      showToast('Mensaje de WhatsApp enviado correctamente', 'success')
+    } catch {
+      showToast('Error al enviar el mensaje de WhatsApp', 'error')
     } finally {
       setLoadingEmail(false)
     }
@@ -402,6 +450,7 @@ export default function GuiasPage() {
           onCambiarEstado={handleCambiarEstado}
           onEditar={handleAbrirEditar}
           onEnviarCorreo={handleEnviarCorreo}
+          onEnviarWhatsapp={handleEnviarWhatsapp}
           loadingEstado={loadingEstado}
         />
       )}
