@@ -6,6 +6,7 @@ import DashboardPage from '../pages/DashboardPage'
 import ProductosPage from '../pages/ProductosPage'
 import CotizacionesPage from '../pages/CotizacionesPage'
 import GuiasPage from '../pages/GuiasPage'
+import WhatsappPage from '../pages/WhatsappPage'
 import NotFoundPage from '../pages/NotFoundPage'
 
 function PrivateRoute({ children }) {
@@ -98,6 +99,16 @@ export default function AppRouter() {
             <PrivateRoute>
               <MainLayout>
                 <GuiasPage />
+              </MainLayout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/whatsapp"
+          element={
+            <PrivateRoute>
+              <MainLayout>
+                <WhatsappPage />
               </MainLayout>
             </PrivateRoute>
           }
