@@ -244,6 +244,7 @@
 
 /* ─── Barra de envío ────────────────────────────────────────────────────── */
 .wap-reply {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
@@ -251,6 +252,19 @@
   border-top: 1px solid var(--color-border);
   background: var(--color-surface-2);
   flex-shrink: 0;
+}
+
+.wap-reply__progreso {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface-3, var(--color-surface-2));
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-soft);
+  text-align: center;
 }
 
 .wap-reply__btn {

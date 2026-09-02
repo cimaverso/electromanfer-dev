@@ -72,7 +72,7 @@ function MensajeBurbuja({ mensaje }) {
 }
 
 // ─── Barra de envío ──────────────────────────────────────────────────────────
-function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, loading }) {
+function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, loading, progreso }) {
   const [texto, setTexto] = useState('')
   const fileInputRef = useRef(null)
 
@@ -119,9 +119,14 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
         onKeyDown={handleKeyDown}
         rows={1}
       />
-      <button className="wap-reply__enviar" onClick={handleEnviar} disabled={loading || !texto.trim()} type="button">
+      <button className="wap-reply__enviar" onClick={handleEnviar} disabled={loading || !!progreso || !texto.trim()} type="button">
         <IconEnviar />
       </button>
+      {progreso && (
+        <div className="wap-reply__progreso">
+          Enviando {progreso.actual} de {progreso.total}...
+        </div>
+      )}
     </div>
   )
 }
@@ -140,6 +145,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const [modalCotizacion, setModalCotizacion] = useState(false)
   const [modalGuia, setModalGuia] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState(null)
+  const [progresoEnvio, setProgresoEnvio] = useState(null)
   const [vistaMovil, setVistaMovil] = useState('lista')
   const mensajesEndRef = useRef(null)
   const busquedaTimeoutRef = useRef(null)
@@ -223,8 +229,14 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     }
 
     const fallos = []
+    const extras = [...adjuntosImagenes, ...adjuntosPdfs]
+    const total = 1 + extras.length
+    let actual = 0
+    setProgresoEnvio({ actual, total })
 
     try {
+      actual += 1
+      setProgresoEnvio({ actual, total })
       const blob = await fetch(blobUrl).then((r) => r.blob())
       const archivo = new File([blob], nombreArchivo, { type: 'application/pdf' })
       const formData = new FormData()
@@ -236,10 +248,11 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
       fallos.push(nombreArchivo || 'PDF de cotización')
     }
 
-    const extras = [...adjuntosImagenes, ...adjuntosPdfs]
     for (const adj of extras) {
       const nombre = adj.nombre || adj.url?.split('/').pop() || 'archivo'
       try {
+        actual += 1
+        setProgresoEnvio({ actual, total })
         const blob = await fetch(adj.url).then((r) => r.blob())
         const archivo = new File([blob], nombre, { type: blob.type })
         const formData = new FormData()
@@ -252,6 +265,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
       }
     }
 
+    setProgresoEnvio(null)
     if (fallos.length > 0) {
       setErrorEnvio(`No se pudieron enviar: ${fallos.join(', ')}. Revísalos manualmente.`)
     }
@@ -316,6 +330,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
               onGenerarCotizacion={() => setModalCotizacion(true)}
               onEnviarGuia={() => setModalGuia(true)}
               loading={loadingEnvio}
+              progreso={progresoEnvio}
             />
           </>
         )}
