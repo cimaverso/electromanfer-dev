@@ -3,7 +3,7 @@ import ModalCotizacionBuzon from './ModalCotizacionBuzon'
 import ModalGuiaBuzon from './ModalGuiaBuzon'
 import { useBuzon } from '../../../hooks/useBuzon'
 import axiosClient from '../../../api/axiosClient'
-import { listarFirmas, guardarFirmaPreferida } from '../../../api/firmasApi'
+import { listarFirmas, guardarFirmaPreferida, subirFirma } from '../../../api/firmasApi'
 import { buildTextoGuia } from '../../../utils/guiaMensajes'
 import './BuzonPanel.css'
 
@@ -459,7 +459,6 @@ function BarraRespuesta({
     e.target.value = ''
     setSubiendoFirma(true)
     try {
-      const { subirFirma } = await import('../../../api/firmasApi')
       const formData = new FormData()
       formData.append('nombre', archivo.name.replace(/\.[^.]+$/, ''))
       formData.append('archivo', archivo)
