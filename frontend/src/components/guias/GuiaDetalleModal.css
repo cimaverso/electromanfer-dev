@@ -109,6 +109,23 @@
   color: var(--color-white);
   border-color: var(--color-primary);
 }
+.guia-detalle__action-btn--whatsapp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: auto;
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  background: rgba(37, 211, 102, 0.1);
+  color: #25D366;
+  border-color: rgba(37, 211, 102, 0.3);
+}
+.guia-detalle__action-btn--whatsapp:hover {
+  background: #25D366;
+  color: var(--color-white);
+  border-color: #25D366;
+}
 
 .guia-detalle__close {
   width: 32px;
