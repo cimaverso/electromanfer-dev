@@ -3,6 +3,7 @@ import axiosClient from '../../api/axiosClient'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
 import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
 import ModalGuiaBuzon from '../cotizaciones/Buzon/ModalGuiaBuzon'
+import ConfirmModal from './ConfirmModal'
 import { buildTextoGuia } from '../../utils/guiaMensajes'
 import './ChatPanel.css'
 
@@ -216,6 +217,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
 
   const [terminoBusqueda, setTerminoBusqueda] = useState('')
   const [menuAbiertoId, setMenuAbiertoId] = useState(null)
+  const [confirmacion, setConfirmacion] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
   const [modalGuia, setModalGuia] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState(null)
@@ -264,15 +266,35 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const handleToggleMenu = (chatId) => setMenuAbiertoId((prev) => (prev === chatId ? null : chatId))
   const handleFijar = async (chatId) => { setMenuAbiertoId(null); await togglePin(chatId) }
   const handleSilenciar = async (chatId) => { setMenuAbiertoId(null); await toggleMute(chatId) }
-  const handleVaciar = async (chatId) => {
+  const handleVaciar = (chatId) => {
     setMenuAbiertoId(null)
-    if (!window.confirm('¿Vaciar esta conversación? Se borrarán todos los mensajes.')) return
-    await vaciarConversacion(chatId)
+    setConfirmacion({
+      tipo: 'vaciar',
+      chatId,
+      titulo: 'Vaciar conversación',
+      mensaje: '¿Vaciar esta conversación? Se borrarán todos los mensajes.',
+      textoAceptar: 'Vaciar',
+      peligroso: false,
+    })
   }
-  const handleEliminar = async (chatId) => {
+  const handleEliminar = (chatId) => {
     setMenuAbiertoId(null)
-    if (!window.confirm('¿Eliminar este chat? Esta acción no se puede deshacer.')) return
-    await eliminarConversacion(chatId)
+    setConfirmacion({
+      tipo: 'eliminar',
+      chatId,
+      titulo: 'Eliminar chat',
+      mensaje: '¿Eliminar este chat? Esta acción no se puede deshacer.',
+      textoAceptar: 'Eliminar',
+      peligroso: true,
+    })
+  }
+
+  const handleConfirmarAccion = async () => {
+    if (!confirmacion) return
+    const { tipo, chatId } = confirmacion
+    setConfirmacion(null)
+    if (tipo === 'vaciar') await vaciarConversacion(chatId)
+    if (tipo === 'eliminar') await eliminarConversacion(chatId)
   }
 
   const handleAbrirChat = (chat) => {
@@ -475,6 +497,17 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
         <ModalGuiaBuzon
           onClose={() => setModalGuia(false)}
           onSeleccionar={handleSeleccionarGuia}
+        />
+      )}
+
+      {confirmacion && (
+        <ConfirmModal
+          titulo={confirmacion.titulo}
+          mensaje={confirmacion.mensaje}
+          textoAceptar={confirmacion.textoAceptar}
+          peligroso={confirmacion.peligroso}
+          onAceptar={handleConfirmarAccion}
+          onCancelar={() => setConfirmacion(null)}
         />
       )}
 
