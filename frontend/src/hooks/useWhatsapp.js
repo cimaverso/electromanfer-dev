@@ -6,7 +6,6 @@ import {
   enviarMensaje,
   enviarConAdjunto as enviarConAdjuntoApi,
   marcarLeido,
-  poll,
   actualizarFlagsChat,
   vaciarChat,
   eliminarChat,
@@ -23,7 +22,7 @@ export function useWhatsapp() {
   const [error, setError] = useState(null)
 
   const pollTimerRef = useRef(null)
-  const ultimoTimestampRef = useRef(null)
+  const chatActivoIdRef = useRef(null)
 
   // ─── Cargar lista de chats ──────────────────────────────────────────────
   const cargarChats = useCallback(async (filtros = {}) => {
@@ -32,7 +31,6 @@ export function useWhatsapp() {
     try {
       const { chats: lista } = await listarChats(filtros)
       setChats(lista)
-      if (lista.length > 0) ultimoTimestampRef.current = lista[0].fecha
     } catch {
       setError('Error al cargar los chats.')
       setChats([])
@@ -178,14 +176,39 @@ export function useWhatsapp() {
     setError(null)
   }, [])
 
-  // ─── Polling — simula el webhook mientras no esté conectado el real ─────
+  // ─── Mantener sincronizado el id del chat activo para el intervalo ─────
+  useEffect(() => {
+    chatActivoIdRef.current = chatActivo?.id ?? null
+  }, [chatActivo?.id])
+
+  // ─── Polling — detecta mensajes nuevos y actualiza lista + chat abierto ──
   useEffect(() => {
     pollTimerRef.current = setInterval(async () => {
       try {
-        const { hayNuevos, chats: lista } = await poll(ultimoTimestampRef.current)
-        if (hayNuevos) {
-          setChats(lista)
-          if (lista.length > 0) ultimoTimestampRef.current = lista[0].fecha
+        const { chats: listaNueva } = await listarChats()
+
+        setChats((prevChats) => listaNueva.map((nuevo) => {
+          const anterior = prevChats.find((c) => c.id === nuevo.id)
+          const esActivo = chatActivoIdRef.current === nuevo.id
+          const cambioMensaje = anterior && anterior.fecha !== nuevo.fecha
+          const noLeidos = esActivo
+            ? 0
+            : cambioMensaje
+              ? (anterior?.no_leidos || 0) + 1
+              : (anterior?.no_leidos || 0)
+          return { ...nuevo, no_leidos: noLeidos }
+        }))
+
+        const idActivo = chatActivoIdRef.current
+        if (idActivo) {
+          const data = await getChat(idActivo)
+          setChatActivo((prev) => {
+            if (!prev || prev.id !== idActivo) return prev
+            const idsPrevios = new Set((prev.mensajes || []).map((m) => m.id))
+            const nuevosMensajes = (data.mensajes || []).filter((m) => !idsPrevios.has(m.id))
+            if (nuevosMensajes.length === 0) return prev
+            return { ...prev, mensajes: [...prev.mensajes, ...nuevosMensajes] }
+          })
         }
       } catch { /* silencioso — no interrumpir la UI por un poll fallido */ }
     }, POLL_INTERVAL_MS)
