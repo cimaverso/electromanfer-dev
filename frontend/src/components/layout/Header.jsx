@@ -7,6 +7,7 @@ const PAGE_TITLES = {
   '/dashboard':    { title: 'Dashboard',    subtitle: 'Resumen general del sistema' },
   '/productos':    { title: 'Productos',    subtitle: 'Busca y agrega productos a cotización' },
   '/cotizaciones': { title: 'Cotizaciones', subtitle: 'Gestiona y genera cotizaciones' },
+  '/whatsapp':     { title: 'WhatsApp',     subtitle: 'Conversaciones con clientes' },
 }
 
 // ─── Icono Sol (light mode) ───
