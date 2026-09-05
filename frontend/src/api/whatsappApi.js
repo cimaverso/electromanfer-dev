@@ -1,48 +1,26 @@
 import axiosClient from './axiosClient'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MOCK — Jair reemplaza el cuerpo de cada función por la llamada real a axiosClient.
-// Los nombres, firmas y shapes de retorno son el CONTRATO. No cambiar sin avisar
-// al frontend, porque useWhatsapp.js y ChatPanel.jsx ya asumen esta forma.
+// Conectado a los endpoints reales de Electromanfer (que a su vez consumen CimAPI).
+// Backend listo: listarChats, getChat, enviarMensaje, enviarConAdjunto (imagen/documento/audio).
+// Backend PENDIENTE: marcarLeido, poll real, buscarOCrearChatPorTelefono.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Datos en memoria (solo para el mock) ────────────────────────────────────
-let _chats = [
-  {
-    id: 'chat_1',
-    telefono: '573001234567',
-    nombre: 'Comercializadora Milpa',
-    ultimo_mensaje: 'Perfecto, quedamos atentos al envío',
-    fecha: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    no_leidos: 2,
-    mensajes: [
-      { id: 'm1', direccion: 'recibido', texto: 'Buenas tardes, ¿tienen disponibilidad de guantes dieléctricos?', fecha: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
-      { id: 'm2', direccion: 'enviado',  texto: 'Buenas tardes, sí tenemos. Le comparto la cotización en un momento.', fecha: new Date(Date.now() - 1000 * 60 * 35).toISOString() },
-      { id: 'm3', direccion: 'recibido', texto: 'Perfecto, quedamos atentos al envío', fecha: new Date(Date.now() - 1000 * 60 * 12).toISOString() },
-    ],
-  },
-  {
-    id: 'chat_2',
-    telefono: '573109876543',
-    nombre: 'Wherex - Avimol S.A.S',
-    ultimo_mensaje: 'Recibido, gracias',
-    fecha: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    no_leidos: 0,
-    mensajes: [
-      { id: 'm4', direccion: 'recibido', texto: 'Hola, ¿me confirman el estado de la guía CRA-2024-881234?', fecha: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString() },
-      { id: 'm5', direccion: 'enviado',  texto: 'Hola, la guía fue despachada ayer, debería llegar hoy en la tarde.', fecha: new Date(Date.now() - 1000 * 60 * 60 * 3.5).toISOString() },
-      { id: 'm6', direccion: 'recibido', texto: 'Recibido, gracias', fecha: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-    ],
-  },
-]
-
-function clone(x) { return JSON.parse(JSON.stringify(x)) }
-
 // ─── Listar chats (bandeja) ──────────────────────────────────────────────────
-// → { chats: [{id, telefono, nombre, ultimo_mensaje, fecha, no_leidos}] }
 export async function listarChats(filtros = {}) {
-  await new Promise((r) => setTimeout(r, 150))
-  let lista = clone(_chats).map(({ mensajes, ...resto }) => resto)
+  const { data } = await axiosClient.get('/whatsapp/conversaciones', {
+    params: { page: 1, limit: 50 },
+  })
+
+  let lista = data.data.map((c) => ({
+    id: c.id,
+    telefono: c.contact_phone?.phone || c.contact?.whatsapp_number || '',
+    nombre: c.contact?.name || c.contact_phone?.phone || 'Sin nombre',
+    ultimo_mensaje: c.last_message?.content || '',
+    fecha: c.last_message?.created_at || c.updated_at,
+    no_leidos: 0,
+  }))
+
   if (filtros.q) {
     const q = filtros.q.toLowerCase()
     lista = lista.filter((c) => c.nombre.toLowerCase().includes(q) || c.telefono.includes(q))
@@ -52,83 +30,100 @@ export async function listarChats(filtros = {}) {
 }
 
 // ─── Abrir un chat (con sus mensajes) ────────────────────────────────────────
-// → { id, telefono, nombre, mensajes: [...] }
 export async function getChat(chatId) {
-  await new Promise((r) => setTimeout(r, 150))
-  const chat = _chats.find((c) => c.id === chatId)
-  if (!chat) return null
-  return clone(chat)
+  const { data } = await axiosClient.get(`/whatsapp/conversaciones/${chatId}/mensajes`, {
+    params: { page: 1, limit: 100 },
+  })
+
+  return {
+    id: data.conversation_id,
+    telefono: data.contact_phone?.phone || data.contact?.whatsapp_number || '',
+    nombre: data.contact?.name || 'Sin nombre',
+    mensajes: data.messages.map((m) => ({
+      id: m.id,
+      direccion: m.direction === 'inbound' ? 'recibido' : 'enviado',
+      texto: m.content || '',
+      tipo: m.type,
+      media_id: m.media_id,
+      fecha: m.created_at,
+    })),
+  }
 }
 
-// ─── Buscar o crear chat por teléfono (para "nuevo chat" desde cotización/guía) ─
-// → { id, telefono, nombre, mensajes: [] }
+// ─── Buscar o crear chat por teléfono ─────────────────────────────────────────
+// PENDIENTE: falta endpoint en backend para iniciar conversación nueva.
 export async function buscarOCrearChatPorTelefono(telefono, nombreSugerido = '') {
-  await new Promise((r) => setTimeout(r, 150))
-  const limpio = telefono.replace(/\D/g, '')
-  let chat = _chats.find((c) => c.telefono.includes(limpio) || limpio.includes(c.telefono))
-  if (!chat) {
-    chat = {
-      id: `chat_${Date.now()}`,
-      telefono: limpio.startsWith('57') ? limpio : `57${limpio}`,
-      nombre: nombreSugerido || limpio,
-      ultimo_mensaje: '',
-      fecha: new Date().toISOString(),
-      no_leidos: 0,
-      mensajes: [],
-    }
-    _chats.push(chat)
-  }
-  return clone(chat)
+  console.warn('buscarOCrearChatPorTelefono: aún no conectado a backend real')
+  throw new Error('Función no disponible todavía')
 }
 
 // ─── Enviar mensaje de texto ──────────────────────────────────────────────────
+// CimAPI necesita el teléfono ("to"), así que primero resolvemos el chat.
 // → { mensaje: {id, direccion, texto, fecha} }
 export async function enviarMensaje(chatId, { texto }) {
-  await new Promise((r) => setTimeout(r, 300))
-  const chat = _chats.find((c) => c.id === chatId)
-  if (!chat) throw new Error('Chat no encontrado')
-  const mensaje = { id: `m_${Date.now()}`, direccion: 'enviado', texto, fecha: new Date().toISOString() }
-  chat.mensajes.push(mensaje)
-  chat.ultimo_mensaje = texto
-  chat.fecha = mensaje.fecha
-  return { mensaje }
+  const chat = await getChat(chatId)
+
+  const { data } = await axiosClient.post('/whatsapp/mensajes/texto', {
+    to: chat.telefono,
+    message: texto,
+    conversation_id: chatId,
+  })
+
+  return {
+    mensaje: {
+      id: data.message?.id ?? `m_${Date.now()}`,
+      direccion: 'enviado',
+      texto: data.message?.content ?? texto,
+      fecha: data.message?.created_at ?? new Date().toISOString(),
+    },
+  }
 }
 
-// ─── Enviar con adjunto (PDF cotización / foto guía) ─────────────────────────
-// En real: 1) subir a Meta media endpoint → media_id, 2) enviar mensaje con media_id.
-// El mock simula ambos pasos como una sola llamada.
+// ─── Enviar con adjunto (imagen, documento o audio) ──────────────────────────
+// formData que arma ChatPanel.jsx trae: 'texto' (caption opcional) y 'archivo' (File).
+// Se traduce a los campos que espera el backend (to, conversation_id, caption, file)
+// y se elige el endpoint según el tipo MIME del archivo.
 // → { mensaje: {id, direccion, texto, media_nombre, fecha} }
 export async function enviarConAdjunto(chatId, formData) {
-  await new Promise((r) => setTimeout(r, 500))
-  const chat = _chats.find((c) => c.id === chatId)
-  if (!chat) throw new Error('Chat no encontrado')
-  const texto = formData.get('texto') || ''
+  const chat = await getChat(chatId)
   const archivo = formData.get('archivo')
-  const mensaje = {
-    id: `m_${Date.now()}`,
-    direccion: 'enviado',
-    texto,
-    media_nombre: archivo?.name || null,
-    fecha: new Date().toISOString(),
+  const texto = formData.get('texto') || ''
+
+  if (!archivo) throw new Error('No se adjuntó ningún archivo')
+
+  let endpoint = 'documento'
+  if (archivo.type?.startsWith('image/')) endpoint = 'imagen'
+  else if (archivo.type?.startsWith('audio/')) endpoint = 'audio'
+  else if (archivo.type?.startsWith('video/')) endpoint = 'video'
+
+  const body = new FormData()
+  body.append('to', chat.telefono)
+  body.append('conversation_id', chatId)
+  body.append('file', archivo)
+  if (endpoint !== 'audio') body.append('caption', texto)
+
+  const { data } = await axiosClient.post(`/whatsapp/mensajes/${endpoint}`, body)
+
+  return {
+    mensaje: {
+      id: data.message?.id ?? `m_${Date.now()}`,
+      direccion: 'enviado',
+      texto: data.message?.content ?? texto,
+      media_nombre: archivo.name,
+      fecha: data.message?.created_at ?? new Date().toISOString(),
+    },
   }
-  chat.mensajes.push(mensaje)
-  chat.ultimo_mensaje = texto || `📎 ${archivo?.name || 'archivo'}`
-  chat.fecha = mensaje.fecha
-  return { mensaje }
 }
 
 // ─── Marcar leído ─────────────────────────────────────────────────────────────
+// PENDIENTE: CimAPI no expone estado de leído/no leído en lo que hemos visto.
 export async function marcarLeido(chatId) {
-  const chat = _chats.find((c) => c.id === chatId)
-  if (chat) chat.no_leidos = 0
   return { ok: true }
 }
 
 // ─── Poll — simula el empuje del webhook ─────────────────────────────────────
-// El hook llama esto cada 5-8s con el timestamp del último mensaje visto.
-// → { hayNuevos: bool, chats: [...] }  (mismo shape que listarChats)
+// Reutiliza listarChats como polling simple (sin detectar "hayNuevos" real).
 export async function poll(_ultimoTimestamp) {
-  await new Promise((r) => setTimeout(r, 100))
-  // Mock: nunca genera mensajes espontáneos — Jair conecta esto al webhook real.
-  return { hayNuevos: false, chats: clone(_chats).map(({ mensajes, ...r }) => r) }
+  const { chats } = await listarChats()
+  return { hayNuevos: false, chats }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import axiosClient from '../../api/axiosClient'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
 import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
 import ModalGuiaBuzon from '../cotizaciones/Buzon/ModalGuiaBuzon'
@@ -29,6 +30,7 @@ function IconAtras() { return <svg width="16" height="16" viewBox="0 0 24 24" fi
 function IconEnviar() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> }
 function IconCotizacion() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="2" /><path d="M5 8h6M5 5h4M5 11h3" /></svg> }
 function IconGuia() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2L2 9l5 1 1 5 6-13z" /><path d="M8 8l4-4" /></svg> }
+function IconAudio() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="6" y="1" width="4" height="8" rx="2" /><path d="M3 7a5 5 0 0 0 10 0" /><line x1="8" y1="12" x2="8" y2="15" /></svg> }
 
 // ─── Item de la lista de chats ─────────────────────────────────────────────────
 function ChatItem({ chat, activo, onClick }) {
@@ -53,8 +55,46 @@ function ChatItem({ chat, activo, onClick }) {
 }
 
 // ─── Burbuja de mensaje ─────────────────────────────────────────────────────────
+function MediaAdjunto({ mediaId, tipo }) {
+  const [url, setUrl] = useState(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    if (!mediaId) return
+    let objectUrl = null
+    let cancelado = false
+
+    axiosClient.get(`/whatsapp/media/${mediaId}`, { responseType: 'blob' })
+      .then((res) => {
+        if (cancelado) return
+        objectUrl = URL.createObjectURL(res.data)
+        setUrl(objectUrl)
+      })
+      .catch(() => { if (!cancelado) setError(true) })
+
+    return () => {
+      cancelado = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [mediaId])
+
+  if (error) return <div className="wap-msg__adjunto-error">No se pudo cargar el archivo</div>
+  if (!url) return <div className="wap-msg__adjunto-cargando">Cargando adjunto...</div>
+
+  if (tipo === 'image') return <img src={url} alt="Imagen enviada" className="wap-msg__imagen" />
+  if (tipo === 'audio') return <audio src={url} controls className="wap-msg__audio" />
+  if (tipo === 'video') return <video src={url} controls className="wap-msg__video" />
+  return (
+    <a href={url} download className="wap-msg__adjunto">
+      <span className="wap-msg__adjunto-icon">📎</span>
+      <span className="wap-msg__adjunto-nombre">Descargar archivo</span>
+    </a>
+  )
+}
+
 function MensajeBurbuja({ mensaje }) {
   const enviado = mensaje.direccion === 'enviado'
+  const esMedia = ['image', 'audio', 'video', 'document'].includes(mensaje.tipo)
   return (
     <div className={`wap-msg ${enviado ? 'wap-msg--enviado' : 'wap-msg--recibido'}`}>
       <div className="wap-msg__bubble">
@@ -64,6 +104,7 @@ function MensajeBurbuja({ mensaje }) {
             <span className="wap-msg__adjunto-nombre">{mensaje.media_nombre}</span>
           </div>
         )}
+        {esMedia && mensaje.media_id && <MediaAdjunto mediaId={mensaje.media_id} tipo={mensaje.tipo} />}
         {mensaje.texto && <div className="wap-msg__texto">{mensaje.texto}</div>}
         <span className="wap-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
@@ -75,6 +116,7 @@ function MensajeBurbuja({ mensaje }) {
 function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, loading, progreso }) {
   const [texto, setTexto] = useState('')
   const fileInputRef = useRef(null)
+  const audioInputRef = useRef(null)
 
   const handleEnviar = () => {
     if (!texto.trim()) return
@@ -83,7 +125,7 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
   }
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       handleEnviar()
     }
@@ -91,37 +133,58 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
 
   return (
     <div className="wap-reply">
-      <button className="wap-reply__btn wap-reply__btn--cot" onClick={onGenerarCotizacion} type="button" title="Generar cotización">
-        <IconCotizacion />
-      </button>
-      <button className="wap-reply__btn wap-reply__btn--guia" onClick={onEnviarGuia} type="button" title="Enviar guía">
-        <IconGuia />
-      </button>
-      <button className="wap-reply__btn" onClick={() => fileInputRef.current?.click()} type="button" title="Adjuntar archivo">
-        <IconAdjuntar />
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const archivo = e.target.files?.[0]
-          if (archivo) onAdjuntar(archivo)
-          e.target.value = ''
-        }}
-      />
       <textarea
         className="wap-reply__input"
         placeholder="Escribe un mensaje..."
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         onKeyDown={handleKeyDown}
-        rows={1}
+        rows={3}
       />
-      <button className="wap-reply__enviar" onClick={handleEnviar} disabled={loading || !!progreso || !texto.trim()} type="button">
-        <IconEnviar />
-      </button>
+      <div className="wap-reply__footer">
+        <div className="wap-reply__acciones">
+          <button className="wap-btn wap-btn--cot" onClick={onGenerarCotizacion} type="button">
+            <IconCotizacion /> Generar cotización
+          </button>
+          <button className="wap-btn wap-btn--guia" onClick={onEnviarGuia} type="button">
+            <IconGuia /> Guía
+          </button>
+          <button className="wap-btn wap-btn--ghost" onClick={() => fileInputRef.current?.click()} type="button">
+            <IconAdjuntar /> Adjuntar
+          </button>
+          <button className="wap-btn wap-btn--ghost" onClick={() => audioInputRef.current?.click()} type="button">
+            <IconAudio /> Audio
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const archivo = e.target.files?.[0]
+              if (archivo) onAdjuntar(archivo)
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const archivo = e.target.files?.[0]
+              if (archivo) onAdjuntar(archivo)
+              e.target.value = ''
+            }}
+          />
+        </div>
+        <div className="wap-reply__enviar">
+          <span className="wap-reply__hint">Ctrl + Enter</span>
+          <button className="wap-btn wap-btn--primary" onClick={handleEnviar} disabled={loading || !!progreso || !texto.trim()} type="button">
+            {loading ? 'Enviando...' : 'Enviar'}
+          </button>
+        </div>
+      </div>
       {progreso && (
         <div className="wap-reply__progreso">
           Enviando {progreso.actual} de {progreso.total}...

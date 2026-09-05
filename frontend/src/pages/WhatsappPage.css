@@ -1,37 +1,11 @@
 .whatsapp-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  padding: var(--space-6);
-}
-
-.whatsapp-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.whatsapp-page__header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.whatsapp-page__title {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.whatsapp-page__subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  padding: var(--space-4);
 }
 
 .whatsapp-page__card {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
