@@ -37,3 +37,10 @@ class EnviarTextoRequest(BaseModel):
 class EnviarMensajeResponse(BaseModel):
     class Config:
         extra = "allow"
+
+
+class ActualizarFlagsRequest(BaseModel):
+    is_pinned: Optional[bool] = None
+    is_muted: Optional[bool] = None
+    is_archived: Optional[bool] = None
+    is_priority: Optional[bool] = None

@@ -116,3 +116,42 @@ class WhatsappService:
         if respuesta.status_code != 200:
             raise HTTPException(status_code=respuesta.status_code, detail="Error descargando media de CimAPI")
         return respuesta.content, respuesta.headers.get("content-type", "application/octet-stream")
+
+
+    @staticmethod
+    def actualizar_flags(conversation_id: int, flags: dict):
+        payload = {k: v for k, v in flags.items() if v is not None}
+        with httpx.Client(timeout=30) as client:
+            respuesta = client.patch(
+                f"{settings.CIMAPI_BASE_URL}/conversations/{conversation_id}",
+                headers={**WhatsappService._headers(), "Content-Type": "application/json"},
+                json=payload,
+            )
+        if respuesta.status_code != 200:
+            detalle = respuesta.json().get("detail", "Error actualizando la conversación en CimAPI")
+            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        return respuesta.json()
+
+    @staticmethod
+    def vaciar_conversacion(conversation_id: int):
+        with httpx.Client(timeout=30) as client:
+            respuesta = client.delete(
+                f"{settings.CIMAPI_BASE_URL}/conversations/{conversation_id}/messages",
+                headers=WhatsappService._headers(),
+            )
+        if respuesta.status_code not in (200, 204):
+            detalle = respuesta.json().get("detail", "Error vaciando la conversación en CimAPI")
+            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        return {"ok": True}
+
+    @staticmethod
+    def eliminar_conversacion(conversation_id: int):
+        with httpx.Client(timeout=30) as client:
+            respuesta = client.delete(
+                f"{settings.CIMAPI_BASE_URL}/conversations/{conversation_id}",
+                headers=WhatsappService._headers(),
+            )
+        if respuesta.status_code not in (200, 204):
+            detalle = respuesta.json().get("detail", "Error eliminando la conversación en CimAPI")
+            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        return {"ok": True}

@@ -8,6 +8,7 @@ from app.schemas.whatsapp import (
     ConversacionesResponse,
     MensajesResponse,
     EnviarTextoRequest,
+    ActualizarFlagsRequest,
 )
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
@@ -100,3 +101,28 @@ def obtener_media(
 ):
     contenido_bytes, content_type = WhatsappService.descargar_media(media_id)
     return Response(content=contenido_bytes, media_type=content_type)
+
+
+@router.patch("/conversaciones/{conversation_id}")
+def actualizar_flags(
+    conversation_id: int,
+    body: ActualizarFlagsRequest,
+    _: TokenData = Depends(require_auth),
+):
+    return WhatsappService.actualizar_flags(conversation_id, body.model_dump())
+
+
+@router.delete("/conversaciones/{conversation_id}/mensajes")
+def vaciar_conversacion(
+    conversation_id: int,
+    _: TokenData = Depends(require_auth),
+):
+    return WhatsappService.vaciar_conversacion(conversation_id)
+
+
+@router.delete("/conversaciones/{conversation_id}")
+def eliminar_conversacion(
+    conversation_id: int,
+    _: TokenData = Depends(require_auth),
+):
+    return WhatsappService.eliminar_conversacion(conversation_id)

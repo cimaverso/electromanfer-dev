@@ -19,6 +19,8 @@ export async function listarChats(filtros = {}) {
     ultimo_mensaje: c.last_message?.content || '',
     fecha: c.last_message?.created_at || c.updated_at,
     no_leidos: 0,
+    is_pinned: !!c.is_pinned,
+    is_muted: !!c.is_muted,
   }))
 
   if (filtros.q) {
@@ -126,4 +128,23 @@ export async function marcarLeido(chatId) {
 export async function poll(_ultimoTimestamp) {
   const { chats } = await listarChats()
   return { hayNuevos: false, chats }
+}
+
+
+// ─── Fijar / silenciar chat ───────────────────────────────────────────────────
+export async function actualizarFlagsChat(chatId, flags) {
+  const { data } = await axiosClient.patch(`/whatsapp/conversaciones/${chatId}`, flags)
+  return data
+}
+
+// ─── Vaciar conversación (borra mensajes, conserva el chat) ──────────────────
+export async function vaciarChat(chatId) {
+  await axiosClient.delete(`/whatsapp/conversaciones/${chatId}/mensajes`)
+  return { ok: true }
+}
+
+// ─── Eliminar chat (soft delete en CimAPI) ───────────────────────────────────
+export async function eliminarChat(chatId) {
+  await axiosClient.delete(`/whatsapp/conversaciones/${chatId}`)
+  return { ok: true }
 }

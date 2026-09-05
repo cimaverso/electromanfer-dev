@@ -31,6 +31,11 @@ function IconEnviar() { return <svg width="15" height="15" viewBox="0 0 24 24" f
 function IconCotizacion() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="2" /><path d="M5 8h6M5 5h4M5 11h3" /></svg> }
 function IconGuia() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2L2 9l5 1 1 5 6-13z" /><path d="M8 8l4-4" /></svg> }
 function IconAudio() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="6" y="1" width="4" height="8" rx="2" /><path d="M3 7a5 5 0 0 0 10 0" /><line x1="8" y1="12" x2="8" y2="15" /></svg> }
+function IconDots() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle cx="8" cy="13" r="1.4" /></svg> }
+function IconPin() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 2l5 5-3 1-3 3-1 3-3-3-3 3v-2l3-3-3-3 3-1 1-3z" /></svg> }
+function IconMute() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 6h3l4-3v10l-4-3H2z" /><line x1="11" y1="5" x2="15" y2="11" /><line x1="15" y1="5" x2="11" y2="11" /></svg> }
+function IconEraser() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 2l3 3-7 7H4l-2-2z" /><path d="M7 12h6" /></svg> }
+function IconTrash() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h12" /><path d="M5 4V2h6v2" /><path d="M4 4l1 10h6l1-10" /></svg> }
 
 // ─── Item de la lista de chats ─────────────────────────────────────────────────
 function ChatItem({ chat, activo, onClick }) {
@@ -42,11 +47,15 @@ function ChatItem({ chat, activo, onClick }) {
       <div className="wap-avatar">{iniciales(chat.nombre)}</div>
       <div className="wap-chat-item__body">
         <div className="wap-chat-item__row">
-          <span className="wap-chat-item__nombre">{chat.nombre}</span>
+          <span className="wap-chat-item__nombre">
+            {chat.is_pinned && <IconPin />} {chat.nombre}
+          </span>
           <span className="wap-chat-item__fecha">{formatFecha(chat.fecha)}</span>
         </div>
         <div className="wap-chat-item__row">
-          <span className="wap-chat-item__preview">{chat.ultimo_mensaje || 'Sin mensajes'}</span>
+          <span className="wap-chat-item__preview">
+            {chat.is_muted && <IconMute />} {chat.ultimo_mensaje || 'Sin mensajes'}
+          </span>
           {chat.no_leidos > 0 && <span className="wap-chat-item__badge">{chat.no_leidos}</span>}
         </div>
       </div>
@@ -202,9 +211,11 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     chats, chatActivo, sinLeer,
     loadingChats, loadingChat, loadingEnvio, error,
     cargarChats, abrirChat, enviar, enviarConAdjunto, cerrarChat, limpiarError,
+    togglePin, toggleMute, vaciarConversacion, eliminarConversacion,
   } = useWhatsapp()
 
   const [terminoBusqueda, setTerminoBusqueda] = useState('')
+  const [menuAbiertoId, setMenuAbiertoId] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
   const [modalGuia, setModalGuia] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState(null)
@@ -213,6 +224,18 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const mensajesEndRef = useRef(null)
   const busquedaTimeoutRef = useRef(null)
   const primerRenderBusqueda = useRef(true)
+  const menuHeaderRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuAbiertoId) return
+    const handleClickFuera = (e) => {
+      if (menuHeaderRef.current && !menuHeaderRef.current.contains(e.target)) {
+        setMenuAbiertoId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [menuAbiertoId])
 
   useEffect(() => { cargarChats() }, []) // eslint-disable-line
 
@@ -237,6 +260,20 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   useEffect(() => {
     mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatActivo?.mensajes?.length])
+
+  const handleToggleMenu = (chatId) => setMenuAbiertoId((prev) => (prev === chatId ? null : chatId))
+  const handleFijar = async (chatId) => { setMenuAbiertoId(null); await togglePin(chatId) }
+  const handleSilenciar = async (chatId) => { setMenuAbiertoId(null); await toggleMute(chatId) }
+  const handleVaciar = async (chatId) => {
+    setMenuAbiertoId(null)
+    if (!window.confirm('¿Vaciar esta conversación? Se borrarán todos los mensajes.')) return
+    await vaciarConversacion(chatId)
+  }
+  const handleEliminar = async (chatId) => {
+    setMenuAbiertoId(null)
+    if (!window.confirm('¿Eliminar este chat? Esta acción no se puede deshacer.')) return
+    await eliminarConversacion(chatId)
+  }
 
   const handleAbrirChat = (chat) => {
     abrirChat(chat.id)
@@ -375,6 +412,33 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
               <div className="wap-conversacion__info">
                 <span className="wap-conversacion__nombre">{chatActivo.nombre}</span>
                 <span className="wap-conversacion__telefono">{chatActivo.telefono}</span>
+              </div>
+              <div className="wap-conversacion__menu-wrapper" ref={menuHeaderRef}>
+                <button
+                  className="wap-conversacion__menu-btn"
+                  onClick={(e) => { e.stopPropagation(); handleToggleMenu(chatActivo.id) }}
+                  type="button"
+                  title="Más opciones"
+                >
+                  <IconDots />
+                </button>
+                {menuAbiertoId === chatActivo.id && (
+                  <div className="wap-chat-item__menu" onClick={(e) => e.stopPropagation()}>
+                    <button className="wap-chat-item__menu-item" onClick={() => handleFijar(chatActivo.id)} type="button">
+                      <IconPin /> {chats.find((c) => c.id === chatActivo.id)?.is_pinned ? 'Desfijar chat' : 'Fijar chat'}
+                    </button>
+                    <button className="wap-chat-item__menu-item" onClick={() => handleSilenciar(chatActivo.id)} type="button">
+                      <IconMute /> {chats.find((c) => c.id === chatActivo.id)?.is_muted ? 'Activar sonido' : 'Silenciar'}
+                    </button>
+                    <button className="wap-chat-item__menu-item" onClick={() => handleVaciar(chatActivo.id)} type="button">
+                      <IconEraser /> Vaciar conversación
+                    </button>
+                    <div className="wap-chat-item__menu-divider" />
+                    <button className="wap-chat-item__menu-item wap-chat-item__menu-item--danger" onClick={() => handleEliminar(chatActivo.id)} type="button">
+                      <IconTrash /> Eliminar chat
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="wap-conversacion__mensajes">
