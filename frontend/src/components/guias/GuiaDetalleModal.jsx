@@ -48,6 +48,7 @@ export default function GuiaDetalleModal({
   const [nota, setNota]               = useState('')
   const [mostrarCambioEstado, setMostrarCambioEstado] = useState(false)
   const [fotoAmpliada, setFotoAmpliada] = useState(false)
+  const [fotoError, setFotoError] = useState(false)
   const [modalEmail, setModalEmail]   = useState(false)   // ← NUEVO
   const [modalSeleccionarChat, setModalSeleccionarChat] = useState(false)
   const [chatSeleccionado, setChatSeleccionado] = useState(null)
@@ -233,7 +234,7 @@ export default function GuiaDetalleModal({
                   </div>
                 )}
 
-                {guia.foto_guia_path && (
+                {guia.foto_guia_path && !fotoError && (
                   <div className="guia-detalle__group">
                     <p className="guia-detalle__group-title">Foto de guía</p>
                     <img
@@ -241,6 +242,7 @@ export default function GuiaDetalleModal({
                       alt="Foto de guía"
                       className="guia-detalle__foto-thumb"
                       onClick={() => setFotoAmpliada(true)}
+                      onError={() => setFotoError(true)}
                       title="Click para ampliar"
                     />
                   </div>

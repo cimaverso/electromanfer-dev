@@ -1,5 +1,18 @@
 import axiosClient from './axiosClient'
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/api$/, '')
+
+function getMediaUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${API_BASE}/${url.replace(/^\/+/, '')}`
+}
+
+function conFotoUrl(guia) {
+  if (!guia) return guia
+  return { ...guia, foto_guia_path: getMediaUrl(guia.foto_guia_path) }
+}
+
 // ─── Transportadoras ─────────────────────────────────────────────────────────
 
 export async function getTransportadoras() {
@@ -18,28 +31,28 @@ export async function getGuias(filtros = {}) {
   const params = new URLSearchParams()
   Object.entries(filtros).forEach(([k, v]) => { if (v) params.append(k, v) })
   const res = await axiosClient.get(`/guias?${params.toString()}`)
-  return res.data
+  return res.data.map(conFotoUrl)
 }
 
 // ─── Guías — Detalle ─────────────────────────────────────────────────────────
 
 export async function getGuia(id) {
   const res = await axiosClient.get(`/guias/${id}`)
-  return res.data
+  return conFotoUrl(res.data)
 }
 
 // ─── Guías — Crear ───────────────────────────────────────────────────────────
 
 export async function crearGuia(formData) {
   const res = await axiosClient.post('/guias', formData)
-  return res.data
+  return conFotoUrl(res.data)
 }
 
 // ─── Guías — Editar ──────────────────────────────────────────────────────────
 
 export async function editarGuia(id, formData) {
   const res = await axiosClient.patch(`/guias/${id}`, formData)
-  return res.data
+  return conFotoUrl(res.data)
 }
 
 // ─── Guías — Cambiar estado ──────────────────────────────────────────────────
