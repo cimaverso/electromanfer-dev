@@ -85,7 +85,7 @@ export default function RecursosModal({ codRef, nomRef, onClose }) {
   } = useRecursos(codRef)
 
   const { user } = useAuth()
-  const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
+  const esAdmin = true // restricción de rol removida
 
   useEffect(() => { cargar() }, [cargar])
 

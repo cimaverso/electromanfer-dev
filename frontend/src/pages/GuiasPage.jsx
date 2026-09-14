@@ -35,7 +35,7 @@ const FILTROS_INIT = { estado: '', transportadora: '', fecha_inicio: '', fecha_f
 
 export default function GuiasPage() {
   const { user } = useAuth()
-  const isAdmin = ['admin', 'ADMIN', 'ADMINISTRADOR'].includes(user?.rol)
+  const isAdmin = true // restricción de rol removida
   const { toast, showToast, hideToast } = useToast()
 
   const {

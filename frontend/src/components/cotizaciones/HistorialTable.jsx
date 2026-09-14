@@ -78,7 +78,7 @@ export default function HistorialTable({
   })
 
   const { user } = useAuth()
-  const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'GERENCIA'
+  const esAdmin = true // restricción de rol removida
   const debounceRef = useRef(null)
 
   const handleFiltro = (field, value) => {
