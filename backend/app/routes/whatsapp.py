@@ -1,8 +1,10 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import Response
-from app.services.whatsapp import WhatsappService
-from app.schemas.whatsapp import (
+from sqlalchemy.orm import Session
+
+from app.integrations.cimasuite.client import WhatsappService
+from app.integrations.cimasuite.schemas import (
     ConectarNumeroRequest,
     ConectarNumeroResponse,
     ConversacionesResponse,
@@ -12,8 +14,32 @@ from app.schemas.whatsapp import (
 )
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
+from app.core.db import get_db
+from app.models.asesor_lineas import AsesorLinea
+from app.enums import RoleEnum
 
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
+
+
+def _phone_number_id_para(token: TokenData, db: Session) -> Optional[str]:
+    """
+    VENDEDOR -> devuelve su phone_number_id asignado (o 403 si no tiene línea).
+    GERENCIA / ADMINISTRADOR -> None (sin filtro, ve todas las líneas).
+    """
+    if token.role != RoleEnum.VENDEDOR.value:
+        return None
+
+    asignacion = (
+        db.query(AsesorLinea)
+        .filter(AsesorLinea.usuario_id == token.user_id)
+        .first()
+    )
+    if not asignacion:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes una línea de WhatsApp asignada",
+        )
+    return asignacion.phone_number_id
 
 
 @router.post("/onboarding/connect", response_model=ConectarNumeroResponse)
@@ -28,9 +54,11 @@ def conectar_numero(
 def listar_conversaciones(
     page: int = 1,
     limit: int = 20,
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
-    return WhatsappService.listar_conversaciones(page, limit)
+    phone_number_id = _phone_number_id_para(token, db)
+    return WhatsappService.listar_conversaciones(page, limit, phone_number_id)
 
 
 @router.get("/conversaciones/{conversation_id}/mensajes", response_model=MensajesResponse)

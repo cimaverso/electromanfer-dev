@@ -1,3 +1,8 @@
+"""
+Cliente REST para consumir CimAPI (WhatsApp) -- proxy en vivo, sin espejo.
+Electromanfer no guarda copia de conversaciones/mensajes: todo se consulta
+en tiempo real contra CimAPI usando la api-key del tenant.
+"""
 import httpx
 from typing import Optional
 from fastapi import HTTPException, UploadFile
@@ -24,12 +29,15 @@ class WhatsappService:
         return respuesta.json()
 
     @staticmethod
-    def listar_conversaciones(page: int = 1, limit: int = 20):
+    def listar_conversaciones(page: int = 1, limit: int = 20, phone_number_id: Optional[str] = None):
+        params = {"page": page, "limit": limit}
+        if phone_number_id is not None:
+            params["phone_number_id"] = phone_number_id
         with httpx.Client(timeout=30) as client:
             respuesta = client.get(
                 f"{settings.CIMAPI_BASE_URL}/conversations",
                 headers=WhatsappService._headers(),
-                params={"page": page, "limit": limit},
+                params=params,
             )
         if respuesta.status_code != 200:
             detalle = respuesta.json().get("detail", "Error obteniendo conversaciones de CimAPI")
@@ -116,7 +124,6 @@ class WhatsappService:
         if respuesta.status_code != 200:
             raise HTTPException(status_code=respuesta.status_code, detail="Error descargando media de CimAPI")
         return respuesta.content, respuesta.headers.get("content-type", "application/octet-stream")
-
 
     @staticmethod
     def actualizar_flags(conversation_id: int, flags: dict):
