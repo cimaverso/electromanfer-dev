@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import './Sidebar.css'
 
-const NAV_ITEMS = [
+const ALL_NAV_ITEMS = [
   {
     path: '/dashboard',
     label: 'Dashboard',
@@ -69,6 +69,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, handleLogout } = useAuth()
+
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter((item) => {
+    if (item.path === '/whatsapp') {
+      return user?.tiene_whatsapp !== false
+    }
+    return true
+  })
 
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar_collapsed') === 'true' } catch { return false }

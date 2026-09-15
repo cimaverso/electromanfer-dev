@@ -22,6 +22,7 @@ class UsuariosRead(UsuariosBase):
     id: int
     rol: str
     activo: bool
+    tiene_whatsapp: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -37,6 +38,7 @@ class UsuariosAuthMe(BaseModel):
     cedula_ciudadania: Optional[str] = None
     rol: str
     activo: bool
+    tiene_whatsapp: bool = True
 
     class Config:
         from_attributes = True
