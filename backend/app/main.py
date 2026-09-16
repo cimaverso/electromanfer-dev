@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,17 +9,25 @@ import app.models
 import os
 import mimetypes
 from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, google_auth, guias, transportadoras, buzon, whatsapp
+from app.routes import realtime
 from app.core.db import Base
 from app.core.db import engine
 from app.routes import usuarios
 from app.scheduler import iniciar_scheduler, detener_scheduler
 from app.core.config import settings
+from app.integrations.cimasuite.ws_client import CimApiWSClient
+from app.integrations.cimasuite.handler import handle_cimapi_event
+
+
+cimapi_ws_client = CimApiWSClient(handle_cimapi_event)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     iniciar_scheduler()
+    cimapi_ws_client.start()
     yield
+    await cimapi_ws_client.stop()
     detener_scheduler()
 
 app = FastAPI(
@@ -54,6 +65,7 @@ app.include_router(buzon.router, prefix="/api")
 app.include_router(guias.router, prefix="/api")
 app.include_router(transportadoras.router, prefix="/api")
 app.include_router(whatsapp.router, prefix="/api")
+app.include_router(realtime.router, prefix="/api")
 app.include_router(google_auth.router)
 
 # Servir archivos de media (solo local — en prod lo maneja Nginx)

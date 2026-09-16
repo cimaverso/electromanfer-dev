@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
     CIMAPI_BASE_URL: str 
     CIMAPI_API_KEY: str
+    CIMAPI_WS_URL: str = ""
     API_BASE_URL: str = ""
     LOGO_URL: str = ""
     MEDIA_BASE: str = os.path.join(BASE_DIR, "media")
