@@ -140,7 +140,7 @@ function MensajeBurbuja({ mensaje, onAbrirMedia }) {
             onAbrir={onAbrirMedia}
           />
         )}
-        {mensaje.texto && <div className="wap-msg__texto">{mensaje.texto}</div>}
+        {mensaje.texto && mensaje.tipo !== 'audio' && <div className="wap-msg__texto">{mensaje.texto}</div>}
         <span className="wap-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
     </div>
