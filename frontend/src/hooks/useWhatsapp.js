@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   listarChats,
+  listarLineas,
   getChat,
   buscarOCrearChatPorTelefono,
   enviarMensaje,
@@ -20,16 +21,41 @@ export function useWhatsapp() {
   const [loadingChat, setLoadingChat] = useState(false)
   const [loadingEnvio, setLoadingEnvio] = useState(false)
   const [error, setError] = useState(null)
+  const [lineas, setLineas] = useState([])
+  const [lineaSeleccionada, setLineaSeleccionada] = useState(null)
 
   const pollTimerRef = useRef(null)
   const chatActivoIdRef = useRef(null)
+
+  // ─── Líneas de WhatsApp disponibles (selector — GERENCIA/ADMINISTRADOR) ──
+  // Un VENDEDOR recibe 403 aquí (ya tiene su línea fija) — se ignora en silencio.
+  const cargarLineas = useCallback(async (usuarioId) => {
+    try {
+      const data = await listarLineas()
+      setLineas(data)
+      if (data.length === 0) return
+
+      const key = `wap_linea_${usuarioId ?? 'anon'}`
+      const guardada = localStorage.getItem(key)
+      const existe = data.find((l) => String(l.id) === guardada)
+      setLineaSeleccionada(existe || data[0])
+    } catch {
+      setLineas([])
+    }
+  }, [])
+
+  const seleccionarLinea = useCallback((linea, usuarioId) => {
+    setLineaSeleccionada(linea)
+    localStorage.setItem(`wap_linea_${usuarioId ?? 'anon'}`, String(linea.id))
+  }, [])
 
   // ─── Cargar lista de chats ──────────────────────────────────────────────
   const cargarChats = useCallback(async (filtros = {}) => {
     setLoadingChats(true)
     setError(null)
     try {
-      const { chats: lista } = await listarChats(filtros)
+      const conLinea = lineaSeleccionada ? { ...filtros, linea_id: lineaSeleccionada.id } : filtros
+      const { chats: lista } = await listarChats(conLinea)
       setChats(lista)
     } catch {
       setError('Error al cargar los chats.')
@@ -37,7 +63,7 @@ export function useWhatsapp() {
     } finally {
       setLoadingChats(false)
     }
-  }, [])
+  }, [lineaSeleccionada])
 
   // ─── Abrir chat ──────────────────────────────────────────────────────────
   const abrirChat = useCallback(async (chatId) => {
@@ -236,5 +262,9 @@ export function useWhatsapp() {
     toggleMute,
     vaciarConversacion,
     eliminarConversacion,
+    lineas,
+    lineaSeleccionada,
+    cargarLineas,
+    seleccionarLinea,
   }
 }

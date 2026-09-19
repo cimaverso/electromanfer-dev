@@ -8,9 +8,10 @@ import axiosClient from './axiosClient'
 
 // ─── Listar chats (bandeja) ──────────────────────────────────────────────────
 export async function listarChats(filtros = {}) {
-  const { data } = await axiosClient.get('/whatsapp/conversaciones', {
-    params: { page: 1, limit: 50 },
-  })
+  const params = { page: 1, limit: 50 }
+  if (filtros.linea_id != null) params.linea_id = filtros.linea_id
+
+  const { data } = await axiosClient.get('/whatsapp/conversaciones', { params })
 
   let lista = data.data.map((c) => ({
     id: c.id,
@@ -50,6 +51,12 @@ export async function getChat(chatId) {
       fecha: m.created_at,
     })),
   }
+}
+
+// ─── Líneas de WhatsApp disponibles (selector — solo GERENCIA/ADMINISTRADOR) ──
+export async function listarLineas() {
+  const { data } = await axiosClient.get('/whatsapp/lineas')
+  return data.lineas
 }
 
 // ─── Buscar o crear chat por teléfono ─────────────────────────────────────────

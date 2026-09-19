@@ -18,28 +18,52 @@ from app.core.db import get_db
 from app.models.asesor_lineas import AsesorLinea
 from app.enums import RoleEnum
 
+# Líneas de WhatsApp disponibles para el selector de GERENCIA/ADMINISTRADOR
+# (Harvey y Cimaverso Tech). Los vendedores no usan esta lista: ellos ya
+# tienen su línea fija en `asesor_lineas`.
+#
+# `id` = el id INTERNO de `phone_numbers` en CimAPI (el mismo que espera
+# el filtro `phone_number_id` de CimAPI) -- NO el whatsapp_phone_number_id
+# (el string largo tipo "724029521785193").
+#
+# Cuando conectes la línea de Wilson, solo agrega una entrada aquí.
+LINEAS_WHATSAPP = [
+    {"id": 7, "nombre": "Ferretería 2"},
+    # {"id": <pendiente>, "nombre": "<nombre>"},  # descomentar y completar al conectar
+]
+
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
 
-def _phone_number_id_para(token: TokenData, db: Session) -> Optional[str]:
+def _phone_number_id_para(token: TokenData, db: Session, linea_id: Optional[int] = None) -> Optional[str]:
     """
     VENDEDOR -> devuelve su phone_number_id asignado (o 403 si no tiene línea).
-    GERENCIA / ADMINISTRADOR -> None (sin filtro, ve todas las líneas).
+        Ignora `linea_id` si lo mandan: un vendedor no elige, ya tiene su línea fija.
+    GERENCIA / ADMINISTRADOR -> filtra por `linea_id` si lo mandan (selector de
+        línea en el frontend); sin `linea_id`, None = sin filtro (todas mezcladas,
+        comportamiento previo, por si algo más del backend sigue llamando esto
+        sin pasar línea).
     """
-    if token.role != RoleEnum.VENDEDOR.value:
+    if token.role == RoleEnum.VENDEDOR.value:
+        asignacion = (
+            db.query(AsesorLinea)
+            .filter(AsesorLinea.usuario_id == token.user_id)
+            .first()
+        )
+        if not asignacion:
+            raise HTTPException(
+                status_code=403,
+                detail="No tienes una línea de WhatsApp asignada",
+            )
+        return asignacion.phone_number_id
+
+    if linea_id is None:
         return None
 
-    asignacion = (
-        db.query(AsesorLinea)
-        .filter(AsesorLinea.usuario_id == token.user_id)
-        .first()
-    )
-    if not asignacion:
-        raise HTTPException(
-            status_code=403,
-            detail="No tienes una línea de WhatsApp asignada",
-        )
-    return asignacion.phone_number_id
+    linea = next((l for l in LINEAS_WHATSAPP if l["id"] == linea_id), None)
+    if not linea:
+        raise HTTPException(status_code=400, detail="Línea de WhatsApp no válida")
+    return str(linea["id"])
 
 
 @router.post("/onboarding/connect", response_model=ConectarNumeroResponse)
@@ -54,11 +78,23 @@ def conectar_numero(
 def listar_conversaciones(
     page: int = 1,
     limit: int = 20,
+    linea_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: TokenData = Depends(require_auth),
 ):
-    phone_number_id = _phone_number_id_para(token, db)
+    phone_number_id = _phone_number_id_para(token, db, linea_id)
     return WhatsappService.listar_conversaciones(page, limit, phone_number_id)
+
+
+@router.get("/lineas")
+def listar_lineas(token: TokenData = Depends(require_auth)):
+    """
+    Líneas de WhatsApp disponibles para el selector -- solo GERENCIA/ADMINISTRADOR.
+    Los vendedores no lo necesitan: ya tienen su línea fija.
+    """
+    if token.role == RoleEnum.VENDEDOR.value:
+        raise HTTPException(status_code=403, detail="No tienes acceso al selector de líneas")
+    return {"lineas": LINEAS_WHATSAPP}
 
 
 @router.get("/conversaciones/{conversation_id}/mensajes", response_model=MensajesResponse)
