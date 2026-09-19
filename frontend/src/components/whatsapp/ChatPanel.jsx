@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import axiosClient from '../../api/axiosClient'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
+import { useAuth } from '../../hooks/useAuth'
 import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
 import ModalGuiaBuzon from '../cotizaciones/Buzon/ModalGuiaBuzon'
 import ConfirmModal from './ConfirmModal'
@@ -65,7 +66,8 @@ function ChatItem({ chat, activo, onClick }) {
 }
 
 // ─── Burbuja de mensaje ─────────────────────────────────────────────────────────
-function MediaAdjunto({ mediaId, tipo }) {
+// onAbrir({ url, tipo, nombre }) — dispara la previsualización en el ChatPanel padre
+function MediaAdjunto({ mediaId, tipo, nombre, onAbrir }) {
   const [url, setUrl] = useState(null)
   const [error, setError] = useState(false)
 
@@ -91,18 +93,34 @@ function MediaAdjunto({ mediaId, tipo }) {
   if (error) return <div className="wap-msg__adjunto-error">No se pudo cargar el archivo</div>
   if (!url) return <div className="wap-msg__adjunto-cargando">Cargando adjunto...</div>
 
-  if (tipo === 'image') return <img src={url} alt="Imagen enviada" className="wap-msg__imagen" />
+  if (tipo === 'image') {
+    return (
+      <img
+        src={url}
+        alt="Imagen enviada"
+        className="wap-msg__imagen"
+        onClick={() => onAbrir({ url, tipo, nombre })}
+      />
+    )
+  }
   if (tipo === 'audio') return <audio src={url} controls className="wap-msg__audio" />
   if (tipo === 'video') return <video src={url} controls className="wap-msg__video" />
+
+  // Documento (hoy solo llegan PDFs por el input de adjuntar) — click abre
+  // el visor en vez de forzar la descarga; el visor trae su propio botón.
   return (
-    <a href={url} download className="wap-msg__adjunto">
+    <a
+      href={url}
+      className="wap-msg__adjunto"
+      onClick={(e) => { e.preventDefault(); onAbrir({ url, tipo, nombre }) }}
+    >
       <span className="wap-msg__adjunto-icon">📎</span>
-      <span className="wap-msg__adjunto-nombre">Descargar archivo</span>
+      <span className="wap-msg__adjunto-nombre">{nombre || 'Ver archivo'}</span>
     </a>
   )
 }
 
-function MensajeBurbuja({ mensaje }) {
+function MensajeBurbuja({ mensaje, onAbrirMedia }) {
   const enviado = mensaje.direccion === 'enviado'
   const esMedia = ['image', 'audio', 'video', 'document'].includes(mensaje.tipo)
   return (
@@ -114,9 +132,50 @@ function MensajeBurbuja({ mensaje }) {
             <span className="wap-msg__adjunto-nombre">{mensaje.media_nombre}</span>
           </div>
         )}
-        {esMedia && mensaje.media_id && <MediaAdjunto mediaId={mensaje.media_id} tipo={mensaje.tipo} />}
+        {esMedia && mensaje.media_id && (
+          <MediaAdjunto
+            mediaId={mensaje.media_id}
+            tipo={mensaje.tipo}
+            nombre={mensaje.media_nombre}
+            onAbrir={onAbrirMedia}
+          />
+        )}
         {mensaje.texto && <div className="wap-msg__texto">{mensaje.texto}</div>}
         <span className="wap-msg__hora">{formatFecha(mensaje.fecha)}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Lightbox de previsualización (imágenes y PDFs) ────────────────────────────
+function LightboxModal({ media, onClose }) {
+  useEffect(() => {
+    if (!media) return
+    const handleKeyDown = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [media, onClose])
+
+  if (!media) return null
+  const esPdf = media.tipo === 'document'
+
+  return (
+    <div className="wap-lightbox-overlay" onClick={onClose}>
+      <div className="wap-lightbox" onClick={(e) => e.stopPropagation()}>
+        <div className="wap-lightbox__header">
+          <span className="wap-lightbox__nombre">{media.nombre || (esPdf ? 'Documento' : 'Imagen')}</span>
+          <div className="wap-lightbox__acciones">
+            <a href={media.url} download={media.nombre || true} className="wap-lightbox__descargar" title="Descargar">⬇</a>
+            <button className="wap-lightbox__cerrar" onClick={onClose} type="button" aria-label="Cerrar">✕</button>
+          </div>
+        </div>
+        <div className="wap-lightbox__cuerpo">
+          {esPdf ? (
+            <iframe src={media.url} title={media.nombre || 'Documento'} className="wap-lightbox__iframe" />
+          ) : (
+            <img src={media.url} alt={media.nombre || 'Imagen'} className="wap-lightbox__img" />
+          )}
+        </div>
       </div>
     </div>
   )
@@ -213,7 +272,9 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     loadingChats, loadingChat, loadingEnvio, error,
     cargarChats, abrirChat, enviar, enviarConAdjunto, cerrarChat, limpiarError,
     togglePin, toggleMute, vaciarConversacion, eliminarConversacion,
+    lineas, lineaSeleccionada, cargarLineas, seleccionarLinea,
   } = useWhatsapp()
+  const { user } = useAuth()
 
   const [terminoBusqueda, setTerminoBusqueda] = useState('')
   const [menuAbiertoId, setMenuAbiertoId] = useState(null)
@@ -223,10 +284,13 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const [errorEnvio, setErrorEnvio] = useState(null)
   const [progresoEnvio, setProgresoEnvio] = useState(null)
   const [vistaMovil, setVistaMovil] = useState('lista')
+  const [mediaPreview, setMediaPreview] = useState(null)
   const mensajesEndRef = useRef(null)
   const busquedaTimeoutRef = useRef(null)
   const primerRenderBusqueda = useRef(true)
   const menuHeaderRef = useRef(null)
+  const [menuLineaAbierto, setMenuLineaAbierto] = useState(false)
+  const menuLineaRef = useRef(null)
 
   useEffect(() => {
     if (!menuAbiertoId) return
@@ -239,7 +303,21 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     return () => document.removeEventListener('mousedown', handleClickFuera)
   }, [menuAbiertoId])
 
-  useEffect(() => { cargarChats() }, []) // eslint-disable-line
+  useEffect(() => {
+    if (!menuLineaAbierto) return
+    const handleClickFuera = (e) => {
+      if (menuLineaRef.current && !menuLineaRef.current.contains(e.target)) {
+        setMenuLineaAbierto(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [menuLineaAbierto])
+
+  // ── Líneas de WhatsApp disponibles (Harvey/Cimaverso) ─────────────────────
+  useEffect(() => { cargarLineas(user?.id) }, [user?.id]) // eslint-disable-line
+
+  useEffect(() => { cargarChats() }, [lineaSeleccionada]) // eslint-disable-line
 
   useEffect(() => {
     if (primerRenderBusqueda.current) {
@@ -402,12 +480,51 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
           <span className="wap-lista__titulo">Chats</span>
           {sinLeer > 0 && <span className="wap-lista__sin-leer">{sinLeer} sin leer</span>}
         </div>
-        <input
-          className="wap-lista__search"
-          placeholder="Buscar chats..."
-          value={terminoBusqueda}
-          onChange={(e) => setTerminoBusqueda(e.target.value)}
-        />
+        <div className="wap-lista__search-row">
+          <input
+            className="wap-lista__search"
+            placeholder="Buscar chats..."
+            value={terminoBusqueda}
+            onChange={(e) => setTerminoBusqueda(e.target.value)}
+          />
+          {lineas.length > 0 && (
+            <div className="wap-lineas" ref={menuLineaRef}>
+              <button
+                className="wap-lineas__btn"
+                onClick={() => setMenuLineaAbierto((v) => !v)}
+                type="button"
+                aria-label="Elegir línea de WhatsApp"
+                title={lineaSeleccionada?.nombre || 'Elegir línea'}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <rect x="2" y="3" width="12" height="3" rx="1" /><rect x="2" y="10" width="12" height="3" rx="1" />
+                </svg>
+                <span className="wap-lineas__dot" />
+              </button>
+              {menuLineaAbierto && (
+                <div className="wap-lineas__menu">
+                  <div className="wap-lineas__menu-titulo">Mostrar línea</div>
+                  {lineas.map((linea) => (
+                    <button
+                      key={linea.id}
+                      className={['wap-lineas__opcion', lineaSeleccionada?.id === linea.id ? 'wap-lineas__opcion--activa' : ''].filter(Boolean).join(' ')}
+                      onClick={() => { seleccionarLinea(linea, user?.id); setMenuLineaAbierto(false) }}
+                      type="button"
+                    >
+                      <span className="wap-lineas__punto" />
+                      {linea.nombre}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {lineaSeleccionada && (
+          <div className="wap-lista__linea-activa">
+            Mostrando: <strong>{lineaSeleccionada.nombre}</strong>
+          </div>
+        )}
         {loadingChats ? (
           <div className="wap-lista__empty">Cargando...</div>
         ) : chats.length === 0 ? (
@@ -469,7 +586,9 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
               ) : chatActivo.mensajes?.length === 0 ? (
                 <div className="wap-lista__empty">Aún no hay mensajes</div>
               ) : (
-                chatActivo.mensajes?.map((msg) => <MensajeBurbuja key={msg.id} mensaje={msg} />)
+                chatActivo.mensajes?.map((msg) => (
+                  <MensajeBurbuja key={msg.id} mensaje={msg} onAbrirMedia={setMediaPreview} />
+                ))
               )}
               <div ref={mensajesEndRef} />
             </div>
@@ -510,6 +629,8 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
           onCancelar={() => setConfirmacion(null)}
         />
       )}
+
+      <LightboxModal media={mediaPreview} onClose={() => setMediaPreview(null)} />
 
       {(error || errorEnvio) && (
         <div className="wap-error">
