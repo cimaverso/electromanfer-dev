@@ -29,7 +29,7 @@ from app.enums import RoleEnum
 # Cuando conectes la línea de Wilson, solo agrega una entrada aquí.
 LINEAS_WHATSAPP = [
     {"id": 7, "nombre": "Ferretería 2"},
-    # {"id": <pendiente>, "nombre": "<nombre>"},  # descomentar y completar al conectar
+    {"id": 8, "nombre": "Ferretería 1"},
 ]
 
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
