@@ -29,6 +29,10 @@ function formatFecha(iso) {
 // ─── Iconos ───────────────────────────────────────────────────────────────────
 function IconChat() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg> }
 function IconAdjuntar() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 8V5a4 4 0 118 0v6a2 2 0 01-4 0V6" /></svg> }
+function IconBuscar() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg> }
+function IconArriba() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg> }
+function IconAbajo() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg> }
+function IconCerrar() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> }
 function IconAtras() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg> }
 function IconEnviar() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> }
 function IconCotizacion() { return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="2" /><path d="M5 8h6M5 5h4M5 11h3" /></svg> }
@@ -133,11 +137,14 @@ function MediaAdjunto({ mediaId, tipo, nombre, onAbrir }) {
   )
 }
 
-function MensajeBurbuja({ mensaje, onAbrirMedia }) {
+function MensajeBurbuja({ mensaje, onAbrirMedia, termino = '', activo = false }) {
   const enviado = mensaje.direccion === 'enviado'
   const esMedia = ['image', 'audio', 'video', 'document'].includes(mensaje.tipo)
   return (
-    <div className={`wap-msg ${enviado ? 'wap-msg--enviado' : 'wap-msg--recibido'}`}>
+    <div
+      data-msg-id={mensaje.id}
+      className={`wap-msg ${enviado ? 'wap-msg--enviado' : 'wap-msg--recibido'}${activo ? ' wap-msg--match-activo' : ''}`}
+    >
       <div className="wap-msg__bubble">
         {mensaje.media_nombre && (
           <div className="wap-msg__adjunto">
@@ -153,7 +160,7 @@ function MensajeBurbuja({ mensaje, onAbrirMedia }) {
             onAbrir={onAbrirMedia}
           />
         )}
-        {mensaje.texto && mensaje.tipo !== 'audio' && <div className="wap-msg__texto">{mensaje.texto}</div>}
+        {mensaje.texto && mensaje.tipo !== 'audio' && <div className="wap-msg__texto">{termino ? resaltar(mensaje.texto, termino) : mensaje.texto}</div>}
         <span className="wap-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
     </div>
@@ -290,6 +297,10 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const { user } = useAuth()
 
   const [terminoBusqueda, setTerminoBusqueda] = useState('')
+  const [busquedaChatAbierta, setBusquedaChatAbierta] = useState(false)
+  const [terminoChat, setTerminoChat] = useState('')
+  const [indiceSel, setIndiceSel] = useState(null)
+  const mensajesRef = useRef(null)
   const [resultadosMensajes, setResultadosMensajes] = useState([])
   const [buscandoMensajes, setBuscandoMensajes] = useState(false)
   const [menuAbiertoId, setMenuAbiertoId] = useState(null)
@@ -339,6 +350,40 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     return chats.filter((c) => c.nombre.toLowerCase().includes(q) || c.telefono.includes(q))
   }, [chats, terminoBusqueda])
 
+  // ── Búsqueda dentro de la conversación abierta (sobre los mensajes cargados) ──
+  const terminoChatLimpio = terminoChat.trim()
+  const coincidenciasChat = useMemo(() => {
+    if (!terminoChatLimpio) return []
+    const q = terminoChatLimpio.toLowerCase()
+    return (chatActivo?.mensajes || [])
+      .filter((m) => m.tipo !== 'audio' && m.texto && m.texto.toLowerCase().includes(q))
+      .map((m) => m.id)
+  }, [chatActivo?.mensajes, terminoChatLimpio])
+  // Sin selección explícita, se parte del más reciente
+  const indiceActivo = coincidenciasChat.length === 0
+    ? -1
+    : indiceSel != null && indiceSel < coincidenciasChat.length ? indiceSel : coincidenciasChat.length - 1
+  const idCoincidenciaActiva = indiceActivo >= 0 ? coincidenciasChat[indiceActivo] : null
+
+  useEffect(() => {
+    if (idCoincidenciaActiva == null) return
+    mensajesRef.current
+      ?.querySelector(`[data-msg-id="${idCoincidenciaActiva}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [idCoincidenciaActiva])
+
+  const cerrarBusquedaChat = () => {
+    setBusquedaChatAbierta(false)
+    setTerminoChat('')
+    setIndiceSel(null)
+  }
+
+  const moverCoincidencia = (delta) => {
+    const total = coincidenciasChat.length
+    if (total === 0) return
+    setIndiceSel((indiceActivo + delta + total) % total)
+  }
+
   // Búsqueda híbrida: además de filtrar chats, busca la frase dentro de los mensajes
   useEffect(() => {
     const q = terminoBusqueda.trim()
@@ -365,8 +410,9 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   }, [chatInicialId]) // eslint-disable-line
 
   useEffect(() => {
+    if (terminoChatLimpio) return
     mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatActivo?.mensajes?.length])
+  }, [chatActivo?.mensajes?.length]) // eslint-disable-line
 
   const handleToggleMenu = (chatId) => setMenuAbiertoId((prev) => (prev === chatId ? null : chatId))
   const handleFijar = async (chatId) => { setMenuAbiertoId(null); await togglePin(chatId) }
@@ -403,11 +449,13 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   }
 
   const handleAbrirChat = (chat) => {
+    cerrarBusquedaChat()
     abrirChat(chat.id)
     setVistaMovil('chat')
   }
 
   const handleVolverALista = () => {
+    cerrarBusquedaChat()
     setVistaMovil('lista')
     cerrarChat()
   }
@@ -603,6 +651,14 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
                 <span className="wap-conversacion__nombre">{chatActivo.nombre}</span>
                 <span className="wap-conversacion__telefono">{chatActivo.telefono}</span>
               </div>
+              <button
+                className="wap-conversacion__menu-btn wap-conversacion__buscar-btn"
+                onClick={() => (busquedaChatAbierta ? cerrarBusquedaChat() : setBusquedaChatAbierta(true))}
+                type="button"
+                title="Buscar en la conversación"
+              >
+                <IconBuscar />
+              </button>
               <div className="wap-conversacion__menu-wrapper" ref={menuHeaderRef}>
                 <button
                   className="wap-conversacion__menu-btn"
@@ -631,14 +687,43 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
                 )}
               </div>
             </div>
-            <div className="wap-conversacion__mensajes">
+            {busquedaChatAbierta && (
+              <div className="wap-chatsearch">
+                <input
+                  className="wap-chatsearch__input"
+                  placeholder="Buscar en esta conversación..."
+                  value={terminoChat}
+                  autoFocus
+                  onChange={(e) => { setTerminoChat(e.target.value); setIndiceSel(null) }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') cerrarBusquedaChat()
+                    else if (e.key === 'Enter') { e.preventDefault(); moverCoincidencia(e.shiftKey ? 1 : -1) }
+                  }}
+                />
+                <span className="wap-chatsearch__count">
+                  {terminoChatLimpio
+                    ? coincidenciasChat.length === 0 ? 'Sin resultados' : `${indiceActivo + 1} de ${coincidenciasChat.length}`
+                    : ''}
+                </span>
+                <button type="button" className="wap-chatsearch__btn" onClick={() => moverCoincidencia(-1)} disabled={coincidenciasChat.length === 0} title="Anterior (más antiguo)"><IconArriba /></button>
+                <button type="button" className="wap-chatsearch__btn" onClick={() => moverCoincidencia(1)} disabled={coincidenciasChat.length === 0} title="Siguiente (más reciente)"><IconAbajo /></button>
+                <button type="button" className="wap-chatsearch__btn" onClick={cerrarBusquedaChat} title="Cerrar"><IconCerrar /></button>
+              </div>
+            )}
+            <div className="wap-conversacion__mensajes" ref={mensajesRef}>
               {loadingChat ? (
                 <div className="wap-lista__empty">Cargando mensajes...</div>
               ) : chatActivo.mensajes?.length === 0 ? (
                 <div className="wap-lista__empty">Aún no hay mensajes</div>
               ) : (
                 chatActivo.mensajes?.map((msg) => (
-                  <MensajeBurbuja key={msg.id} mensaje={msg} onAbrirMedia={setMediaPreview} />
+                  <MensajeBurbuja
+                    key={msg.id}
+                    mensaje={msg}
+                    onAbrirMedia={setMediaPreview}
+                    termino={terminoChatLimpio}
+                    activo={msg.id === idCoincidenciaActiva}
+                  />
                 ))
               )}
               <div ref={mensajesEndRef} />

@@ -249,9 +249,10 @@
 
 .wap-conversacion__menu-wrapper {
   position: relative;
-  margin-left: auto;
   flex-shrink: 0;
 }
+
+.wap-conversacion__buscar-btn { margin-left: auto; flex-shrink: 0; }
 
 .wap-conversacion__menu-btn {
   background: none;
@@ -777,3 +778,42 @@
 .wap-busqueda__count { font-size: var(--font-size-xs); font-weight: 400; color: var(--color-text-muted); }
 .wap-busqueda__snippet { font-size: var(--font-size-xs); color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wap-busqueda__snippet mark { background: #fde68a; color: inherit; border-radius: 2px; }
+
+/* ─── Búsqueda dentro de la conversación ────────────────────────────────── */
+.wap-chatsearch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.wap-chatsearch__input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+.wap-chatsearch__input:focus { border-color: var(--color-primary); }
+.wap-chatsearch__count { font-size: var(--font-size-xs); color: var(--color-text-muted); white-space: nowrap; }
+.wap-chatsearch__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.wap-chatsearch__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: var(--color-text); }
+.wap-chatsearch__btn:disabled { opacity: 0.4; cursor: default; }
+.wap-msg__texto mark { background: #fde68a; color: #111; border-radius: 2px; }
+.wap-msg--match-activo .wap-msg__bubble { outline: 2px solid var(--color-primary); }
