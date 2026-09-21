@@ -7,13 +7,11 @@ import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
 import ModalGuiaBuzon from '../cotizaciones/Buzon/ModalGuiaBuzon'
 import ConfirmModal from './ConfirmModal'
 import { buildTextoGuia } from '../../utils/guiaMensajes'
+import { formatTelefono, nombreVisible, sinNombreGuardado } from '../../utils/formatTelefono'
+import AvatarChat from './AvatarChat'
 import './ChatPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function iniciales(nombre = '') {
-  return nombre.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
-}
-
 function formatFecha(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -63,11 +61,11 @@ function ChatItem({ chat, activo, onClick }) {
       className={['wap-chat-item', activo ? 'wap-chat-item--activo' : '', chat.no_leidos > 0 ? 'wap-chat-item--no-leido' : ''].filter(Boolean).join(' ')}
       onClick={() => onClick(chat)}
     >
-      <div className="wap-avatar">{iniciales(chat.nombre)}</div>
+      <AvatarChat chat={chat} className="wap-avatar" />
       <div className="wap-chat-item__body">
         <div className="wap-chat-item__row">
           <span className="wap-chat-item__nombre">
-            {chat.is_pinned && <IconPin />} {chat.nombre}
+            {chat.is_pinned && <IconPin />} {nombreVisible(chat)}
           </span>
           <span className="wap-chat-item__fecha">{formatFecha(chat.fecha)}</span>
         </div>
@@ -646,10 +644,10 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
           <>
             <div className="wap-conversacion__header">
               <button className="wap-conversacion__volver" onClick={handleVolverALista} type="button"><IconAtras /></button>
-              <div className="wap-avatar">{iniciales(chatActivo.nombre)}</div>
+              <AvatarChat chat={chatActivo} className="wap-avatar" />
               <div className="wap-conversacion__info">
-                <span className="wap-conversacion__nombre">{chatActivo.nombre}</span>
-                <span className="wap-conversacion__telefono">{chatActivo.telefono}</span>
+                <span className="wap-conversacion__nombre">{nombreVisible(chatActivo)}</span>
+                {!sinNombreGuardado(chatActivo.nombre) && <span className="wap-conversacion__telefono">{formatTelefono(chatActivo.telefono)}</span>}
               </div>
               <button
                 className="wap-conversacion__menu-btn wap-conversacion__buscar-btn"

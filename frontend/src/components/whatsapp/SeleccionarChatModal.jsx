@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
+import { formatTelefono, nombreVisible, sinNombreGuardado } from '../../utils/formatTelefono'
+import AvatarChat from './AvatarChat'
 import './SeleccionarChatModal.css'
-
-function iniciales(nombre = '') {
-  return nombre.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
-}
 
 function formatFecha(iso) {
   if (!iso) return ''
@@ -65,13 +63,13 @@ export default function SeleccionarChatModal({ onSeleccionar, onClose, titulo = 
           ) : (
             chats.map((chat) => (
               <div key={chat.id} className="scm-chat-item" onClick={() => onSeleccionar(chat)}>
-                <div className="scm-avatar">{iniciales(chat.nombre)}</div>
+                <AvatarChat chat={chat} className="scm-avatar" />
                 <div className="scm-chat-item__body">
                   <div className="scm-chat-item__row">
-                    <span className="scm-chat-item__nombre">{chat.nombre}</span>
+                    <span className="scm-chat-item__nombre">{nombreVisible(chat)}</span>
                     <span className="scm-chat-item__fecha">{formatFecha(chat.fecha)}</span>
                   </div>
-                  <span className="scm-chat-item__telefono">{chat.telefono}</span>
+                  {!sinNombreGuardado(chat.nombre) && <span className="scm-chat-item__telefono">{formatTelefono(chat.telefono)}</span>}
                 </div>
               </div>
             ))

@@ -61,7 +61,7 @@ export async function getChat(chatId) {
   return {
     id: data.conversation_id,
     telefono: data.contact_phone?.phone || data.contact?.whatsapp_number || '',
-    nombre: data.contact?.name || 'Sin nombre',
+    nombre: data.contact?.name || data.contact_phone?.phone || data.contact?.whatsapp_number || 'Sin nombre',
     mensajes: data.messages.map((m) => ({
       id: m.id,
       direccion: m.direction === 'inbound' ? 'recibido' : 'enviado',
