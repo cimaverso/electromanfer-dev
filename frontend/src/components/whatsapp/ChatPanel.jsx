@@ -178,7 +178,12 @@ function MensajeBurbuja({ mensaje, onAbrirMedia, termino = '', activo = false })
   const esMedia = ['image', 'audio', 'video', 'document'].includes(mensaje.tipo)
   const esTemplate = mensaje.tipo === 'template'
   // Si el "texto" es solo el nombre del archivo, no se repite bajo la vista previa
-  const soloNombre = esMedia && mensaje.texto && (mensaje.texto === mensaje.media_nombre || (/^\S+\.\w{2,5}$/.test(mensaje.texto) || (mensaje.tipo === 'document' && /\.\w{2,5}$/.test(mensaje.texto))))
+  // Mensajes viejos guardaban el nombre del archivo como texto: se oculta para no repetirlo.
+  // Con media_filename (CimAPI nuevo) el texto es el caption real y siempre se muestra.
+  const soloNombre = esMedia && mensaje.texto && (
+    mensaje.texto === mensaje.media_nombre ||
+    (!mensaje.media_nombre && (/^\S+\.\w{2,5}$/.test(mensaje.texto) || (mensaje.tipo === 'document' && /\.\w{2,5}$/.test(mensaje.texto))))
+  )
   const textoVisible = mensaje.tipo === 'audio' || soloNombre ? '' : mensaje.texto
   return (
     <div

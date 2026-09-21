@@ -68,6 +68,7 @@ export async function getChat(chatId) {
       texto: m.content || '',
       tipo: m.type,
       media_id: m.media_id,
+      media_nombre: m.media_filename || null,
       plantilla: m.template_components || null,
       fecha: m.created_at,
     })),
