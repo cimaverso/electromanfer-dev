@@ -44,3 +44,19 @@ class ActualizarFlagsRequest(BaseModel):
     is_muted: Optional[bool] = None
     is_archived: Optional[bool] = None
     is_priority: Optional[bool] = None
+
+
+class CrearPlantillaRequest(BaseModel):
+    name: str
+    language: str = "es"
+    category: str  # MARKETING | UTILITY
+    components: list[dict[str, Any]]
+
+
+class EnviarPlantillaRequest(BaseModel):
+    to: str
+    template_name: str
+    language: str = "es"
+    components: Optional[list[dict[str, Any]]] = None
+    preview_text: Optional[str] = None
+    conversation_id: Optional[int] = None

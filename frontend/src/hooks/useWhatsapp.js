@@ -6,6 +6,7 @@ import {
   buscarOCrearChatPorTelefono,
   enviarMensaje,
   enviarConAdjunto as enviarConAdjuntoApi,
+  enviarPlantilla as enviarPlantillaApi,
   marcarLeido,
   actualizarFlagsChat,
   vaciarChat,
@@ -145,6 +146,27 @@ export function useWhatsapp() {
     }
   }, [])
 
+  // ─── Enviar plantilla ────────────────────────────────────────────────────
+  const enviarPlantilla = useCallback(async (chatId, datos) => {
+    setLoadingEnvio(true)
+    setError(null)
+    try {
+      const data = await enviarPlantillaApi(chatId, datos)
+      if (data?.mensaje) {
+        setChatActivo((prev) =>
+          prev ? { ...prev, mensajes: [...(prev.mensajes || []), data.mensaje] } : prev
+        )
+      }
+      return { success: true, data }
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Error al enviar la plantilla.'
+      setError(msg)
+      return { success: false, error: msg }
+    } finally {
+      setLoadingEnvio(false)
+    }
+  }, [])
+
   // ─── Fijar / desfijar ───────────────────────────────────────────────────
   const togglePin = useCallback(async (chatId) => {
     const actual = chats.find((c) => c.id === chatId)
@@ -260,6 +282,7 @@ export function useWhatsapp() {
     abrirOCrearPorTelefono,
     enviar,
     enviarConAdjunto,
+    enviarPlantilla,
     cerrarChat,
     limpiarError,
     togglePin,

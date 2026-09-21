@@ -11,6 +11,8 @@ from app.integrations.cimasuite.schemas import (
     MensajesResponse,
     EnviarTextoRequest,
     ActualizarFlagsRequest,
+    CrearPlantillaRequest,
+    EnviarPlantillaRequest,
 )
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
@@ -64,6 +66,14 @@ def _phone_number_id_para(token: TokenData, db: Session, linea_id: Optional[int]
     if not linea:
         raise HTTPException(status_code=400, detail="Línea de WhatsApp no válida")
     return str(linea["id"])
+
+
+def _linea_para_plantillas(token: TokenData, db: Session, linea_id: Optional[int]) -> int:
+    """Las plantillas viven a nivel de línea: siempre se necesita una concreta."""
+    phone_number_id = _phone_number_id_para(token, db, linea_id)
+    if phone_number_id is None:
+        raise HTTPException(status_code=400, detail="Selecciona una línea de WhatsApp")
+    return int(phone_number_id)
 
 
 @router.post("/onboarding/connect", response_model=ConectarNumeroResponse)
@@ -203,3 +213,43 @@ def eliminar_conversacion(
     _: TokenData = Depends(require_auth),
 ):
     return WhatsappService.eliminar_conversacion(conversation_id)
+
+
+# ─── Plantillas ──────────────────────────────────────────────────────────────
+
+@router.get("/plantillas")
+def listar_plantillas(
+    linea_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    return WhatsappService.listar_plantillas(_linea_para_plantillas(token, db, linea_id))
+
+
+@router.post("/plantillas", status_code=201)
+def crear_plantilla(
+    body: CrearPlantillaRequest,
+    linea_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    return WhatsappService.crear_plantilla(
+        _linea_para_plantillas(token, db, linea_id), body.model_dump()
+    )
+
+
+@router.post("/plantillas/sincronizar")
+def sincronizar_plantillas(
+    linea_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    return WhatsappService.sincronizar_plantillas(_linea_para_plantillas(token, db, linea_id))
+
+
+@router.post("/mensajes/plantilla")
+def enviar_plantilla(
+    body: EnviarPlantillaRequest,
+    _: TokenData = Depends(require_auth),
+):
+    return WhatsappService.enviar_plantilla(**body.model_dump())

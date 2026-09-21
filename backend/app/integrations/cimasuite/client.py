@@ -179,3 +179,70 @@ class WhatsappService:
             detalle = respuesta.json().get("detail", "Error eliminando la conversación en CimAPI")
             raise HTTPException(status_code=respuesta.status_code, detail=detalle)
         return {"ok": True}
+
+    # ─── Plantillas ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _json_o_error(respuesta, mensaje_por_defecto: str, ok=(200, 201)):
+        if respuesta.status_code not in ok:
+            try:
+                detalle = respuesta.json().get("detail", mensaje_por_defecto)
+            except ValueError:
+                detalle = mensaje_por_defecto
+            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        return respuesta.json()
+
+    @staticmethod
+    def listar_plantillas(phone_number_id: int):
+        with httpx.Client(timeout=30) as client:
+            respuesta = client.get(
+                f"{settings.CIMAPI_BASE_URL}/templates",
+                headers=WhatsappService._headers(),
+                params={"phone_number_id": phone_number_id},
+            )
+        return WhatsappService._json_o_error(respuesta, "Error obteniendo plantillas de CimAPI")
+
+    @staticmethod
+    def crear_plantilla(phone_number_id: int, payload: dict):
+        with httpx.Client(timeout=60) as client:
+            respuesta = client.post(
+                f"{settings.CIMAPI_BASE_URL}/templates/submit",
+                headers={**WhatsappService._headers(), "Content-Type": "application/json"},
+                params={"phone_number_id": phone_number_id},
+                json=payload,
+            )
+        return WhatsappService._json_o_error(respuesta, "Error creando la plantilla en CimAPI")
+
+    @staticmethod
+    def sincronizar_plantillas(phone_number_id: int):
+        with httpx.Client(timeout=60) as client:
+            respuesta = client.post(
+                f"{settings.CIMAPI_BASE_URL}/templates/sync",
+                headers=WhatsappService._headers(),
+                params={"phone_number_id": phone_number_id},
+            )
+        return WhatsappService._json_o_error(respuesta, "Error sincronizando plantillas con CimAPI")
+
+    @staticmethod
+    def enviar_plantilla(
+        to: str,
+        template_name: str,
+        language: str,
+        components: Optional[list] = None,
+        preview_text: Optional[str] = None,
+        conversation_id: Optional[int] = None,
+    ):
+        with httpx.Client(timeout=30) as client:
+            respuesta = client.post(
+                f"{settings.CIMAPI_BASE_URL}/messages/template",
+                headers={**WhatsappService._headers(), "Content-Type": "application/json"},
+                json={
+                    "to": to,
+                    "template_name": template_name,
+                    "language": language,
+                    "components": components,
+                    "preview_text": preview_text,
+                    "conversation_id": conversation_id,
+                },
+            )
+        return WhatsappService._json_o_error(respuesta, "Error enviando la plantilla en CimAPI")

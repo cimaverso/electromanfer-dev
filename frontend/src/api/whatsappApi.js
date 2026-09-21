@@ -175,3 +175,51 @@ export async function eliminarChat(chatId) {
   await axiosClient.delete(`/whatsapp/conversaciones/${chatId}`)
   return { ok: true }
 }
+
+// ─── Plantillas ───────────────────────────────────────────────────────────────
+// Viven a nivel de línea. GERENCIA/ADMIN pasan la línea elegida; el backend
+// ignora `lineaId` para vendedores (usa su línea fija).
+const paramsLinea = (lineaId) => (lineaId != null ? { linea_id: lineaId } : {})
+
+// → [{id, name, language, category, status, components}]
+export async function listarPlantillas(lineaId) {
+  const { data } = await axiosClient.get('/whatsapp/plantillas', { params: paramsLinea(lineaId) })
+  return data
+}
+
+export async function crearPlantilla(lineaId, { name, language, category, components }) {
+  const { data } = await axiosClient.post(
+    '/whatsapp/plantillas',
+    { name, language, category, components },
+    { params: paramsLinea(lineaId) }
+  )
+  return data
+}
+
+// Trae de Meta el estado actualizado (aprobada / en revisión / rechazada).
+export async function sincronizarPlantillas(lineaId) {
+  const { data } = await axiosClient.post('/whatsapp/plantillas/sincronizar', null, { params: paramsLinea(lineaId) })
+  return data
+}
+
+// → { mensaje: {id, direccion, texto, tipo, fecha} }
+export async function enviarPlantilla(chatId, { templateName, language, components, previewText }) {
+  const chat = await getChat(chatId)
+  const { data } = await axiosClient.post('/whatsapp/mensajes/plantilla', {
+    to: chat.telefono,
+    template_name: templateName,
+    language,
+    components: components?.length ? components : null,
+    preview_text: previewText,
+    conversation_id: chatId,
+  })
+  return {
+    mensaje: {
+      id: data.message?.id ?? `m_${Date.now()}`,
+      direccion: 'enviado',
+      texto: data.message?.content ?? previewText ?? templateName,
+      tipo: data.message?.type ?? 'template',
+      fecha: data.message?.created_at ?? new Date().toISOString(),
+    },
+  }
+}

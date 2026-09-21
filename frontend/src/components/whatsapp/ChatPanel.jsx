@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
 import ModalGuiaBuzon from '../cotizaciones/Buzon/ModalGuiaBuzon'
 import ConfirmModal from './ConfirmModal'
+import PlantillasModal from './PlantillasModal'
 import { buildTextoGuia } from '../../utils/guiaMensajes'
 import { formatTelefono, nombreVisible, sinNombreGuardado } from '../../utils/formatTelefono'
 import AvatarChat from './AvatarChat'
@@ -200,7 +201,7 @@ function LightboxModal({ media, onClose }) {
 }
 
 // ─── Barra de envío ──────────────────────────────────────────────────────────
-function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, loading, progreso }) {
+function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, onPlantillas, loading, progreso }) {
   const [texto, setTexto] = useState('')
   const fileInputRef = useRef(null)
   const audioInputRef = useRef(null)
@@ -235,6 +236,9 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
           </button>
           <button className="wap-btn wap-btn--guia" onClick={onEnviarGuia} type="button">
             <IconGuia /> Guía
+          </button>
+          <button className="wap-btn wap-btn--ghost" onClick={onPlantillas} type="button">
+            Plantillas
           </button>
           <button className="wap-btn wap-btn--ghost" onClick={() => fileInputRef.current?.click()} type="button">
             <IconAdjuntar /> Adjuntar
@@ -288,7 +292,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const {
     chats, chatActivo,
     loadingChats, loadingChat, loadingEnvio, error,
-    cargarChats, abrirChat, enviar, enviarConAdjunto, cerrarChat, limpiarError,
+    cargarChats, abrirChat, enviar, enviarConAdjunto, enviarPlantilla, cerrarChat, limpiarError,
     togglePin, toggleMute, vaciarConversacion, eliminarConversacion,
     lineas, lineaSeleccionada, cargarLineas, seleccionarLinea,
   } = useWhatsapp()
@@ -305,6 +309,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const [confirmacion, setConfirmacion] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
   const [modalGuia, setModalGuia] = useState(false)
+  const [modalPlantillas, setModalPlantillas] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState(null)
   const [progresoEnvio, setProgresoEnvio] = useState(null)
   const [vistaMovil, setVistaMovil] = useState('lista')
@@ -731,6 +736,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
               onAdjuntar={handleAdjuntar}
               onGenerarCotizacion={() => setModalCotizacion(true)}
               onEnviarGuia={() => setModalGuia(true)}
+              onPlantillas={() => setModalPlantillas(true)}
               loading={loadingEnvio}
               progreso={progresoEnvio}
             />
@@ -743,6 +749,15 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
           hilo={{ remitente: chatActivo.nombre, telefono: chatActivo.telefono }}
           onClose={() => setModalCotizacion(false)}
           onCotizacionGenerada={handleCotizacionGenerada}
+        />
+      )}
+
+      {modalPlantillas && chatActivo && (
+        <PlantillasModal
+          lineaId={lineaSeleccionada?.id}
+          lineaNombre={lineaSeleccionada?.nombre}
+          onEnviar={(datos) => enviarPlantilla(chatActivo.id, datos)}
+          onClose={() => setModalPlantillas(false)}
         />
       )}
 
