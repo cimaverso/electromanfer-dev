@@ -26,6 +26,9 @@ export function useWhatsapp() {
 
   const pollTimerRef = useRef(null)
   const chatActivoIdRef = useRef(null)
+  // Últimos filtros (búsqueda + línea) usados para la lista: el polling los reutiliza
+  // para no pisar el resultado filtrado con la lista completa.
+  const filtrosListaRef = useRef({})
 
   // ─── Líneas de WhatsApp disponibles (selector — GERENCIA/ADMINISTRADOR) ──
   // Un VENDEDOR recibe 403 aquí (ya tiene su línea fija) — se ignora en silencio.
@@ -55,6 +58,7 @@ export function useWhatsapp() {
     setError(null)
     try {
       const conLinea = lineaSeleccionada ? { ...filtros, linea_id: lineaSeleccionada.id } : filtros
+      filtrosListaRef.current = conLinea
       const { chats: lista } = await listarChats(conLinea)
       setChats(lista)
     } catch {
@@ -211,7 +215,7 @@ export function useWhatsapp() {
   useEffect(() => {
     pollTimerRef.current = setInterval(async () => {
       try {
-        const { chats: listaNueva } = await listarChats()
+        const { chats: listaNueva } = await listarChats(filtrosListaRef.current)
 
         setChats((prevChats) => listaNueva.map((nuevo) => {
           const anterior = prevChats.find((c) => c.id === nuevo.id)

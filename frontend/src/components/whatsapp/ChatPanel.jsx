@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import axiosClient from '../../api/axiosClient'
 import { buscarGlobal } from '../../api/whatsappApi'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
@@ -281,7 +281,7 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
 // onChatMontado: () => void — callback para limpiar el chatInicialId en el padre
 export default function ChatPanel({ chatInicialId = null, onChatMontado = null }) {
   const {
-    chats, chatActivo, sinLeer,
+    chats, chatActivo,
     loadingChats, loadingChat, loadingEnvio, error,
     cargarChats, abrirChat, enviar, enviarConAdjunto, cerrarChat, limpiarError,
     togglePin, toggleMute, vaciarConversacion, eliminarConversacion,
@@ -301,8 +301,6 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const [vistaMovil, setVistaMovil] = useState('lista')
   const [mediaPreview, setMediaPreview] = useState(null)
   const mensajesEndRef = useRef(null)
-  const busquedaTimeoutRef = useRef(null)
-  const primerRenderBusqueda = useRef(true)
   const menuHeaderRef = useRef(null)
   const [menuLineaAbierto, setMenuLineaAbierto] = useState(false)
   const menuLineaRef = useRef(null)
@@ -334,17 +332,12 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
 
   useEffect(() => { cargarChats() }, [lineaSeleccionada]) // eslint-disable-line
 
-  useEffect(() => {
-    if (primerRenderBusqueda.current) {
-      primerRenderBusqueda.current = false
-      return
-    }
-    if (busquedaTimeoutRef.current) clearTimeout(busquedaTimeoutRef.current)
-    busquedaTimeoutRef.current = setTimeout(() => {
-      cargarChats(terminoBusqueda ? { q: terminoBusqueda } : {})
-    }, 400)
-    return () => clearTimeout(busquedaTimeoutRef.current)
-  }, [terminoBusqueda]) // eslint-disable-line
+  // Los chats ya están en memoria: se filtran al instante, sin volver al servidor
+  const chatsVisibles = useMemo(() => {
+    const q = terminoBusqueda.trim().toLowerCase()
+    if (!q) return chats
+    return chats.filter((c) => c.nombre.toLowerCase().includes(q) || c.telefono.includes(q))
+  }, [chats, terminoBusqueda])
 
   // Búsqueda híbrida: además de filtrar chats, busca la frase dentro de los mensajes
   useEffect(() => {
@@ -361,7 +354,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
       } finally {
         if (!controller.signal.aborted) setBuscandoMensajes(false)
       }
-    }, 400)
+    }, 300)
     return () => { clearTimeout(t); controller.abort() }
   }, [terminoBusqueda, lineaSeleccionada])
 
@@ -512,7 +505,6 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
       <div className="wap-lista">
         <div className="wap-lista__header">
           <span className="wap-lista__titulo">Chats</span>
-          {sinLeer > 0 && <span className="wap-lista__sin-leer">{sinLeer} sin leer</span>}
         </div>
         <div className="wap-lista__search-row">
           <input
@@ -561,10 +553,12 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
         )}
         {loadingChats ? (
           <div className="wap-lista__empty">Cargando...</div>
-        ) : chats.length === 0 ? (
-          <div className="wap-lista__empty">Sin conversaciones</div>
+        ) : chatsVisibles.length === 0 ? (
+          !(terminoBusqueda.trim().length >= 2 && (buscandoMensajes || resultadosMensajes.length > 0)) && (
+            <div className="wap-lista__empty">Sin conversaciones</div>
+          )
         ) : (
-          chats.map((chat) => (
+          chatsVisibles.map((chat) => (
             <ChatItem key={chat.id} chat={chat} activo={chatActivo?.id === chat.id} onClick={handleAbrirChat} />
           ))
         )}
