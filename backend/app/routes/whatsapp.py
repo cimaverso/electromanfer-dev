@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -84,6 +84,19 @@ def listar_conversaciones(
 ):
     phone_number_id = _phone_number_id_para(token, db, linea_id)
     return WhatsappService.listar_conversaciones(page, limit, phone_number_id)
+
+
+@router.get("/buscar")
+def buscar(
+    q: str = Query(..., min_length=2, max_length=100),
+    limit: int = Query(20, ge=1, le=25),
+    linea_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    """Búsqueda híbrida (contactos + texto de mensajes) acotada a la línea del usuario."""
+    phone_number_id = _phone_number_id_para(token, db, linea_id)
+    return WhatsappService.buscar(q, limit, phone_number_id)
 
 
 @router.get("/lineas")

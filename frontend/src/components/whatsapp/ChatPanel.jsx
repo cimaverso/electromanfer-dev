@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import axiosClient from '../../api/axiosClient'
+import { buscarGlobal } from '../../api/whatsappApi'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
 import { useAuth } from '../../hooks/useAuth'
 import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
@@ -40,6 +41,18 @@ function IconEraser() { return <svg width="14" height="14" viewBox="0 0 16 16" f
 function IconTrash() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h12" /><path d="M5 4V2h6v2" /><path d="M4 4l1 10h6l1-10" /></svg> }
 
 // ─── Item de la lista de chats ─────────────────────────────────────────────────
+function resaltar(texto, termino) {
+  const i = texto.toLowerCase().indexOf(termino.toLowerCase())
+  if (i < 0) return texto
+  return (
+    <>
+      {texto.slice(0, i)}
+      <mark>{texto.slice(i, i + termino.length)}</mark>
+      {texto.slice(i + termino.length)}
+    </>
+  )
+}
+
 function ChatItem({ chat, activo, onClick }) {
   return (
     <div
@@ -277,6 +290,8 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const { user } = useAuth()
 
   const [terminoBusqueda, setTerminoBusqueda] = useState('')
+  const [resultadosMensajes, setResultadosMensajes] = useState([])
+  const [buscandoMensajes, setBuscandoMensajes] = useState(false)
   const [menuAbiertoId, setMenuAbiertoId] = useState(null)
   const [confirmacion, setConfirmacion] = useState(null)
   const [modalCotizacion, setModalCotizacion] = useState(false)
@@ -330,6 +345,25 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     }, 400)
     return () => clearTimeout(busquedaTimeoutRef.current)
   }, [terminoBusqueda]) // eslint-disable-line
+
+  // Búsqueda híbrida: además de filtrar chats, busca la frase dentro de los mensajes
+  useEffect(() => {
+    const q = terminoBusqueda.trim()
+    if (q.length < 2) return
+    const controller = new AbortController()
+    const t = setTimeout(async () => {
+      setBuscandoMensajes(true)
+      try {
+        const { mensajes } = await buscarGlobal(q, lineaSeleccionada?.id, controller.signal)
+        setResultadosMensajes(mensajes)
+      } catch (e) {
+        if (e?.code !== 'ERR_CANCELED') setResultadosMensajes([])
+      } finally {
+        if (!controller.signal.aborted) setBuscandoMensajes(false)
+      }
+    }, 400)
+    return () => { clearTimeout(t); controller.abort() }
+  }, [terminoBusqueda, lineaSeleccionada])
 
   useEffect(() => {
     if (!chatInicialId) return
@@ -533,6 +567,29 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
           chats.map((chat) => (
             <ChatItem key={chat.id} chat={chat} activo={chatActivo?.id === chat.id} onClick={handleAbrirChat} />
           ))
+        )}
+        {terminoBusqueda.trim().length >= 2 && (buscandoMensajes || resultadosMensajes.length > 0) && (
+          <div className="wap-busqueda">
+            <div className="wap-busqueda__titulo">Mensajes</div>
+            {buscandoMensajes && resultadosMensajes.length === 0 ? (
+              <div className="wap-lista__empty">Buscando...</div>
+            ) : (
+              resultadosMensajes.map((m) => (
+                <button
+                  key={m.message_id}
+                  type="button"
+                  className="wap-busqueda__item"
+                  onClick={() => handleAbrirChat({ id: m.conversation_id })}
+                >
+                  <span className="wap-busqueda__nombre">
+                    {m.nombre}
+                    {m.matches > 1 && <span className="wap-busqueda__count">{m.matches} coincidencias</span>}
+                  </span>
+                  <span className="wap-busqueda__snippet">{resaltar(m.snippet, terminoBusqueda.trim())}</span>
+                </button>
+              ))
+            )}
+          </div>
         )}
       </div>
 

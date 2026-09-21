@@ -45,6 +45,23 @@ class WhatsappService:
         return respuesta.json()
 
     @staticmethod
+    def buscar(q: str, limit: int = 8, phone_number_id: Optional[str] = None):
+        """Búsqueda híbrida de CimAPI: contactos + contenido de mensajes."""
+        params = {"q": q, "limit": limit}
+        if phone_number_id is not None:
+            params["phone_number_id"] = phone_number_id
+        with httpx.Client(timeout=30) as client:
+            respuesta = client.get(
+                f"{settings.CIMAPI_BASE_URL}/contacts/search",
+                headers=WhatsappService._headers(),
+                params=params,
+            )
+        if respuesta.status_code != 200:
+            detalle = respuesta.json().get("detail", "Error buscando en CimAPI")
+            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        return respuesta.json()
+
+    @staticmethod
     def obtener_mensajes(conversation_id: int, page: int = 1, limit: int = 50):
         with httpx.Client(timeout=30) as client:
             respuesta = client.get(

@@ -32,6 +32,26 @@ export async function listarChats(filtros = {}) {
   return { chats: lista }
 }
 
+// ─── Búsqueda híbrida (contactos + texto de mensajes) ────────────────────────
+// → { contactos: [...], mensajes: [{conversation_id, snippet, matches, fecha, nombre, telefono}] }
+export async function buscarGlobal(q, lineaId, signal) {
+  const params = { q }
+  if (lineaId != null) params.linea_id = lineaId
+  const { data } = await axiosClient.get('/whatsapp/buscar', { params, signal })
+  return {
+    contactos: data.contacts || [],
+    mensajes: (data.messages || []).map((m) => ({
+      conversation_id: m.conversation_id,
+      message_id: m.message_id,
+      snippet: m.snippet,
+      matches: m.matches,
+      fecha: m.created_at,
+      nombre: m.contact?.name || m.contact?.whatsapp_number || 'Sin nombre',
+      telefono: m.contact?.whatsapp_number || '',
+    })),
+  }
+}
+
 // ─── Abrir un chat (con sus mensajes) ────────────────────────────────────────
 export async function getChat(chatId) {
   const { data } = await axiosClient.get(`/whatsapp/conversaciones/${chatId}/mensajes`, {

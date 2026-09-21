@@ -750,3 +750,30 @@
   background: var(--color-primary);
   flex-shrink: 0;
 }
+
+/* ─── Resultados de búsqueda en mensajes ────────────────────────────────── */
+.wap-busqueda { border-top: 1px solid var(--color-border); }
+.wap-busqueda__titulo {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.wap-busqueda__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+}
+.wap-busqueda__item:hover { background: var(--color-surface-hover, rgba(0, 0, 0, 0.04)); }
+.wap-busqueda__nombre { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
+.wap-busqueda__count { font-size: var(--font-size-xs); font-weight: 400; color: var(--color-text-muted); }
+.wap-busqueda__snippet { font-size: var(--font-size-xs); color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wap-busqueda__snippet mark { background: #fde68a; color: inherit; border-radius: 2px; }
