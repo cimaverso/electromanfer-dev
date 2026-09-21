@@ -83,12 +83,26 @@ function ChatItem({ chat, activo, onClick }) {
 
 // ─── Burbuja de mensaje ─────────────────────────────────────────────────────────
 // onAbrir({ url, tipo, nombre }) — dispara la previsualización en el ChatPanel padre
-function MediaAdjunto({ mediaId, tipo, nombre, onAbrir }) {
-  const [url, setUrl] = useState(null)
+// Etiqueta y color del ícono según la extensión del archivo
+function iconoDocumento(nombre = '') {
+  const ext = (nombre.match(/\.(\w{2,5})$/)?.[1] || '').toLowerCase()
+  if (ext === 'pdf') return { etiqueta: 'PDF', color: '#d9534f' }
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return { etiqueta: 'XLS', color: '#1f8f4e' }
+  if (['doc', 'docx'].includes(ext)) return { etiqueta: 'DOC', color: '#2b6cb0' }
+  if (['ppt', 'pptx'].includes(ext)) return { etiqueta: 'PPT', color: '#d9822b' }
+  if (['zip', 'rar', '7z'].includes(ext)) return { etiqueta: 'ZIP', color: '#7c5cbf' }
+  return { etiqueta: ext ? ext.toUpperCase().slice(0, 4) : 'ARCH', color: '#6b7280' }
+}
+
+function MediaAdjunto({ mediaId, mediaLocal, tipo, nombre, onAbrir }) {
+  const [urlRemota, setUrl] = useState(null)
   const [error, setError] = useState(false)
+  // Recién enviado desde la app: se usa el archivo local (sin descargar nada)
+  const urlLocal = useMemo(() => (mediaLocal ? URL.createObjectURL(mediaLocal) : null), [mediaLocal])
+  const url = urlLocal || urlRemota
 
   useEffect(() => {
-    if (!mediaId) return
+    if (mediaLocal || !mediaId) return
     let objectUrl = null
     let cancelado = false
 
@@ -104,7 +118,7 @@ function MediaAdjunto({ mediaId, tipo, nombre, onAbrir }) {
       cancelado = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [mediaId])
+  }, [mediaId, mediaLocal])
 
   if (error) return <div className="wap-msg__adjunto-error">No se pudo cargar el archivo</div>
   if (!url) return <div className="wap-msg__adjunto-cargando">Cargando adjunto...</div>
@@ -122,44 +136,69 @@ function MediaAdjunto({ mediaId, tipo, nombre, onAbrir }) {
   if (tipo === 'audio') return <audio src={url} controls className="wap-msg__audio" />
   if (tipo === 'video') return <video src={url} controls className="wap-msg__video" />
 
+  const icono = iconoDocumento(nombre)
+  const esPdf = icono.etiqueta === 'PDF'
   // Documento (hoy solo llegan PDFs por el input de adjuntar) — click abre
   // el visor en vez de forzar la descarga; el visor trae su propio botón.
   return (
     <a
       href={url}
       className="wap-msg__adjunto"
-      onClick={(e) => { e.preventDefault(); onAbrir({ url, tipo, nombre }) }}
+      // Solo el PDF se previsualiza; Excel/Word/etc. se descargan
+      download={esPdf ? undefined : (nombre || true)}
+      onClick={esPdf ? (e) => { e.preventDefault(); onAbrir({ url, tipo, nombre }) } : undefined}
     >
-      <span className="wap-msg__adjunto-icon">📎</span>
+      <span className="wap-msg__doc-icon" style={{ background: icono.color }}>{icono.etiqueta}</span>
       <span className="wap-msg__adjunto-nombre">{nombre || 'Ver archivo'}</span>
+      <span className="wap-msg__doc-accion">{esPdf ? 'Ver' : 'Descargar'}</span>
     </a>
+  )
+}
+
+// Plantilla: usa las partes estructuradas de CimAPI; si no vienen, cae al texto plano
+function PlantillaContenido({ plantilla, texto, termino }) {
+  const res = (t) => (termino ? resaltar(t, termino) : t)
+  const { header, body, footer, buttons = [] } = plantilla || { body: texto }
+  return (
+    <>
+      {header && <div className="wap-msg__texto wap-msg__plantilla-header">{res(header)}</div>}
+      {body && <div className="wap-msg__texto">{res(body)}</div>}
+      {footer && <div className="wap-msg__plantilla-pie">{footer}</div>}
+      {buttons.length > 0 && (
+        <div className="wap-msg__plantilla-botones">
+          {buttons.map((b, i) => <div key={i} className="wap-msg__plantilla-boton">{b.text}</div>)}
+        </div>
+      )}
+    </>
   )
 }
 
 function MensajeBurbuja({ mensaje, onAbrirMedia, termino = '', activo = false }) {
   const enviado = mensaje.direccion === 'enviado'
   const esMedia = ['image', 'audio', 'video', 'document'].includes(mensaje.tipo)
+  const esTemplate = mensaje.tipo === 'template'
+  // Si el "texto" es solo el nombre del archivo, no se repite bajo la vista previa
+  const soloNombre = esMedia && mensaje.texto && (mensaje.texto === mensaje.media_nombre || (/^\S+\.\w{2,5}$/.test(mensaje.texto) || (mensaje.tipo === 'document' && /\.\w{2,5}$/.test(mensaje.texto))))
+  const textoVisible = mensaje.tipo === 'audio' || soloNombre ? '' : mensaje.texto
   return (
     <div
       data-msg-id={mensaje.id}
-      className={`wap-msg ${enviado ? 'wap-msg--enviado' : 'wap-msg--recibido'}${activo ? ' wap-msg--match-activo' : ''}`}
+      className={`wap-msg${esTemplate ? ' wap-msg--plantilla' : ''} ${enviado ? 'wap-msg--enviado' : 'wap-msg--recibido'}${activo ? ' wap-msg--match-activo' : ''}`}
     >
       <div className="wap-msg__bubble">
-        {mensaje.media_nombre && (
-          <div className="wap-msg__adjunto">
-            <span className="wap-msg__adjunto-icon">📎</span>
-            <span className="wap-msg__adjunto-nombre">{mensaje.media_nombre}</span>
-          </div>
-        )}
-        {esMedia && mensaje.media_id && (
+        {esTemplate && <div className="wap-msg__plantilla-tag">Plantilla</div>}
+        {esMedia && (mensaje.media_id || mensaje.media_local) && (
           <MediaAdjunto
             mediaId={mensaje.media_id}
+            mediaLocal={mensaje.media_local}
             tipo={mensaje.tipo}
-            nombre={mensaje.media_nombre}
+            nombre={mensaje.media_nombre || mensaje.texto}
             onAbrir={onAbrirMedia}
           />
         )}
-        {mensaje.texto && mensaje.tipo !== 'audio' && <div className="wap-msg__texto">{termino ? resaltar(mensaje.texto, termino) : mensaje.texto}</div>}
+        {esTemplate
+          ? <PlantillaContenido plantilla={mensaje.plantilla} texto={textoVisible} termino={termino} />
+          : textoVisible && <div className="wap-msg__texto">{termino ? resaltar(textoVisible, termino) : textoVisible}</div>}
         <span className="wap-msg__hora">{formatFecha(mensaje.fecha)}</span>
       </div>
     </div>

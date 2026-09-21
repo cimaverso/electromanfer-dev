@@ -817,3 +817,58 @@
 .wap-chatsearch__btn:disabled { opacity: 0.4; cursor: default; }
 .wap-msg__texto mark { background: #fde68a; color: #111; border-radius: 2px; }
 .wap-msg--match-activo .wap-msg__bubble { outline: 2px solid var(--color-primary); }
+
+/* ─── Documento (tarjeta) y plantilla ───────────────────────────────────── */
+.wap-msg__adjunto:is(a) {
+  min-width: 220px;
+  padding: var(--space-2) var(--space-3);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.wap-msg__doc-icon {
+  flex: none;
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.wap-msg__doc-accion {
+  margin-left: auto;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.wap-msg__adjunto-nombre { flex: 1; min-width: 0; }
+
+.wap-msg--plantilla .wap-msg__bubble {
+  border-left: 3px solid var(--color-primary);
+  min-width: 240px;
+}
+.wap-msg__plantilla-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: var(--space-1);
+}
+.wap-msg__plantilla-header { font-weight: 700; margin-bottom: var(--space-1); }
+.wap-msg__plantilla-pie {
+  font-size: var(--font-size-xs);
+  opacity: .7;
+  margin-top: var(--space-1);
+}
+.wap-msg__plantilla-botones {
+  margin-top: var(--space-2);
+  border-top: 1px solid rgba(128, 128, 128, .3);
+}
+.wap-msg__plantilla-boton {
+  padding: var(--space-2);
+  text-align: center;
+  font-weight: 600;
+  color: var(--color-primary);
+  border-bottom: 1px solid rgba(128, 128, 128, .2);
+}
+.wap-msg__plantilla-boton:last-child { border-bottom: 0; }

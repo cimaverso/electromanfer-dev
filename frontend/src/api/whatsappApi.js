@@ -68,6 +68,7 @@ export async function getChat(chatId) {
       texto: m.content || '',
       tipo: m.type,
       media_id: m.media_id,
+      plantilla: m.template_components || null,
       fecha: m.created_at,
     })),
   }
@@ -138,7 +139,11 @@ export async function enviarConAdjunto(chatId, formData) {
       id: data.message?.id ?? `m_${Date.now()}`,
       direccion: 'enviado',
       texto: data.message?.content ?? texto,
+      tipo: { imagen: 'image', audio: 'audio', video: 'video', documento: 'document' }[endpoint],
+      media_id: data.message?.media_id ?? null,
       media_nombre: archivo.name,
+      // Respaldo: si CimAPI no devuelve media_id, se previsualiza el archivo local
+      media_local: archivo,
       fecha: data.message?.created_at ?? new Date().toISOString(),
     },
   }
@@ -219,6 +224,7 @@ export async function enviarPlantilla(chatId, { templateName, language, componen
       direccion: 'enviado',
       texto: data.message?.content ?? previewText ?? templateName,
       tipo: data.message?.type ?? 'template',
+      plantilla: data.message?.template_components ?? null,
       fecha: data.message?.created_at ?? new Date().toISOString(),
     },
   }
