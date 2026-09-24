@@ -15,6 +15,7 @@ from app.models.usuarios import Usuarios
 from app.models.asesor_lineas import AsesorLinea
 from app.enums import RoleEnum
 from app.realtime.manager import realtime_manager
+from app.integrations.bot.service import procesar_mensaje_entrante
 
 logger = logging.getLogger(__name__)
 
@@ -73,3 +74,6 @@ async def handle_cimapi_event(event: str, data: dict) -> None:
         "Evento CimAPI reenviado | event=%s | conversation_id=%s | usuarios=%s",
         event, conversation_id, usuario_ids,
     )
+
+    if event == "message.received":
+        procesar_mensaje_entrante(phone_number_id, conversation_id)

@@ -24,4 +24,6 @@ dependencies = [
     "cryptography>=47.0.0",
     "beautifulsoup4>=4.14.3",
     "websockets>=17.1",
+    "langgraph>=0.2.0",
+    "langchain-anthropic>=0.3.0",
 ]

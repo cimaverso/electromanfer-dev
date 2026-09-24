@@ -4,6 +4,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.integrations.cimasuite.client import WhatsappService
+from app.integrations.bot.schedule import esta_en_horario_bot
 from app.integrations.cimasuite.schemas import (
     ConectarNumeroRequest,
     ConectarNumeroResponse,
@@ -118,6 +119,13 @@ def listar_lineas(token: TokenData = Depends(require_auth)):
     if token.role == RoleEnum.VENDEDOR.value:
         raise HTTPException(status_code=403, detail="No tienes acceso al selector de líneas")
     return {"lineas": LINEAS_WHATSAPP}
+
+
+@router.get("/bot/estado")
+def estado_bot(_: TokenData = Depends(require_auth)):
+    """Si el bot de saludo/consultas fuera de horario está activo ahora
+    mismo (mismo horario para las dos líneas, ver integrations/bot/schedule.py)."""
+    return {"activo": esta_en_horario_bot()}
 
 
 @router.get("/conversaciones/{conversation_id}/mensajes", response_model=MensajesResponse)

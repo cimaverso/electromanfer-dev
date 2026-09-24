@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     CIMAPI_BASE_URL: str 
     CIMAPI_API_KEY: str
     CIMAPI_WS_URL: str = ""
+    ANTHROPIC_API_KEY: str = ""
     API_BASE_URL: str = ""
     LOGO_URL: str = ""
     MEDIA_BASE: str = os.path.join(BASE_DIR, "media")

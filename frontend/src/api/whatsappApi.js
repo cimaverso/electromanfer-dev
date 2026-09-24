@@ -81,6 +81,12 @@ export async function listarLineas() {
   return data.lineas
 }
 
+// ─── Estado del bot de saludo/consultas fuera de horario ──────────────────────
+export async function obtenerEstadoBot() {
+  const { data } = await axiosClient.get('/whatsapp/bot/estado')
+  return data.activo
+}
+
 // ─── Buscar o crear chat por teléfono ─────────────────────────────────────────
 // PENDIENTE: falta endpoint en backend para iniciar conversación nueva.
 export async function buscarOCrearChatPorTelefono(telefono, nombreSugerido = '') {

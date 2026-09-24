@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import axiosClient from '../../api/axiosClient'
-import { buscarGlobal } from '../../api/whatsappApi'
+import { buscarGlobal, obtenerEstadoBot } from '../../api/whatsappApi'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
 import { useAuth } from '../../hooks/useAuth'
 import ModalCotizacionBuzon from '../cotizaciones/Buzon/ModalCotizacionBuzon'
@@ -390,6 +390,20 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
 
   useEffect(() => { cargarChats() }, [lineaSeleccionada]) // eslint-disable-line
 
+  // ── Estado del bot de saludo/consultas fuera de horario (mismo para ambas líneas) ──
+  const [botActivo, setBotActivo] = useState(null)
+  useEffect(() => {
+    let cancelado = false
+    const consultar = () => {
+      obtenerEstadoBot()
+        .then((activo) => { if (!cancelado) setBotActivo(activo) })
+        .catch(() => { if (!cancelado) setBotActivo(null) })
+    }
+    consultar()
+    const intervalo = setInterval(consultar, 60000)
+    return () => { cancelado = true; clearInterval(intervalo) }
+  }, [])
+
   // Los chats ya están en memoria: se filtran al instante, sin volver al servidor
   const chatsVisibles = useMemo(() => {
     const q = terminoBusqueda.trim().toLowerCase()
@@ -600,6 +614,14 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
       <div className="wap-lista">
         <div className="wap-lista__header">
           <span className="wap-lista__titulo">Chats</span>
+          {botActivo !== null && (
+            <span
+              className={['wap-lineas__ia-badge', botActivo ? 'wap-lineas__ia-badge--activa' : 'wap-lineas__ia-badge--inactiva'].join(' ')}
+              title={botActivo ? 'El bot responde saludos y consultas fuera de horario' : 'Fuera del horario del bot: no responde automáticamente'}
+            >
+              {botActivo ? 'IA activa' : 'IA desactivada'}
+            </span>
+          )}
         </div>
         <div className="wap-lista__search-row">
           <input
