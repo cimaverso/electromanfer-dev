@@ -1,10 +1,12 @@
+from datetime import date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.integrations.cimasuite.client import WhatsappService
-from app.integrations.bot.schedule import esta_en_horario_bot
+from app.integrations.bot.config import actualizar_config, bot_activo_ahora, obtener_config, recargar_saldo
+from app.integrations.bot.uso import resumen_uso
 from app.integrations.cimasuite.schemas import (
     ConectarNumeroRequest,
     ConectarNumeroResponse,
@@ -16,9 +18,17 @@ from app.integrations.cimasuite.schemas import (
     EnviarPlantillaRequest,
 )
 from app.schemas.auth import TokenData
+from app.schemas.bot import (
+    BotChatFlagRequest,
+    BotConfigResponse,
+    BotConfigUpdate,
+    BotRecargaRequest,
+    BotUsoResponse,
+)
 from app.core.security import require_auth
 from app.core.db import get_db
 from app.models.asesor_lineas import AsesorLinea
+from app.models.bot_chat_desactivado import BotChatDesactivado
 from app.enums import RoleEnum
 
 # Líneas de WhatsApp disponibles para el selector de GERENCIA/ADMINISTRADOR
@@ -36,6 +46,25 @@ LINEAS_WHATSAPP = [
 ]
 
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
+
+
+def _requerir_gerencia_o_admin(token: TokenData) -> None:
+    """Control del asistente de IA y sus créditos: mismo criterio que el
+    selector de líneas, solo GERENCIA/ADMINISTRADOR."""
+    if token.role == RoleEnum.VENDEDOR.value:
+        raise HTTPException(status_code=403, detail="No tienes acceso al asistente de IA")
+
+
+def _config_a_response(db: Session, config) -> BotConfigResponse:
+    return BotConfigResponse(
+        override_manual=config.override_manual,
+        horario_activo=config.horario_activo,
+        horario_reglas=config.horario_reglas,
+        saldo_usd=float(config.saldo_usd or 0),
+        saldo_activo=config.saldo_activo,
+        instrucciones_extra=config.instrucciones_extra or "",
+        activo_ahora=bot_activo_ahora(db),
+    )
 
 
 def _phone_number_id_para(token: TokenData, db: Session, linea_id: Optional[int] = None) -> Optional[str]:
@@ -94,7 +123,21 @@ def listar_conversaciones(
     token: TokenData = Depends(require_auth),
 ):
     phone_number_id = _phone_number_id_para(token, db, linea_id)
-    return WhatsappService.listar_conversaciones(page, limit, phone_number_id)
+    resultado = WhatsappService.listar_conversaciones(page, limit, phone_number_id)
+
+    ids = [c["id"] for c in resultado.get("data", []) if "id" in c]
+    desactivados = set()
+    if ids:
+        desactivados = {
+            fila.conversation_id
+            for fila in db.query(BotChatDesactivado.conversation_id)
+            .filter(BotChatDesactivado.conversation_id.in_(ids))
+            .all()
+        }
+    for conversacion in resultado.get("data", []):
+        conversacion["bot_desactivado"] = conversacion.get("id") in desactivados
+
+    return resultado
 
 
 @router.get("/buscar")
@@ -122,10 +165,87 @@ def listar_lineas(token: TokenData = Depends(require_auth)):
 
 
 @router.get("/bot/estado")
-def estado_bot(_: TokenData = Depends(require_auth)):
+def estado_bot(db: Session = Depends(get_db), _: TokenData = Depends(require_auth)):
     """Si el bot de saludo/consultas fuera de horario está activo ahora
-    mismo (mismo horario para las dos líneas, ver integrations/bot/schedule.py)."""
-    return {"activo": esta_en_horario_bot()}
+    mismo (mismo horario para las dos líneas, ver integrations/bot/config.py)."""
+    return {"activo": bot_activo_ahora(db)}
+
+
+@router.get("/bot/config", response_model=BotConfigResponse)
+def obtener_config_bot(db: Session = Depends(get_db), token: TokenData = Depends(require_auth)):
+    _requerir_gerencia_o_admin(token)
+    return _config_a_response(db, obtener_config(db))
+
+
+@router.put("/bot/config", response_model=BotConfigResponse)
+def actualizar_config_bot(
+    body: BotConfigUpdate,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    _requerir_gerencia_o_admin(token)
+    try:
+        config = actualizar_config(
+            db,
+            override_manual=body.override_manual,
+            horario_activo=body.horario_activo,
+            horario_reglas=body.horario_reglas,
+            saldo_activo=body.saldo_activo,
+            instrucciones_extra=body.instrucciones_extra,
+            actualizado_por_id=token.user_id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    return _config_a_response(db, config)
+
+
+@router.post("/bot/saldo/recargar", response_model=BotConfigResponse)
+def recargar_saldo_bot(
+    body: BotRecargaRequest,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    """Acredita saldo prepago al asistente (representa una plata que ya
+    recibieron por fuera, ej. una transferencia). No toca la cuenta de
+    Anthropic -- esto es un saldo interno que controla si el bot puede
+    seguir respondiendo, ver bot/config.py:bot_activo_ahora."""
+    _requerir_gerencia_o_admin(token)
+    try:
+        config = recargar_saldo(db, body.monto, actualizado_por_id=token.user_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    return _config_a_response(db, config)
+
+
+@router.get("/bot/uso", response_model=BotUsoResponse)
+def obtener_uso_bot(
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    _requerir_gerencia_o_admin(token)
+    hasta = hasta or date.today()
+    desde = desde or (hasta - timedelta(days=29))
+    return resumen_uso(db, desde, hasta)
+
+
+@router.patch("/conversaciones/{conversation_id}/bot")
+def actualizar_bot_chat(
+    conversation_id: int,
+    body: BotChatFlagRequest,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    _requerir_gerencia_o_admin(token)
+    fila = db.get(BotChatDesactivado, conversation_id)
+    if body.desactivado and fila is None:
+        db.add(BotChatDesactivado(conversation_id=conversation_id, desactivado_por_id=token.user_id))
+        db.commit()
+    elif not body.desactivado and fila is not None:
+        db.delete(fila)
+        db.commit()
+    return {"conversation_id": conversation_id, "bot_desactivado": body.desactivado}
 
 
 @router.get("/conversaciones/{conversation_id}/mensajes", response_model=MensajesResponse)
@@ -133,9 +253,12 @@ def obtener_mensajes(
     conversation_id: int,
     page: int = 1,
     limit: int = 50,
+    db: Session = Depends(get_db),
     _: TokenData = Depends(require_auth),
 ):
-    return WhatsappService.obtener_mensajes(conversation_id, page, limit)
+    resultado = WhatsappService.obtener_mensajes(conversation_id, page, limit)
+    resultado["bot_desactivado"] = db.get(BotChatDesactivado, conversation_id) is not None
+    return resultado
 
 
 @router.post("/mensajes/texto")

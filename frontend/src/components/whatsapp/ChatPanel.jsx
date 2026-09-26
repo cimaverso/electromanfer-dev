@@ -42,6 +42,7 @@ function IconPin() { return <svg width="14" height="14" viewBox="0 0 16 16" fill
 function IconMute() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 6h3l4-3v10l-4-3H2z" /><line x1="11" y1="5" x2="15" y2="11" /><line x1="15" y1="5" x2="11" y2="11" /></svg> }
 function IconEraser() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 2l3 3-7 7H4l-2-2z" /><path d="M7 12h6" /></svg> }
 function IconTrash() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h12" /><path d="M5 4V2h6v2" /><path d="M4 4l1 10h6l1-10" /></svg> }
+function IconBot() { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="6" width="12" height="8" rx="1.5" /><circle cx="8" cy="3" r="1.2" /><line x1="8" y1="4.2" x2="8" y2="6" /><line x1="5.5" y1="10" x2="5.5" y2="10.01" /><line x1="10.5" y1="10" x2="10.5" y2="10.01" /></svg> }
 
 // ─── Item de la lista de chats ─────────────────────────────────────────────────
 function resaltar(texto, termino) {
@@ -337,7 +338,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     chats, chatActivo,
     loadingChats, loadingChat, loadingEnvio, error,
     cargarChats, abrirChat, enviar, enviarConAdjunto, enviarPlantilla, cerrarChat, limpiarError,
-    togglePin, toggleMute, vaciarConversacion, eliminarConversacion,
+    togglePin, toggleMute, toggleBotChat, vaciarConversacion, eliminarConversacion,
     lineas, lineaSeleccionada, cargarLineas, seleccionarLinea,
   } = useWhatsapp()
   const { user } = useAuth()
@@ -478,6 +479,7 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const handleToggleMenu = (chatId) => setMenuAbiertoId((prev) => (prev === chatId ? null : chatId))
   const handleFijar = async (chatId) => { setMenuAbiertoId(null); await togglePin(chatId) }
   const handleSilenciar = async (chatId) => { setMenuAbiertoId(null); await toggleMute(chatId) }
+  const handleToggleBot = async (chatId) => { setMenuAbiertoId(null); await toggleBotChat(chatId) }
   const handleVaciar = (chatId) => {
     setMenuAbiertoId(null)
     setConfirmacion({
@@ -745,6 +747,11 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
                     <button className="wap-chat-item__menu-item" onClick={() => handleSilenciar(chatActivo.id)} type="button">
                       <IconMute /> {chats.find((c) => c.id === chatActivo.id)?.is_muted ? 'Activar sonido' : 'Silenciar'}
                     </button>
+                    {user?.rol !== 'VENDEDOR' && (
+                      <button className="wap-chat-item__menu-item" onClick={() => handleToggleBot(chatActivo.id)} type="button">
+                        <IconBot /> {chats.find((c) => c.id === chatActivo.id)?.bot_desactivado ? 'Activar asistente IA' : 'Desactivar asistente IA'}
+                      </button>
+                    )}
                     <button className="wap-chat-item__menu-item" onClick={() => handleVaciar(chatActivo.id)} type="button">
                       <IconEraser /> Vaciar conversación
                     </button>

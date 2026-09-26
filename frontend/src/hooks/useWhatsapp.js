@@ -12,6 +12,7 @@ import {
   vaciarChat,
   eliminarChat,
 } from '../api/whatsappApi'
+import { toggleBotChat as toggleBotChatApi } from '../api/botIaApi'
 
 const POLL_INTERVAL_MS = 6000
 
@@ -193,6 +194,19 @@ export function useWhatsapp() {
     }
   }, [chats])
 
+  // ─── Activar / desactivar el asistente de IA en un chat puntual ─────────
+  const toggleBotChat = useCallback(async (chatId) => {
+    const actual = chats.find((c) => c.id === chatId)
+    const nuevoValor = !actual?.bot_desactivado
+    setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, bot_desactivado: nuevoValor } : c)))
+    try {
+      await toggleBotChatApi(chatId, nuevoValor)
+    } catch {
+      setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, bot_desactivado: !nuevoValor } : c)))
+      setError('No se pudo actualizar el asistente de IA en este chat.')
+    }
+  }, [chats])
+
   // ─── Vaciar conversación (borra mensajes, conserva el chat) ─────────────
   const vaciarConversacion = useCallback(async (chatId) => {
     try {
@@ -287,6 +301,7 @@ export function useWhatsapp() {
     limpiarError,
     togglePin,
     toggleMute,
+    toggleBotChat,
     vaciarConversacion,
     eliminarConversacion,
     lineas,

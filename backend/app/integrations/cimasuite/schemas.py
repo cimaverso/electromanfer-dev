@@ -26,6 +26,7 @@ class MensajesResponse(BaseModel):
     contact_phone: dict[str, Any]
     messages: list[dict[str, Any]]
     pagination: dict[str, Any]
+    bot_desactivado: bool = False
 
 
 class EnviarTextoRequest(BaseModel):

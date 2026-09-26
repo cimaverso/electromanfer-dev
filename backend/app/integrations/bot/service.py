@@ -21,9 +21,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
-from app.integrations.bot.graph import responder
-from app.integrations.bot.schedule import esta_en_horario_bot
+from app.integrations.bot.config import bot_activo_ahora, obtener_config
+from app.integrations.bot.graph import MODELO_AGENTE, responder
+from app.integrations.bot.uso import registrar_uso
 from app.integrations.cimasuite.client import WhatsappService
+from app.models.bot_chat_desactivado import BotChatDesactivado
 from app.models.clientes import Clientes
 
 logger = logging.getLogger(__name__)
@@ -122,42 +124,54 @@ def procesar_mensaje_entrante(phone_number_id, conversation_id: int | None) -> N
     if conversation_id is None or str(phone_number_id) not in LINEAS_CON_BOT:
         return
 
-    if not esta_en_horario_bot():
-        return
-
-    try:
-        contexto = _contexto_conversacion(conversation_id)
-    except Exception:
-        logger.exception(
-            "Bot WA: error consultando la conversación | conversation_id=%s", conversation_id
-        )
-        return
-
-    if contexto is None:
-        return
-
     db = SessionLocal()
     try:
+        config = obtener_config(db)
+        if not bot_activo_ahora(db):
+            return
+        if db.get(BotChatDesactivado, conversation_id) is not None:
+            return
+
+        try:
+            contexto = _contexto_conversacion(conversation_id)
+        except Exception:
+            logger.exception(
+                "Bot WA: error consultando la conversación | conversation_id=%s", conversation_id
+            )
+            return
+
+        if contexto is None:
+            return
+
         cliente = _buscar_cliente_por_telefono(db, contexto["telefono"])
+
+        mensajes_lc: list[BaseMessage] = []
+        contexto_cliente = _contexto_cliente_mensaje(cliente)
+        if contexto_cliente is not None:
+            mensajes_lc.append(contexto_cliente)
+        mensajes_lc.extend(_historial_a_mensajes(contexto["mensajes"]))
+
+        try:
+            texto_respuesta, uso = responder(mensajes_lc, config.instrucciones_extra)
+        except Exception:
+            logger.exception(
+                "Bot WA: error generando respuesta | conversation_id=%s", conversation_id
+            )
+            return
+
+        registrar_uso(
+            db,
+            conversation_id=conversation_id,
+            phone_number_id=str(phone_number_id),
+            modelo=MODELO_AGENTE,
+            tokens_entrada=uso["input_tokens"],
+            tokens_salida=uso["output_tokens"],
+        )
+
+        if not texto_respuesta:
+            return
+
+        WhatsappService.enviar_texto(contexto["telefono"], texto_respuesta, conversation_id)
+        logger.info("Bot WA: respuesta enviada | conversation_id=%s", conversation_id)
     finally:
         db.close()
-
-    mensajes_lc: list[BaseMessage] = []
-    contexto_cliente = _contexto_cliente_mensaje(cliente)
-    if contexto_cliente is not None:
-        mensajes_lc.append(contexto_cliente)
-    mensajes_lc.extend(_historial_a_mensajes(contexto["mensajes"]))
-
-    try:
-        texto_respuesta = responder(mensajes_lc)
-    except Exception:
-        logger.exception(
-            "Bot WA: error generando respuesta | conversation_id=%s", conversation_id
-        )
-        return
-
-    if not texto_respuesta:
-        return
-
-    WhatsappService.enviar_texto(contexto["telefono"], texto_respuesta, conversation_id)
-    logger.info("Bot WA: respuesta enviada | conversation_id=%s", conversation_id)

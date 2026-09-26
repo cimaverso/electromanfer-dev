@@ -22,6 +22,7 @@ export async function listarChats(filtros = {}) {
     no_leidos: 0,
     is_pinned: !!c.is_pinned,
     is_muted: !!c.is_muted,
+    bot_desactivado: !!c.bot_desactivado,
   }))
 
   if (filtros.q) {

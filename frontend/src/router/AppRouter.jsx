@@ -7,6 +7,7 @@ import ProductosPage from '../pages/ProductosPage'
 import CotizacionesPage from '../pages/CotizacionesPage'
 import GuiasPage from '../pages/GuiasPage'
 import WhatsappPage from '../pages/WhatsappPage'
+import AsistenteIAPage from '../pages/AsistenteIAPage'
 import NotFoundPage from '../pages/NotFoundPage'
 
 function PrivateRoute({ children }) {
@@ -109,6 +110,16 @@ export default function AppRouter() {
             <PrivateRoute>
               <MainLayout>
                 <WhatsappPage />
+              </MainLayout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/asistente-ia"
+          element={
+            <PrivateRoute>
+              <MainLayout>
+                <AsistenteIAPage />
               </MainLayout>
             </PrivateRoute>
           }
