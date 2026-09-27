@@ -17,11 +17,10 @@ MAX_LARGO_INSTRUCCIONES_EXTRA = 1500
 def _config_por_defecto() -> BotConfig:
     return BotConfig(
         id=1,
-        override_manual=None,
+        lineas_apagadas=[],
         horario_activo=True,
         horario_reglas={},
         saldo_usd=0,
-        saldo_activo=False,
         instrucciones_extra="",
     )
 
@@ -60,31 +59,42 @@ def validar_horario_reglas(reglas: dict) -> None:
 def actualizar_config(
     db: Session,
     *,
-    override_manual: str | None = "__sin_cambio__",
     horario_activo: bool | None = None,
     horario_reglas: dict | None = None,
-    saldo_activo: bool | None = None,
     instrucciones_extra: str | None = None,
     actualizado_por_id: int | None = None,
 ) -> BotConfig:
     config = obtener_config(db)
-    if override_manual != "__sin_cambio__":
-        if override_manual not in (None, "on", "off"):
-            raise ValueError("override_manual debe ser 'on', 'off' o null")
-        config.override_manual = override_manual
     if horario_activo is not None:
         config.horario_activo = horario_activo
     if horario_reglas is not None:
         validar_horario_reglas(horario_reglas)
         config.horario_reglas = horario_reglas
-    if saldo_activo is not None:
-        config.saldo_activo = saldo_activo
     if instrucciones_extra is not None:
         if len(instrucciones_extra) > MAX_LARGO_INSTRUCCIONES_EXTRA:
             raise ValueError(
                 f"Las instrucciones adicionales no pueden superar los {MAX_LARGO_INSTRUCCIONES_EXTRA} caracteres"
             )
         config.instrucciones_extra = instrucciones_extra.strip()
+    if actualizado_por_id is not None:
+        config.actualizado_por_id = actualizado_por_id
+    db.commit()
+    db.refresh(config)
+    return config
+
+
+def cambiar_override_linea(
+    db: Session, linea_id: str, apagado: bool, actualizado_por_id: int | None = None
+) -> BotConfig:
+    """Prende/apaga manualmente el asistente para una línea puntual (las
+    demás líneas y el resto de la config -- horario, saldo -- no cambian)."""
+    config = obtener_config(db)
+    apagadas = set(config.lineas_apagadas or [])
+    if apagado:
+        apagadas.add(linea_id)
+    else:
+        apagadas.discard(linea_id)
+    config.lineas_apagadas = sorted(apagadas)
     if actualizado_por_id is not None:
         config.actualizado_por_id = actualizado_por_id
     db.commit()
@@ -114,13 +124,11 @@ def descontar_saldo(db: Session, monto: float) -> None:
     config.saldo_usd = float(config.saldo_usd or 0) - monto
 
 
-def bot_activo_ahora(db: Session, ahora: datetime | None = None) -> bool:
+def bot_activo_ahora(db: Session, linea_id: str | None = None, ahora: datetime | None = None) -> bool:
     config = obtener_config(db)
-    if config.saldo_activo and float(config.saldo_usd or 0) <= 0:
+    if float(config.saldo_usd or 0) <= 0:
         return False
-    if config.override_manual == "on":
-        return True
-    if config.override_manual == "off":
+    if linea_id is not None and str(linea_id) in (config.lineas_apagadas or []):
         return False
     if not config.horario_activo:
         return False

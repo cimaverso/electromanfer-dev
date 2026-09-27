@@ -83,9 +83,10 @@ export async function listarLineas() {
 }
 
 // ─── Estado del bot de saludo/consultas fuera de horario ──────────────────────
+// → { activo, saldo_agotado } -- saldo_agotado avisa que se apagó por falta de saldo prepago
 export async function obtenerEstadoBot() {
   const { data } = await axiosClient.get('/whatsapp/bot/estado')
-  return data.activo
+  return data
 }
 
 // ─── Buscar o crear chat por teléfono ─────────────────────────────────────────

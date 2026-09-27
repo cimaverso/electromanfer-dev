@@ -4,22 +4,29 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 
-class BotConfigResponse(BaseModel):
-    override_manual: Optional[str] = None
-    horario_activo: bool
-    horario_reglas: dict
-    saldo_usd: float
-    saldo_activo: bool
-    instrucciones_extra: str
+class BotLineaEstado(BaseModel):
+    id: int
+    nombre: str
+    apagada_manual: bool
     activo_ahora: bool
 
 
+class BotConfigResponse(BaseModel):
+    horario_activo: bool
+    horario_reglas: dict
+    saldo_usd: float
+    instrucciones_extra: str
+    lineas: list[BotLineaEstado]
+
+
 class BotConfigUpdate(BaseModel):
-    override_manual: Optional[str] = "__sin_cambio__"
     horario_activo: Optional[bool] = None
     horario_reglas: Optional[dict] = None
-    saldo_activo: Optional[bool] = None
     instrucciones_extra: Optional[str] = Field(default=None, max_length=1500)
+
+
+class BotLineaOverrideRequest(BaseModel):
+    apagada: bool
 
 
 class BotRecargaRequest(BaseModel):

@@ -127,7 +127,7 @@ def procesar_mensaje_entrante(phone_number_id, conversation_id: int | None) -> N
     db = SessionLocal()
     try:
         config = obtener_config(db)
-        if not bot_activo_ahora(db):
+        if not bot_activo_ahora(db, str(phone_number_id)):
             return
         if db.get(BotChatDesactivado, conversation_id) is not None:
             return

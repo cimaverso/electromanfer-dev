@@ -7,21 +7,28 @@ import axiosClient from './axiosClient'
 // usar GERENCIA/ADMINISTRADOR -- el backend devuelve 403 a un VENDEDOR.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// → { override_manual: 'on'|'off'|null, horario_activo, horario_reglas, activo_ahora }
+// → { horario_activo, horario_reglas, saldo_usd, instrucciones_extra,
+//     lineas: [{ id, nombre, apagada_manual, activo_ahora }] }
 export async function obtenerConfigBot() {
   const { data } = await axiosClient.get('/whatsapp/bot/config')
   return data
 }
 
-// cambios: { override_manual?, horario_activo?, horario_reglas?, saldo_activo? } (parcial)
+// cambios: { horario_activo?, horario_reglas?, instrucciones_extra? } (parcial)
 export async function actualizarConfigBot(cambios) {
   const { data } = await axiosClient.put('/whatsapp/bot/config', cambios)
   return data
 }
 
+// Prende/apaga el asistente manualmente para una línea puntual de WhatsApp.
+export async function cambiarOverrideLineaBot(lineaId, apagada) {
+  const { data } = await axiosClient.patch(`/whatsapp/bot/lineas/${lineaId}/override`, { apagada })
+  return data
+}
+
 // Acredita saldo prepago (plata ya recibida por fuera, ej. una transferencia).
-// No toca la cuenta de Anthropic -- es un saldo interno que puede apagar el
-// bot solo si "saldo_activo" está prendido en la config.
+// No toca la cuenta de Anthropic -- es un saldo interno que apaga el bot en
+// todas las líneas apenas llega a $0 (ver bot_activo_ahora en el backend).
 export async function recargarSaldoBot(monto) {
   const { data } = await axiosClient.post('/whatsapp/bot/saldo/recargar', { monto })
   return data

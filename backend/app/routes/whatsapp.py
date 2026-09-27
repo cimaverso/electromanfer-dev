@@ -5,7 +5,13 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.integrations.cimasuite.client import WhatsappService
-from app.integrations.bot.config import actualizar_config, bot_activo_ahora, obtener_config, recargar_saldo
+from app.integrations.bot.config import (
+    actualizar_config,
+    bot_activo_ahora,
+    cambiar_override_linea,
+    obtener_config,
+    recargar_saldo,
+)
 from app.integrations.bot.uso import resumen_uso
 from app.integrations.cimasuite.schemas import (
     ConectarNumeroRequest,
@@ -22,6 +28,7 @@ from app.schemas.bot import (
     BotChatFlagRequest,
     BotConfigResponse,
     BotConfigUpdate,
+    BotLineaOverrideRequest,
     BotRecargaRequest,
     BotUsoResponse,
 )
@@ -56,14 +63,22 @@ def _requerir_gerencia_o_admin(token: TokenData) -> None:
 
 
 def _config_a_response(db: Session, config) -> BotConfigResponse:
+    apagadas = set(config.lineas_apagadas or [])
+    lineas = [
+        {
+            "id": linea["id"],
+            "nombre": linea["nombre"],
+            "apagada_manual": str(linea["id"]) in apagadas,
+            "activo_ahora": bot_activo_ahora(db, str(linea["id"])),
+        }
+        for linea in LINEAS_WHATSAPP
+    ]
     return BotConfigResponse(
-        override_manual=config.override_manual,
         horario_activo=config.horario_activo,
         horario_reglas=config.horario_reglas,
         saldo_usd=float(config.saldo_usd or 0),
-        saldo_activo=config.saldo_activo,
         instrucciones_extra=config.instrucciones_extra or "",
-        activo_ahora=bot_activo_ahora(db),
+        lineas=lineas,
     )
 
 
@@ -166,9 +181,14 @@ def listar_lineas(token: TokenData = Depends(require_auth)):
 
 @router.get("/bot/estado")
 def estado_bot(db: Session = Depends(get_db), _: TokenData = Depends(require_auth)):
-    """Si el bot de saludo/consultas fuera de horario está activo ahora
-    mismo (mismo horario para las dos líneas, ver integrations/bot/config.py)."""
-    return {"activo": bot_activo_ahora(db)}
+    """Si el bot de saludo/consultas fuera de horario está activo ahora mismo
+    en AL MENOS UNA línea (el horario y el saldo son compartidos; el apagado
+    manual es por línea, ver integrations/bot/config.py). `saldo_agotado`
+    avisa que el asistente está apagado por falta de saldo prepago."""
+    config = obtener_config(db)
+    activo = any(bot_activo_ahora(db, str(linea["id"])) for linea in LINEAS_WHATSAPP)
+    saldo_agotado = float(config.saldo_usd or 0) <= 0
+    return {"activo": activo, "saldo_agotado": saldo_agotado}
 
 
 @router.get("/bot/config", response_model=BotConfigResponse)
@@ -187,15 +207,30 @@ def actualizar_config_bot(
     try:
         config = actualizar_config(
             db,
-            override_manual=body.override_manual,
             horario_activo=body.horario_activo,
             horario_reglas=body.horario_reglas,
-            saldo_activo=body.saldo_activo,
             instrucciones_extra=body.instrucciones_extra,
             actualizado_por_id=token.user_id,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    return _config_a_response(db, config)
+
+
+@router.patch("/bot/lineas/{linea_id}/override", response_model=BotConfigResponse)
+def cambiar_override_linea_bot(
+    linea_id: int,
+    body: BotLineaOverrideRequest,
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
+):
+    """Prende/apaga el asistente manualmente para una línea puntual (badge
+    "Control del asistente" en la pantalla de Asistente de IA)."""
+    _requerir_gerencia_o_admin(token)
+    linea = next((l for l in LINEAS_WHATSAPP if l["id"] == linea_id), None)
+    if not linea:
+        raise HTTPException(status_code=400, detail="Línea de WhatsApp no válida")
+    config = cambiar_override_linea(db, str(linea_id), body.apagada, actualizado_por_id=token.user_id)
     return _config_a_response(db, config)
 
 

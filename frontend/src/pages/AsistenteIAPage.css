@@ -69,6 +69,67 @@
   background: var(--color-surface-2);
 }
 
+.asistente-ia-page__estado-badge--mixto {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+.asistente-ia-page__estado-wrap {
+  position: relative;
+}
+
+.asistente-ia-page__estado-badge--btn {
+  border: none;
+  cursor: pointer;
+}
+
+.asistente-ia-page__estado-popover {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 10;
+  min-width: 220px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.asistente-ia-page__estado-popover-titulo {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-1);
+}
+
+.asistente-ia-page__estado-popover-linea {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.asistente-ia-page__estado-popover-linea input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.asistente-ia-page__estado-popover-hint {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-muted);
+}
+
 .asistente-ia-page__hint {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { obtenerConfigBot, actualizarConfigBot, obtenerUsoBot, recargarSaldoBot } from '../api/botIaApi'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { obtenerConfigBot, actualizarConfigBot, cambiarOverrideLineaBot, obtenerUsoBot, recargarSaldoBot } from '../api/botIaApi'
 import { useToast } from '../hooks/useToast'
 import Toast from '../components/common/Toast'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -98,6 +98,14 @@ function fmtFechaCorta(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
 
+function etiquetaEstadoLineas(lineas) {
+  if (!lineas?.length) return ''
+  const activas = lineas.filter((l) => l.activo_ahora).length
+  if (activas === lineas.length) return 'Activo ahora mismo'
+  if (activas === 0) return 'Apagado ahora mismo'
+  return `Activo en ${activas} de ${lineas.length} líneas`
+}
+
 export default function AsistenteIAPage() {
   const { toast, showToast, hideToast } = useToast()
 
@@ -106,6 +114,10 @@ export default function AsistenteIAPage() {
   const [guardandoEstado, setGuardandoEstado] = useState(false)
   const [horarioSimple, setHorarioSimple] = useState(null)
   const [guardandoHorario, setGuardandoHorario] = useState(false)
+
+  const [mostrarLineas, setMostrarLineas] = useState(false)
+  const [guardandoLinea, setGuardandoLinea] = useState(null)
+  const estadoRef = useRef(null)
 
   const [rango, setRango] = useState('7d')
   const [uso, setUso] = useState(null)
@@ -150,6 +162,27 @@ export default function AsistenteIAPage() {
   useEffect(() => { cargarConfig() }, [cargarConfig])
   useEffect(() => { cargarUso(rango) }, [rango, cargarUso])
 
+  useEffect(() => {
+    if (!mostrarLineas) return
+    const cerrarSiEsAfuera = (e) => {
+      if (estadoRef.current && !estadoRef.current.contains(e.target)) setMostrarLineas(false)
+    }
+    document.addEventListener('mousedown', cerrarSiEsAfuera)
+    return () => document.removeEventListener('mousedown', cerrarSiEsAfuera)
+  }, [mostrarLineas])
+
+  const cambiarLineaApagada = async (lineaId, apagada) => {
+    setGuardandoLinea(lineaId)
+    try {
+      const data = await cambiarOverrideLineaBot(lineaId, apagada)
+      setConfig(data)
+    } catch (e) {
+      showToast(e.response?.data?.detail || 'No se pudo actualizar la línea', 'error')
+    } finally {
+      setGuardandoLinea(null)
+    }
+  }
+
   const cambiarHorarioActivo = async (activo) => {
     setGuardandoEstado(true)
     try {
@@ -157,18 +190,6 @@ export default function AsistenteIAPage() {
       setConfig(data)
     } catch (e) {
       showToast(e.response?.data?.detail || 'No se pudo actualizar el horario automático', 'error')
-    } finally {
-      setGuardandoEstado(false)
-    }
-  }
-
-  const cambiarSaldoActivo = async (activo) => {
-    setGuardandoEstado(true)
-    try {
-      const data = await actualizarConfigBot({ saldo_activo: activo })
-      setConfig(data)
-    } catch (e) {
-      showToast(e.response?.data?.detail || 'No se pudo actualizar el control por saldo', 'error')
     } finally {
       setGuardandoEstado(false)
     }
@@ -269,9 +290,42 @@ export default function AsistenteIAPage() {
         <div className="asistente-ia-page__card-header">
           <h2>Control del asistente</h2>
           {config && (
-            <span className={`asistente-ia-page__estado-badge ${config.activo_ahora ? 'asistente-ia-page__estado-badge--on' : 'asistente-ia-page__estado-badge--off'}`}>
-              {config.activo_ahora ? 'Activo ahora mismo' : 'Apagado ahora mismo'}
-            </span>
+            <div className="asistente-ia-page__estado-wrap" ref={estadoRef}>
+              <button
+                type="button"
+                className={`asistente-ia-page__estado-badge asistente-ia-page__estado-badge--btn ${
+                  config.lineas.every((l) => l.activo_ahora)
+                    ? 'asistente-ia-page__estado-badge--on'
+                    : config.lineas.every((l) => !l.activo_ahora)
+                      ? 'asistente-ia-page__estado-badge--off'
+                      : 'asistente-ia-page__estado-badge--mixto'
+                }`}
+                onClick={() => setMostrarLineas((v) => !v)}
+              >
+                {etiquetaEstadoLineas(config.lineas)}
+              </button>
+              {mostrarLineas && (
+                <div className="asistente-ia-page__estado-popover">
+                  <p className="asistente-ia-page__estado-popover-titulo">Apagar manualmente</p>
+                  {config.lineas.map((linea) => (
+                    <label key={linea.id} className="asistente-ia-page__estado-popover-linea">
+                      <span>
+                        {linea.nombre}
+                        {!linea.apagada_manual && !linea.activo_ahora && (
+                          <span className="asistente-ia-page__estado-popover-hint"> (fuera de horario)</span>
+                        )}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={linea.apagada_manual}
+                        disabled={guardandoLinea === linea.id}
+                        onChange={(e) => cambiarLineaApagada(linea.id, e.target.checked)}
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -306,21 +360,11 @@ export default function AsistenteIAPage() {
                 </div>
               </div>
 
-              <label className="asistente-ia-page__toggle-row">
-                <span className="asistente-ia-page__control-label">Controlar por saldo</span>
-                <input
-                  type="checkbox"
-                  checked={config.saldo_activo}
-                  disabled={guardandoEstado}
-                  onChange={(e) => cambiarSaldoActivo(e.target.checked)}
-                />
-              </label>
               <p className="asistente-ia-page__hint">
-                {config.saldo_activo
-                  ? 'Si el saldo llega a $0, el asistente se apaga automáticamente sin importar el horario, hasta que se recargue de nuevo.'
-                  : 'El saldo es solo informativo por ahora (no apaga el asistente). Activá el control para que apague solo al llegar a $0.'}
+                Si el saldo llega a $0, el asistente se apaga automáticamente en todas las líneas sin
+                importar el horario, hasta que se recargue de nuevo.
               </p>
-              {config.saldo_activo && Number(config.saldo_usd) <= 0 && (
+              {Number(config.saldo_usd) <= 0 && (
                 <p className="asistente-ia-page__alerta">⚠ El asistente está apagado por falta de saldo.</p>
               )}
             </div>

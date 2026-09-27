@@ -693,6 +693,17 @@
   color: var(--color-text-muted);
 }
 
+.wap-lineas__ia-badge--saldo {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border: none;
+  cursor: pointer;
+}
+
+.wap-lineas__ia-badge--saldo:hover {
+  filter: brightness(0.95);
+}
+
 .wap-lineas {
   position: relative;
   flex-shrink: 0;

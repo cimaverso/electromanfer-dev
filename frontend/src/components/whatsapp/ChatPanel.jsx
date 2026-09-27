@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axiosClient from '../../api/axiosClient'
 import { buscarGlobal, obtenerEstadoBot } from '../../api/whatsappApi'
 import { useWhatsapp } from '../../hooks/useWhatsapp'
@@ -334,6 +335,7 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
 // chatInicialId: string|null — si viene, abre ese chat automáticamente al montar
 // onChatMontado: () => void — callback para limpiar el chatInicialId en el padre
 export default function ChatPanel({ chatInicialId = null, onChatMontado = null }) {
+  const navigate = useNavigate()
   const {
     chats, chatActivo,
     loadingChats, loadingChat, loadingEnvio, error,
@@ -393,11 +395,16 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
 
   // ── Estado del bot de saludo/consultas fuera de horario (mismo para ambas líneas) ──
   const [botActivo, setBotActivo] = useState(null)
+  const [botSaldoAgotado, setBotSaldoAgotado] = useState(false)
   useEffect(() => {
     let cancelado = false
     const consultar = () => {
       obtenerEstadoBot()
-        .then((activo) => { if (!cancelado) setBotActivo(activo) })
+        .then(({ activo, saldo_agotado }) => {
+          if (cancelado) return
+          setBotActivo(activo)
+          setBotSaldoAgotado(saldo_agotado)
+        })
         .catch(() => { if (!cancelado) setBotActivo(null) })
     }
     consultar()
@@ -623,6 +630,16 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
             >
               {botActivo ? 'IA activa' : 'IA desactivada'}
             </span>
+          )}
+          {botSaldoAgotado && user?.rol !== 'VENDEDOR' && (
+            <button
+              type="button"
+              className="wap-lineas__ia-badge wap-lineas__ia-badge--saldo"
+              title="El asistente de IA se apagó porque el saldo prepago llegó a $0"
+              onClick={() => navigate('/asistente-ia')}
+            >
+              ⚠ Sin saldo — recargar
+            </button>
           )}
         </div>
         <div className="wap-lista__search-row">
