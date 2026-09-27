@@ -5,15 +5,74 @@ import Toast from '../components/common/Toast'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import './AsistenteIAPage.css'
 
-const DIAS = [
-  { key: '0', label: 'Lunes' },
-  { key: '1', label: 'Martes' },
-  { key: '2', label: 'Miércoles' },
-  { key: '3', label: 'Jueves' },
-  { key: '4', label: 'Viernes' },
-  { key: '5', label: 'Sábado' },
-  { key: '6', label: 'Domingo' },
+// Un día puede tener varios rangos horarios (ej: de noche Y en el horario
+// de almuerzo). Se define directamente la hora en la que EL ASISTENTE
+// responde (no el horario de atención invertido) -- si "desde" es más
+// tarde que "hasta" en un rango, se entiende que cruza la medianoche (ej:
+// desde 18:00 hasta 06:00). De ahí se calculan los tramos reales que se
+// guardan en `horario_reglas`.
+const GRUPOS_HORARIO = [
+  { key: '0', dias: ['0'], label: 'Lunes' },
+  { key: '1', dias: ['1'], label: 'Martes' },
+  { key: '2', dias: ['2'], label: 'Miércoles' },
+  { key: '3', dias: ['3'], label: 'Jueves' },
+  { key: '4', dias: ['4'], label: 'Viernes' },
+  { key: '5', dias: ['5'], label: 'Sábado' },
+  { key: '6', dias: ['6'], label: 'Domingo' },
 ]
+
+const RANGO_POR_DEFECTO = ['18:00', '06:00']
+
+function tramosDeGrupo({ todoElDia, rangos }) {
+  if (todoElDia) return [['00:00', '24:00']]
+  const tramos = []
+  for (const [desde, hasta] of rangos || []) {
+    if (!desde || !hasta || desde === hasta) continue
+    if (desde <= hasta) tramos.push([desde, hasta])
+    else tramos.push(['00:00', hasta], [desde, '24:00']) // cruza medianoche
+  }
+  return tramos
+}
+
+// Inverso: a partir de los tramos guardados, reconstruye la lista de
+// rangos "desde/hasta" para mostrarlos. Un par de tramos "00:00-X" y
+// "Y-24:00" se junta de nuevo en un solo rango que cruza la medianoche;
+// cualquier otro tramo se muestra como un rango independiente (ej. el de
+// almuerzo). Si no calza con ningún patrón conocido, usa un default.
+function grupoDesdeTramos(tramos) {
+  if (!tramos || tramos.length === 0) {
+    return { todoElDia: false, rangos: [RANGO_POR_DEFECTO] }
+  }
+  if (tramos.length === 1 && tramos[0][0] === '00:00' && tramos[0][1] === '24:00') {
+    return { todoElDia: true, rangos: [RANGO_POR_DEFECTO] }
+  }
+
+  const iCola = tramos.findIndex((t) => t[0] === '00:00')
+  const iCabeza = tramos.findIndex((t) => t[1] === '24:00')
+  const rangos = []
+  if (iCola !== -1 && iCabeza !== -1 && iCola !== iCabeza) {
+    rangos.push([tramos[iCabeza][0], tramos[iCola][1]])
+    tramos.forEach((t, i) => { if (i !== iCola && i !== iCabeza) rangos.push([t[0], t[1]]) })
+  } else {
+    tramos.forEach((t) => rangos.push([t[0], t[1]]))
+  }
+  return { todoElDia: false, rangos: rangos.length ? rangos : [RANGO_POR_DEFECTO] }
+}
+
+function horarioSimpleDesdeReglas(reglas) {
+  const simple = {}
+  GRUPOS_HORARIO.forEach((g) => { simple[g.key] = grupoDesdeTramos(reglas?.[g.dias[0]]) })
+  return simple
+}
+
+function reglasDesdeHorarioSimple(simple) {
+  const reglas = {}
+  GRUPOS_HORARIO.forEach((g) => {
+    const tramos = tramosDeGrupo(simple[g.key])
+    g.dias.forEach((dia) => { reglas[dia] = tramos })
+  })
+  return reglas
+}
 
 const MAX_INSTRUCCIONES = 1500
 
@@ -35,11 +94,6 @@ function fmtTokens(valor) {
   return new Intl.NumberFormat('es-CO').format(valor || 0)
 }
 
-function horaAFraccion(hhmm) {
-  const [h, m] = (hhmm || '0:0').split(':').map(Number)
-  return h + (m || 0) / 60
-}
-
 function fmtFechaCorta(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
@@ -50,7 +104,7 @@ export default function AsistenteIAPage() {
   const [config, setConfig] = useState(null)
   const [loadingConfig, setLoadingConfig] = useState(true)
   const [guardandoEstado, setGuardandoEstado] = useState(false)
-  const [horarioBorrador, setHorarioBorrador] = useState(null)
+  const [horarioSimple, setHorarioSimple] = useState(null)
   const [guardandoHorario, setGuardandoHorario] = useState(false)
 
   const [rango, setRango] = useState('7d')
@@ -68,7 +122,7 @@ export default function AsistenteIAPage() {
     try {
       const data = await obtenerConfigBot()
       setConfig(data)
-      setHorarioBorrador(data.horario_reglas)
+      setHorarioSimple(horarioSimpleDesdeReglas(data.horario_reglas))
       setInstruccionesBorrador(data.instrucciones_extra || '')
     } catch (e) {
       showToast(e.response?.data?.detail || 'No se pudo cargar la configuración del asistente', 'error')
@@ -95,19 +149,6 @@ export default function AsistenteIAPage() {
 
   useEffect(() => { cargarConfig() }, [cargarConfig])
   useEffect(() => { cargarUso(rango) }, [rango, cargarUso])
-
-  const cambiarEstado = async (overrideManual) => {
-    setGuardandoEstado(true)
-    try {
-      const data = await actualizarConfigBot({ override_manual: overrideManual })
-      setConfig(data)
-      showToast('Estado del asistente actualizado', 'success')
-    } catch (e) {
-      showToast(e.response?.data?.detail || 'No se pudo actualizar el estado', 'error')
-    } finally {
-      setGuardandoEstado(false)
-    }
-  }
 
   const cambiarHorarioActivo = async (activo) => {
     setGuardandoEstado(true)
@@ -152,34 +193,44 @@ export default function AsistenteIAPage() {
     }
   }
 
-  const agregarTramo = (dia) => {
-    setHorarioBorrador((prev) => ({
+  const cambiarGrupoHorario = (grupo, campo, valor) => {
+    setHorarioSimple((prev) => ({
       ...prev,
-      [dia]: [...(prev[dia] || []), ['08:00', '18:00']],
+      [grupo]: { ...prev[grupo], [campo]: valor },
     }))
   }
 
-  const quitarTramo = (dia, index) => {
-    setHorarioBorrador((prev) => ({
+  const cambiarRango = (grupo, index, posicion, valor) => {
+    setHorarioSimple((prev) => ({
       ...prev,
-      [dia]: prev[dia].filter((_, i) => i !== index),
+      [grupo]: {
+        ...prev[grupo],
+        rangos: prev[grupo].rangos.map((r, i) => (i === index ? (posicion === 0 ? [valor, r[1]] : [r[0], valor]) : r)),
+      },
     }))
   }
 
-  const cambiarTramo = (dia, index, posicion, valor) => {
-    setHorarioBorrador((prev) => ({
+  const agregarRango = (grupo) => {
+    setHorarioSimple((prev) => ({
       ...prev,
-      [dia]: prev[dia].map((tramo, i) => (i === index ? (posicion === 0 ? [valor, tramo[1]] : [tramo[0], valor]) : tramo)),
+      [grupo]: { ...prev[grupo], rangos: [...prev[grupo].rangos, ['12:00', '14:00']] },
+    }))
+  }
+
+  const quitarRango = (grupo, index) => {
+    setHorarioSimple((prev) => ({
+      ...prev,
+      [grupo]: { ...prev[grupo], rangos: prev[grupo].rangos.filter((_, i) => i !== index) },
     }))
   }
 
   const guardarHorario = async () => {
     setGuardandoHorario(true)
     try {
-      const data = await actualizarConfigBot({ horario_reglas: horarioBorrador })
+      const data = await actualizarConfigBot({ horario_reglas: reglasDesdeHorarioSimple(horarioSimple) })
       setConfig(data)
-      setHorarioBorrador(data.horario_reglas)
-      showToast('Horario automático guardado', 'success')
+      setHorarioSimple(horarioSimpleDesdeReglas(data.horario_reglas))
+      showToast('Horario guardado', 'success')
     } catch (e) {
       showToast(e.response?.data?.detail || 'No se pudo guardar el horario', 'error')
     } finally {
@@ -201,7 +252,7 @@ export default function AsistenteIAPage() {
     }
   }
 
-  const horarioModificado = config && horarioBorrador && JSON.stringify(config.horario_reglas) !== JSON.stringify(horarioBorrador)
+  const horarioModificado = config && horarioSimple && JSON.stringify(config.horario_reglas) !== JSON.stringify(reglasDesdeHorarioSimple(horarioSimple))
   const instruccionesModificadas = config && instruccionesBorrador !== (config.instrucciones_extra || '')
 
   const maxCosto = uso ? Math.max(1e-6, ...uso.por_dia.map((d) => d.costo_usd)) : 1
@@ -266,49 +317,12 @@ export default function AsistenteIAPage() {
               </label>
               <p className="asistente-ia-page__hint">
                 {config.saldo_activo
-                  ? 'Si el saldo llega a $0, el asistente se apaga automáticamente sin importar el estado ni el horario, hasta que se recargue de nuevo.'
+                  ? 'Si el saldo llega a $0, el asistente se apaga automáticamente sin importar el horario, hasta que se recargue de nuevo.'
                   : 'El saldo es solo informativo por ahora (no apaga el asistente). Activá el control para que apague solo al llegar a $0.'}
               </p>
               {config.saldo_activo && Number(config.saldo_usd) <= 0 && (
                 <p className="asistente-ia-page__alerta">⚠ El asistente está apagado por falta de saldo.</p>
               )}
-            </div>
-
-            <div className="asistente-ia-page__control-block">
-              <p className="asistente-ia-page__control-label">Estado</p>
-              <div className="asistente-ia-page__segmented">
-                <button
-                  type="button"
-                  className={`asistente-ia-page__segmented-btn ${config.override_manual == null ? 'is-active' : ''}`}
-                  disabled={guardandoEstado}
-                  onClick={() => cambiarEstado(null)}
-                >
-                  Automático
-                </button>
-                <button
-                  type="button"
-                  className={`asistente-ia-page__segmented-btn ${config.override_manual === 'on' ? 'is-active' : ''}`}
-                  disabled={guardandoEstado}
-                  onClick={() => cambiarEstado('on')}
-                >
-                  Encendido siempre
-                </button>
-                <button
-                  type="button"
-                  className={`asistente-ia-page__segmented-btn ${config.override_manual === 'off' ? 'is-active' : ''}`}
-                  disabled={guardandoEstado}
-                  onClick={() => cambiarEstado('off')}
-                >
-                  Apagado siempre
-                </button>
-              </div>
-              <p className="asistente-ia-page__hint">
-                {config.override_manual == null
-                  ? 'El asistente sigue el horario automático de abajo.'
-                  : config.override_manual === 'on'
-                    ? 'El asistente responde siempre, sin importar el horario.'
-                    : 'El asistente no responde, sin importar el horario.'}
-              </p>
             </div>
 
             <div className="asistente-ia-page__control-block">
@@ -322,70 +336,68 @@ export default function AsistenteIAPage() {
                 />
               </label>
               <p className="asistente-ia-page__hint">
-                Solo aplica cuando el estado está en "Automático". Editá las horas por día abajo.
+                Solo aplica cuando este interruptor está prendido. Definí desde y hasta qué hora responde
+                el asistente solo, día por día -- podés agregar más de un rango (ej. la hora del almuerzo).
               </p>
 
-              <div className="asistente-ia-page__info-box">
-                <p className="asistente-ia-page__info-box-titulo">¿Cómo funcionan los tramos?</p>
-                <p>
-                  Cada día puede tener uno o varios rangos de hora ("tramos") en los que el asistente
-                  responde solo. Fuera de esos rangos, no contesta nada — queda para que lo atienda una persona.
-                </p>
-                <p>
-                  <strong>Ejemplo:</strong> si un día tiene los tramos <code>00:00–06:00</code> y{' '}
-                  <code>18:00–24:00</code>, el asistente está prendido de 6pm a 6am (toda la noche) y apagado
-                  durante el día.
-                </p>
-                <p>
-                  Para que esté prendido <strong>todo el día</strong>, dejá un solo tramo de{' '}
-                  <code>00:00</code> a <code>23:59</code>. Para que <strong>nunca</strong> responda solo ese
-                  día, borrá todos sus tramos con la <code>×</code>.
-                </p>
-              </div>
-
               <div className="asistente-ia-page__horario">
-                {DIAS.map((dia) => (
-                  <div key={dia.key} className="asistente-ia-page__horario-dia">
-                    <span className="asistente-ia-page__horario-dia-label">{dia.label}</span>
-                    <div className="asistente-ia-page__horario-tramos">
-                      {(horarioBorrador?.[dia.key] || []).map((tramo, i) => (
-                        <div key={i} className="asistente-ia-page__tramo">
-                          <input
-                            type="time"
-                            value={tramo[0]}
-                            onChange={(e) => cambiarTramo(dia.key, i, 0, e.target.value)}
-                          />
-                          <span>–</span>
-                          <input
-                            type="time"
-                            value={tramo[1] === '24:00' ? '23:59' : tramo[1]}
-                            onChange={(e) => cambiarTramo(dia.key, i, 1, e.target.value)}
-                          />
-                          <button type="button" className="asistente-ia-page__tramo-quitar" onClick={() => quitarTramo(dia.key, i)} title="Quitar tramo">×</button>
+                {horarioSimple && GRUPOS_HORARIO.map((grupo) => {
+                  const valor = horarioSimple[grupo.key]
+                  return (
+                    <div key={grupo.key} className="asistente-ia-page__horario-dia">
+                      <span className="asistente-ia-page__horario-dia-label">{grupo.label}</span>
+
+                      {!valor.todoElDia ? (
+                        <div className="asistente-ia-page__horario-horas">
+                          {valor.rangos.map((rango, i) => (
+                            <div key={i} className="asistente-ia-page__horario-rango">
+                              <input
+                                type="time"
+                                value={rango[0]}
+                                onChange={(e) => cambiarRango(grupo.key, i, 0, e.target.value)}
+                              />
+                              <span>–</span>
+                              <input
+                                type="time"
+                                value={rango[1] === '24:00' ? '23:59' : rango[1]}
+                                onChange={(e) => cambiarRango(grupo.key, i, 1, e.target.value)}
+                              />
+                              {valor.rangos.length > 1 && (
+                                <button
+                                  type="button"
+                                  className="asistente-ia-page__horario-rango-quitar"
+                                  onClick={() => quitarRango(grupo.key, i)}
+                                  title="Quitar rango"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            className="asistente-ia-page__horario-rango-agregar"
+                            onClick={() => agregarRango(grupo.key)}
+                            title="Agregar otro rango"
+                          >
+                            +
+                          </button>
                         </div>
-                      ))}
-                      <button type="button" className="asistente-ia-page__tramo-agregar" onClick={() => agregarTramo(dia.key)}>+ Agregar tramo</button>
+                      ) : (
+                        <span className="asistente-ia-page__horario-todo-el-dia-texto">Todo el día</span>
+                      )}
+
+                      <label className="asistente-ia-page__horario-cerrado">
+                        <input
+                          type="checkbox"
+                          checked={valor.todoElDia}
+                          onChange={(e) => cambiarGrupoHorario(grupo.key, 'todoElDia', e.target.checked)}
+                        />
+                        Todo el día
+                      </label>
                     </div>
-                    <div className="asistente-ia-page__horario-timeline">
-                      <div className="asistente-ia-page__horario-timeline-track">
-                        {(horarioBorrador?.[dia.key] || []).map((tramo, i) => {
-                          const desde = horaAFraccion(tramo[0])
-                          const hasta = horaAFraccion(tramo[1])
-                          return (
-                            <div
-                              key={i}
-                              className="asistente-ia-page__horario-timeline-bloque"
-                              style={{ left: `${(desde / 24) * 100}%`, width: `${Math.max(0, ((hasta - desde) / 24) * 100)}%` }}
-                            />
-                          )
-                        })}
-                      </div>
-                      <div className="asistente-ia-page__horario-timeline-ticks">
-                        <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               <div className="asistente-ia-page__horario-acciones">
@@ -399,75 +411,40 @@ export default function AsistenteIAPage() {
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </section>
 
-      {/* ── Instrucciones adicionales ── */}
-      <section className="asistente-ia-page__card">
-        <div className="asistente-ia-page__card-header">
-          <h2>Instrucciones adicionales</h2>
-        </div>
-        {loadingConfig ? (
-          <LoadingSpinner text="Cargando..." />
-        ) : (
-          <>
-            <p className="asistente-ia-page__hint">
-              Texto libre que se le suma al asistente: tono, promociones vigentes, aclaraciones puntuales
-              del negocio. Las reglas de seguridad (no inventar precios, no dar descuentos, ignorar
-              mensajes que intenten hacerse pasar por el dueño/admin, etc.) están fijas en el código y esto
-              no las puede pisar.
-            </p>
-            <textarea
-              className="asistente-ia-page__textarea"
-              rows={4}
-              maxLength={MAX_INSTRUCCIONES}
-              placeholder='Ej: "Este mes hay 10% de descuento en herramientas eléctricas, mencionalo si preguntan por ese tipo de producto." o "Contamos con domicilio gratis en Pereira."'
-              value={instruccionesBorrador}
-              onChange={(e) => setInstruccionesBorrador(e.target.value)}
-            />
-            <div className="asistente-ia-page__instrucciones-acciones">
-              <span className="asistente-ia-page__contador">{instruccionesBorrador.length}/{MAX_INSTRUCCIONES}</span>
-              <button
-                type="button"
-                className="asistente-ia-page__btn-guardar"
-                disabled={!instruccionesModificadas || guardandoInstrucciones}
-                onClick={guardarInstrucciones}
-              >
-                {guardandoInstrucciones ? 'Guardando...' : 'Guardar instrucciones'}
-              </button>
+            <div className="asistente-ia-page__control-block">
+              <p className="asistente-ia-page__control-label">Instrucciones adicionales</p>
+              <p className="asistente-ia-page__hint">
+                Texto libre que se le suma al asistente: tono, promociones vigentes, aclaraciones puntuales
+                del negocio. Las reglas de seguridad (no inventar precios, no dar descuentos, ignorar
+                mensajes que intenten hacerse pasar por el dueño/admin, etc.) están fijas en el código y esto
+                no las puede pisar.
+              </p>
+              <textarea
+                className="asistente-ia-page__textarea"
+                rows={4}
+                maxLength={MAX_INSTRUCCIONES}
+                placeholder='Ej: "Este mes hay 10% de descuento en herramientas eléctricas, mencionalo si preguntan por ese tipo de producto." o "Contamos con domicilio gratis en Pereira."'
+                value={instruccionesBorrador}
+                onChange={(e) => setInstruccionesBorrador(e.target.value)}
+              />
+              <div className="asistente-ia-page__instrucciones-acciones">
+                <span className="asistente-ia-page__contador">{instruccionesBorrador.length}/{MAX_INSTRUCCIONES}</span>
+                <button
+                  type="button"
+                  className="asistente-ia-page__btn-guardar"
+                  disabled={!instruccionesModificadas || guardandoInstrucciones}
+                  onClick={guardarInstrucciones}
+                >
+                  {guardandoInstrucciones ? 'Guardando...' : 'Guardar instrucciones'}
+                </button>
+              </div>
             </div>
           </>
         )}
       </section>
 
-      {/* ── Transparencia: qué sabe y qué no el asistente ── */}
-      <section className="asistente-ia-page__card">
-        <div className="asistente-ia-page__card-header">
-          <h2>Qué puede ver y hacer el asistente</h2>
-        </div>
-        <div className="asistente-ia-page__transparencia">
-          <div>
-            <p className="asistente-ia-page__control-label">Sí puede ver / usar</p>
-            <ul>
-              <li>El catálogo de productos: nombre, precio final (con IVA) y si hay disponibilidad.</li>
-              <li>Los últimos mensajes de esa conversación de WhatsApp puntual (para no repetir preguntas).</li>
-              <li>Si el número ya es un cliente guardado: su nombre/empresa y ciudad, para no volver a pedirlos.</li>
-            </ul>
-          </div>
-          <div>
-            <p className="asistente-ia-page__control-label">No puede ver / hacer</p>
-            <ul>
-              <li>No tiene acceso al resto de la base de datos: ni cotizaciones, ni otros clientes, ni otras conversaciones.</li>
-              <li>No inventa descuentos, promociones, tiempos de entrega, garantías ni formas de pago.</li>
-              <li>No registra pedidos ni cotizaciones — siempre remite eso a un asesor humano.</li>
-              <li>Ignora cualquier mensaje de un cliente que intente hacerse pasar por el dueño o un administrador para pedir trato especial.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Créditos gastados ── */}
+      {/* ── Reporte: cuánto se ha gastado en el asistente ── */}
       <section className="asistente-ia-page__card">
         <div className="asistente-ia-page__card-header">
           <h2>Créditos de IA gastados</h2>

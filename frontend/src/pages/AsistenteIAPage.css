@@ -96,38 +96,6 @@
   margin: 0;
 }
 
-.asistente-ia-page__segmented {
-  display: inline-flex;
-  background: var(--color-surface-2);
-  border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 3px;
-  width: fit-content;
-}
-
-.asistente-ia-page__segmented-btn {
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  white-space: nowrap;
-}
-
-.asistente-ia-page__segmented-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.asistente-ia-page__segmented-btn.is-active {
-  background: var(--color-primary);
-  color: var(--color-white);
-}
-
 .asistente-ia-page__toggle-row {
   display: flex;
   align-items: center;
@@ -183,52 +151,23 @@
   margin: 0;
 }
 
-/* ── Cajas informativas ── */
-.asistente-ia-page__info-box {
-  background: var(--color-info-soft);
-  border: 1px solid var(--color-info);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-
-.asistente-ia-page__info-box p {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-soft);
-  line-height: 1.5;
-}
-
-.asistente-ia-page__info-box-titulo {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text) !important;
-  font-size: var(--font-size-sm) !important;
-}
-
-.asistente-ia-page__info-box code {
-  background: var(--color-surface-2);
-  border-radius: var(--radius-xs);
-  padding: 1px 5px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text);
-}
-
-/* ── Horario ── */
+/* ── Horario (horario de atención → tramos automáticos) ── */
 .asistente-ia-page__horario {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   margin-top: var(--space-2);
 }
 
 .asistente-ia-page__horario-dia {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-4);
   padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asistente-ia-page__horario-dia:last-child {
+  border-bottom: none;
 }
 
 .asistente-ia-page__horario-dia-label {
@@ -236,71 +175,36 @@
   flex-shrink: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-soft);
-  padding-top: var(--space-2);
 }
 
-.asistente-ia-page__horario-tramos {
+.asistente-ia-page__horario-horas {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  align-items: center;
-}
-
-.asistente-ia-page__horario-timeline {
   flex: 1;
-  min-width: 160px;
-  align-self: center;
-  padding-top: var(--space-1);
 }
 
-.asistente-ia-page__horario-timeline-track {
-  position: relative;
-  height: 10px;
-  background: var(--color-surface-2);
-  border-radius: var(--radius-xs);
-  overflow: hidden;
-}
-
-.asistente-ia-page__horario-timeline-bloque {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: var(--color-primary);
-}
-
-.asistente-ia-page__horario-timeline-ticks {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 2px;
-}
-
-.asistente-ia-page__horario-timeline-ticks span {
-  font-size: 10px;
-  color: var(--color-text-muted);
-}
-
-.asistente-ia-page__tramo {
+.asistente-ia-page__horario-rango {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+
+.asistente-ia-page__horario-horas input[type="time"] {
+  border: 1px solid var(--color-border);
   background: var(--color-surface-2);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
-}
-
-.asistente-ia-page__tramo input[type="time"] {
-  border: none;
-  background: transparent;
   color: var(--color-text);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-sm);
-  width: 90px;
 }
 
-.asistente-ia-page__tramo span {
+.asistente-ia-page__horario-horas span {
   color: var(--color-text-muted);
 }
 
-.asistente-ia-page__tramo-quitar {
+.asistente-ia-page__horario-rango-quitar {
   border: none;
   background: transparent;
   color: var(--color-text-muted);
@@ -310,24 +214,47 @@
   padding: 0 var(--space-1);
 }
 
-.asistente-ia-page__tramo-quitar:hover {
+.asistente-ia-page__horario-rango-quitar:hover {
   color: var(--color-danger);
 }
 
-.asistente-ia-page__tramo-agregar {
+.asistente-ia-page__horario-rango-agregar {
+  width: 26px;
+  height: 26px;
   border: 1px dashed var(--color-border-strong);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
   cursor: pointer;
+  font-size: var(--font-size-sm);
+  line-height: 1;
   transition: var(--transition-fast);
 }
 
-.asistente-ia-page__tramo-agregar:hover {
+.asistente-ia-page__horario-rango-agregar:hover {
   color: var(--color-primary);
   border-color: var(--color-primary);
+}
+
+.asistente-ia-page__horario-todo-el-dia-texto {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.asistente-ia-page__horario-cerrado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.asistente-ia-page__horario-cerrado input {
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .asistente-ia-page__horario-acciones {
@@ -377,27 +304,6 @@
 .asistente-ia-page__contador {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-}
-
-/* ── Transparencia ── */
-.asistente-ia-page__transparencia {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-5);
-}
-
-.asistente-ia-page__transparencia ul {
-  margin: var(--space-2) 0 0;
-  padding-left: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.asistente-ia-page__transparencia li {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-soft);
-  line-height: 1.5;
 }
 
 /* ── Créditos ── */
@@ -491,19 +397,13 @@
 
 @media (max-width: 640px) {
   .asistente-ia-page__horario-dia {
-    flex-direction: column;
-    gap: var(--space-2);
+    flex-wrap: wrap;
   }
 
-  .asistente-ia-page__horario-dia-label {
-    width: auto;
-    padding-top: 0;
-  }
-
-  .asistente-ia-page__horario-timeline {
-    flex: none;
-    width: 100%;
-    margin-top: var(--space-2);
+  .asistente-ia-page__horario-horas,
+  .asistente-ia-page__horario-todo-el-dia-texto {
+    order: 3;
+    flex-basis: 100%;
   }
 
   .asistente-ia-page__barra-fila {
