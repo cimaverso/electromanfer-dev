@@ -2,7 +2,7 @@
 """
 Configuración del bot de WhatsApp fuera de horario (una sola fila, id=1).
 Ver app/integrations/bot/config.py para la lógica que combina
-`lineas_apagadas` + `horario_activo`/`horario_reglas` + el saldo prepago
+`lineas_apagadas`/`lineas_encendidas` + `horario_activo`/`horario_reglas` + el saldo prepago
 en un solo booleano de "¿está activo ahora?" por línea.
 """
 from typing import TYPE_CHECKING, Optional
@@ -22,8 +22,13 @@ class BotConfig(Base):
 
     # Ids (como string, ej. "7") de las líneas de WhatsApp (LINEAS_WHATSAPP en
     # app/routes/whatsapp.py) apagadas manualmente. Una línea que no está en
-    # esta lista sigue el horario automático de abajo.
+    # esta lista ni en `lineas_encendidas` sigue el horario automático de abajo.
     lineas_apagadas: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+
+    # Ids de las líneas encendidas manualmente: responden aunque estén fuera
+    # de horario o con el horario automático desactivado (el saldo en $0 las
+    # sigue apagando). Una línea nunca está en las dos listas a la vez.
+    lineas_encendidas: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
     horario_activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

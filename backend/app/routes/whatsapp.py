@@ -9,6 +9,7 @@ from app.integrations.bot.config import (
     actualizar_config,
     bot_activo_ahora,
     cambiar_override_linea,
+    modo_linea,
     obtener_config,
     recargar_saldo,
 )
@@ -63,12 +64,11 @@ def _requerir_gerencia_o_admin(token: TokenData) -> None:
 
 
 def _config_a_response(db: Session, config) -> BotConfigResponse:
-    apagadas = set(config.lineas_apagadas or [])
     lineas = [
         {
             "id": linea["id"],
             "nombre": linea["nombre"],
-            "apagada_manual": str(linea["id"]) in apagadas,
+            "modo": modo_linea(config, str(linea["id"])),
             "activo_ahora": bot_activo_ahora(db, str(linea["id"])),
         }
         for linea in LINEAS_WHATSAPP
@@ -230,7 +230,7 @@ def cambiar_override_linea_bot(
     linea = next((l for l in LINEAS_WHATSAPP if l["id"] == linea_id), None)
     if not linea:
         raise HTTPException(status_code=400, detail="Línea de WhatsApp no válida")
-    config = cambiar_override_linea(db, str(linea_id), body.apagada, actualizado_por_id=token.user_id)
+    config = cambiar_override_linea(db, str(linea_id), body.modo, actualizado_por_id=token.user_id)
     return _config_a_response(db, config)
 
 

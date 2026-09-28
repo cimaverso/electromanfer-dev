@@ -88,7 +88,7 @@
   top: calc(100% + var(--space-2));
   right: 0;
   z-index: 10;
-  min-width: 220px;
+  min-width: 340px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -113,15 +113,46 @@
   gap: var(--space-3);
   font-size: var(--font-size-sm);
   color: var(--color-text);
+}
+
+.asistente-ia-page__modo-linea {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.asistente-ia-page__modo-btn {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
   cursor: pointer;
 }
 
-.asistente-ia-page__estado-popover-linea input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-  flex-shrink: 0;
+.asistente-ia-page__modo-btn + .asistente-ia-page__modo-btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.asistente-ia-page__modo-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.asistente-ia-page__modo-btn--activo {
+  font-weight: var(--font-weight-semibold);
+  color: #fff;
+  background: var(--color-primary);
+}
+
+.asistente-ia-page__modo-btn--on {
+  background: var(--color-success, #16a34a);
+}
+
+.asistente-ia-page__modo-btn--off {
+  background: var(--color-danger, #dc2626);
 }
 
 .asistente-ia-page__estado-popover-hint {

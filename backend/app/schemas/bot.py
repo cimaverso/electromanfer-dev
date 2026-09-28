@@ -1,5 +1,5 @@
 # app/schemas/bot.py
-from typing import Optional
+from typing import Literal, Optional
 from datetime import date
 from pydantic import BaseModel, Field
 
@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class BotLineaEstado(BaseModel):
     id: int
     nombre: str
-    apagada_manual: bool
+    modo: Literal["auto", "on", "off"]
     activo_ahora: bool
 
 
@@ -26,7 +26,7 @@ class BotConfigUpdate(BaseModel):
 
 
 class BotLineaOverrideRequest(BaseModel):
-    apagada: bool
+    modo: Literal["auto", "on", "off"]
 
 
 class BotRecargaRequest(BaseModel):

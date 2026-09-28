@@ -98,6 +98,12 @@ function fmtFechaCorta(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
 
+const MODOS_LINEA = [
+  { key: 'auto', label: 'Auto' },
+  { key: 'on', label: 'Encendido' },
+  { key: 'off', label: 'Apagado' },
+]
+
 function etiquetaEstadoLineas(lineas) {
   if (!lineas?.length) return ''
   const activas = lineas.filter((l) => l.activo_ahora).length
@@ -171,10 +177,10 @@ export default function AsistenteIAPage() {
     return () => document.removeEventListener('mousedown', cerrarSiEsAfuera)
   }, [mostrarLineas])
 
-  const cambiarLineaApagada = async (lineaId, apagada) => {
+  const cambiarModoLinea = async (lineaId, modo) => {
     setGuardandoLinea(lineaId)
     try {
-      const data = await cambiarOverrideLineaBot(lineaId, apagada)
+      const data = await cambiarOverrideLineaBot(lineaId, modo)
       setConfig(data)
     } catch (e) {
       showToast(e.response?.data?.detail || 'No se pudo actualizar la línea', 'error')
@@ -306,22 +312,34 @@ export default function AsistenteIAPage() {
               </button>
               {mostrarLineas && (
                 <div className="asistente-ia-page__estado-popover">
-                  <p className="asistente-ia-page__estado-popover-titulo">Apagar manualmente</p>
+                  <p className="asistente-ia-page__estado-popover-titulo">Control manual por línea</p>
                   {config.lineas.map((linea) => (
-                    <label key={linea.id} className="asistente-ia-page__estado-popover-linea">
+                    <div key={linea.id} className="asistente-ia-page__estado-popover-linea">
                       <span>
                         {linea.nombre}
-                        {!linea.apagada_manual && !linea.activo_ahora && (
-                          <span className="asistente-ia-page__estado-popover-hint"> (fuera de horario)</span>
+                        {linea.modo === 'auto' && (
+                          <span className="asistente-ia-page__estado-popover-hint">
+                            {linea.activo_ahora ? ' (en horario)' : ' (fuera de horario)'}
+                          </span>
+                        )}
+                        {linea.modo === 'on' && !linea.activo_ahora && (
+                          <span className="asistente-ia-page__estado-popover-hint"> (sin saldo)</span>
                         )}
                       </span>
-                      <input
-                        type="checkbox"
-                        checked={linea.apagada_manual}
-                        disabled={guardandoLinea === linea.id}
-                        onChange={(e) => cambiarLineaApagada(linea.id, e.target.checked)}
-                      />
-                    </label>
+                      <div className="asistente-ia-page__modo-linea" role="group">
+                        {MODOS_LINEA.map((m) => (
+                          <button
+                            key={m.key}
+                            type="button"
+                            className={`asistente-ia-page__modo-btn ${linea.modo === m.key ? `asistente-ia-page__modo-btn--activo asistente-ia-page__modo-btn--${m.key}` : ''}`}
+                            disabled={guardandoLinea === linea.id}
+                            onClick={() => linea.modo !== m.key && cambiarModoLinea(linea.id, m.key)}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -329,7 +347,7 @@ export default function AsistenteIAPage() {
           )}
         </div>
 
-        {loadingConfig ? (
+        {loadingConfig || !config ? (
           <LoadingSpinner text="Cargando configuración..." />
         ) : (
           <>

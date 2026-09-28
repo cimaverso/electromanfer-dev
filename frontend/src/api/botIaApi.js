@@ -8,7 +8,7 @@ import axiosClient from './axiosClient'
 // ─────────────────────────────────────────────────────────────────────────────
 
 // → { horario_activo, horario_reglas, saldo_usd, instrucciones_extra,
-//     lineas: [{ id, nombre, apagada_manual, activo_ahora }] }
+//     lineas: [{ id, nombre, modo: 'auto'|'on'|'off', activo_ahora }] }
 export async function obtenerConfigBot() {
   const { data } = await axiosClient.get('/whatsapp/bot/config')
   return data
@@ -20,9 +20,11 @@ export async function actualizarConfigBot(cambios) {
   return data
 }
 
-// Prende/apaga el asistente manualmente para una línea puntual de WhatsApp.
-export async function cambiarOverrideLineaBot(lineaId, apagada) {
-  const { data } = await axiosClient.patch(`/whatsapp/bot/lineas/${lineaId}/override`, { apagada })
+// Fija el modo del asistente para una línea puntual de WhatsApp:
+// 'on' (encendido aunque esté fuera de horario), 'off' (apagado) o
+// 'auto' (sigue el horario automático). El saldo en $0 apaga todo igual.
+export async function cambiarOverrideLineaBot(lineaId, modo) {
+  const { data } = await axiosClient.patch(`/whatsapp/bot/lineas/${lineaId}/override`, { modo })
   return data
 }
 

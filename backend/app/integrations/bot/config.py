@@ -18,6 +18,7 @@ def _config_por_defecto() -> BotConfig:
     return BotConfig(
         id=1,
         lineas_apagadas=[],
+        lineas_encendidas=[],
         horario_activo=True,
         horario_reglas={},
         saldo_usd=0,
@@ -83,18 +84,34 @@ def actualizar_config(
     return config
 
 
+MODOS_LINEA = ("auto", "on", "off")
+
+
+def modo_linea(config: BotConfig, linea_id: str) -> str:
+    if linea_id in (config.lineas_apagadas or []):
+        return "off"
+    if linea_id in (config.lineas_encendidas or []):
+        return "on"
+    return "auto"
+
+
 def cambiar_override_linea(
-    db: Session, linea_id: str, apagado: bool, actualizado_por_id: int | None = None
+    db: Session, linea_id: str, modo: str, actualizado_por_id: int | None = None
 ) -> BotConfig:
-    """Prende/apaga manualmente el asistente para una línea puntual (las
-    demás líneas y el resto de la config -- horario, saldo -- no cambian)."""
+    """Fija el modo manual del asistente para una línea puntual: "on"
+    (encendido sin importar horario), "off" (apagado) o "auto" (sigue el
+    horario). Las demás líneas y el resto de la config no cambian."""
+    if modo not in MODOS_LINEA:
+        raise ValueError("modo debe ser 'auto', 'on' u 'off'")
     config = obtener_config(db)
-    apagadas = set(config.lineas_apagadas or [])
-    if apagado:
+    apagadas = set(config.lineas_apagadas or []) - {linea_id}
+    encendidas = set(config.lineas_encendidas or []) - {linea_id}
+    if modo == "off":
         apagadas.add(linea_id)
-    else:
-        apagadas.discard(linea_id)
+    elif modo == "on":
+        encendidas.add(linea_id)
     config.lineas_apagadas = sorted(apagadas)
+    config.lineas_encendidas = sorted(encendidas)
     if actualizado_por_id is not None:
         config.actualizado_por_id = actualizado_por_id
     db.commit()
@@ -128,8 +145,12 @@ def bot_activo_ahora(db: Session, linea_id: str | None = None, ahora: datetime |
     config = obtener_config(db)
     if float(config.saldo_usd or 0) <= 0:
         return False
-    if linea_id is not None and str(linea_id) in (config.lineas_apagadas or []):
-        return False
+    if linea_id is not None:
+        modo = modo_linea(config, str(linea_id))
+        if modo == "off":
+            return False
+        if modo == "on":
+            return True
     if not config.horario_activo:
         return False
     return esta_en_horario(config.horario_reglas, ahora)
