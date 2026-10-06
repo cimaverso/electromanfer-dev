@@ -23,7 +23,7 @@ class MensajesResponse(BaseModel):
     conversation_id: int
     is_open: bool
     contact: dict[str, Any]
-    contact_phone: dict[str, Any]
+    contact_phone: Optional[dict[str, Any]] = None
     messages: list[dict[str, Any]]
     pagination: dict[str, Any]
     bot_desactivado: bool = False

@@ -15,11 +15,17 @@ from app.core.db import engine
 from app.routes import usuarios
 from app.scheduler import iniciar_scheduler, detener_scheduler
 from app.core.config import settings
-from app.integrations.cimasuite.ws_client import CimApiWSClient
+from app.integrations.cimasuite.ws_client import CimaSuiteWSClient
+from app.integrations.cimasuite.cursor import DbCursorStore
 from app.integrations.cimasuite.handler import handle_cimapi_event
 
 
-cimapi_ws_client = CimApiWSClient(handle_cimapi_event)
+cimapi_ws_client = CimaSuiteWSClient(
+    url=settings.CIMAPI_WS_URL,
+    api_key=settings.CIMAPI_API_KEY,
+    handler=handle_cimapi_event,
+    cursor_store=DbCursorStore(),
+)
 
 
 @asynccontextmanager

@@ -5,6 +5,7 @@ espejo local de leads/contactos -- a diferencia de Hospedia, este
 handler no crea ni actualiza ninguna entidad propia, solo decide a
 qué usuarios avisar y reenvía el aviso.
 """
+import asyncio
 import logging
 
 from sqlalchemy import select
@@ -54,26 +55,32 @@ async def handle_cimapi_event(event: str, data: dict) -> None:
     phone_number_id = data.get("phone_number_id")
     conversation_id = data.get("conversation_id")
 
+    # BD y bot son síncronos: en un hilo, para que el WebSocket siga leyendo
+    # (y respondiendo pings) mientras tanto. Se espera a que terminen: así el
+    # cursor solo avanza cuando el bot ya contestó, y dos mensajes seguidos
+    # del mismo cliente no generan dos respuestas en paralelo.
+    usuario_ids = await asyncio.to_thread(_usuarios_a_notificar_en_sesion, phone_number_id)
+
+    if usuario_ids:
+        # Señal mínima -- el frontend dispara un fetch puntual al endpoint
+        # REST correspondiente, no se manda el contenido del mensaje por WS.
+        payload = {
+            "type": event,
+            "conversation_id": conversation_id,
+        }
+        await realtime_manager.send_to_users(usuario_ids, payload)
+        logger.info(
+            "Evento CimAPI reenviado | event=%s | conversation_id=%s | usuarios=%s",
+            event, conversation_id, usuario_ids,
+        )
+
+    if event == "message.received" and (data.get("message") or {}).get("direction") == "inbound":
+        await asyncio.to_thread(procesar_mensaje_entrante, phone_number_id, conversation_id)
+
+
+def _usuarios_a_notificar_en_sesion(phone_number_id) -> list[int]:
     db = SessionLocal()
     try:
-        usuario_ids = _usuarios_a_notificar(phone_number_id, db)
+        return _usuarios_a_notificar(phone_number_id, db)
     finally:
         db.close()
-
-    if not usuario_ids:
-        return
-
-    # Señal mínima -- el frontend dispara un fetch puntual al endpoint
-    # REST correspondiente, no se manda el contenido del mensaje por WS.
-    payload = {
-        "type": event,
-        "conversation_id": conversation_id,
-    }
-    await realtime_manager.send_to_users(usuario_ids, payload)
-    logger.info(
-        "Evento CimAPI reenviado | event=%s | conversation_id=%s | usuarios=%s",
-        event, conversation_id, usuario_ids,
-    )
-
-    if event == "message.received":
-        procesar_mensaje_entrante(phone_number_id, conversation_id)

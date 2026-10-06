@@ -48,7 +48,7 @@ def _contexto_conversacion(conversation_id: int) -> dict | None:
     datos = WhatsappService.obtener_mensajes(
         conversation_id, page=1, limit=MENSAJES_DE_CONTEXTO
     )
-    telefono = datos.get("contact_phone", {}).get("phone")
+    telefono = (datos.get("contact_phone") or {}).get("phone")
     mensajes = sorted(datos.get("messages", []), key=lambda m: m.get("created_at") or "")
     if not mensajes or not telefono:
         return None

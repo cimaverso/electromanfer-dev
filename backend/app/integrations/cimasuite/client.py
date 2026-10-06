@@ -9,6 +9,29 @@ from fastapi import HTTPException, UploadFile
 from app.core.config import settings
 
 
+def _mensaje_error(respuesta, mensaje_por_defecto: str) -> str:
+    """Mensaje legible de un error de CimaSuite: {"error": {"code", "message"}}.
+    En datos inválidos el motivo concreto (ej. número mal escrito) va en details."""
+    try:
+        error = respuesta.json().get("error") or {}
+    except ValueError:
+        return mensaje_por_defecto
+    mensaje = error.get("message") or mensaje_por_defecto
+    detalles = error.get("details")
+    if error.get("code") == "validation_error" and isinstance(detalles, list) and detalles:
+        mensaje = detalles[0].get("message") or mensaje
+    return mensaje
+
+
+def _json_o_error(respuesta, mensaje_por_defecto: str, ok=(200, 201)):
+    if respuesta.status_code not in ok:
+        raise HTTPException(
+            status_code=respuesta.status_code,
+            detail=_mensaje_error(respuesta, mensaje_por_defecto),
+        )
+    return respuesta.json() if respuesta.content else None
+
+
 class WhatsappService:
 
     @staticmethod
@@ -23,10 +46,7 @@ class WhatsappService:
                 headers={**WhatsappService._headers(), "Content-Type": "application/json"},
                 json={"code": code, "display_name": display_name},
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error conectando el número en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error conectando el número en CimAPI")
 
     @staticmethod
     def listar_conversaciones(page: int = 1, limit: int = 20, phone_number_id: Optional[str] = None):
@@ -39,10 +59,7 @@ class WhatsappService:
                 headers=WhatsappService._headers(),
                 params=params,
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error obteniendo conversaciones de CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error obteniendo conversaciones de CimAPI")
 
     @staticmethod
     def buscar(q: str, limit: int = 8, phone_number_id: Optional[str] = None):
@@ -56,10 +73,7 @@ class WhatsappService:
                 headers=WhatsappService._headers(),
                 params=params,
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error buscando en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error buscando en CimAPI")
 
     @staticmethod
     def obtener_mensajes(conversation_id: int, page: int = 1, limit: int = 50):
@@ -69,10 +83,7 @@ class WhatsappService:
                 headers=WhatsappService._headers(),
                 params={"page": page, "limit": limit},
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error obteniendo mensajes de CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error obteniendo mensajes de CimAPI")
 
     @staticmethod
     def enviar_texto(to: str, message: str, conversation_id: Optional[int] = None):
@@ -82,10 +93,7 @@ class WhatsappService:
                 headers={**WhatsappService._headers(), "Content-Type": "application/json"},
                 json={"to": to, "message": message, "conversation_id": conversation_id},
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error enviando mensaje en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error enviando mensaje en CimAPI")
 
     @staticmethod
     def _enviar_archivo(endpoint: str, to: str, file: UploadFile, conversation_id: Optional[int], caption: Optional[str]):
@@ -100,10 +108,7 @@ class WhatsappService:
                 },
                 files={"file": (file.filename, file.file, file.content_type)},
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", f"Error enviando {endpoint} en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, f"Error enviando {endpoint} en CimAPI")
 
     @staticmethod
     def enviar_imagen(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None):
@@ -126,10 +131,7 @@ class WhatsappService:
                 data={"to": to, "conversation_id": conversation_id},
                 files={"file": (file.filename, file.file, file.content_type)},
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error enviando audio en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error enviando audio en CimAPI")
 
     @staticmethod
     def descargar_media(media_id: str):
@@ -139,7 +141,10 @@ class WhatsappService:
                 headers=WhatsappService._headers(),
             )
         if respuesta.status_code != 200:
-            raise HTTPException(status_code=respuesta.status_code, detail="Error descargando media de CimAPI")
+            raise HTTPException(
+                status_code=respuesta.status_code,
+                detail=_mensaje_error(respuesta, "Error descargando media de CimAPI"),
+            )
         return respuesta.content, respuesta.headers.get("content-type", "application/octet-stream")
 
     @staticmethod
@@ -151,10 +156,7 @@ class WhatsappService:
                 headers={**WhatsappService._headers(), "Content-Type": "application/json"},
                 json=payload,
             )
-        if respuesta.status_code != 200:
-            detalle = respuesta.json().get("detail", "Error actualizando la conversación en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
+        return _json_o_error(respuesta, "Error actualizando la conversación en CimAPI")
 
     @staticmethod
     def vaciar_conversacion(conversation_id: int):
@@ -163,9 +165,7 @@ class WhatsappService:
                 f"{settings.CIMAPI_BASE_URL}/conversations/{conversation_id}/messages",
                 headers=WhatsappService._headers(),
             )
-        if respuesta.status_code not in (200, 204):
-            detalle = respuesta.json().get("detail", "Error vaciando la conversación en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        _json_o_error(respuesta, "Error vaciando la conversación en CimAPI", ok=(200, 204))
         return {"ok": True}
 
     @staticmethod
@@ -175,22 +175,10 @@ class WhatsappService:
                 f"{settings.CIMAPI_BASE_URL}/conversations/{conversation_id}",
                 headers=WhatsappService._headers(),
             )
-        if respuesta.status_code not in (200, 204):
-            detalle = respuesta.json().get("detail", "Error eliminando la conversación en CimAPI")
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
+        _json_o_error(respuesta, "Error eliminando la conversación en CimAPI", ok=(200, 204))
         return {"ok": True}
 
     # ─── Plantillas ──────────────────────────────────────────────────────────
-
-    @staticmethod
-    def _json_o_error(respuesta, mensaje_por_defecto: str, ok=(200, 201)):
-        if respuesta.status_code not in ok:
-            try:
-                detalle = respuesta.json().get("detail", mensaje_por_defecto)
-            except ValueError:
-                detalle = mensaje_por_defecto
-            raise HTTPException(status_code=respuesta.status_code, detail=detalle)
-        return respuesta.json()
 
     @staticmethod
     def listar_plantillas(phone_number_id: int):
@@ -200,7 +188,7 @@ class WhatsappService:
                 headers=WhatsappService._headers(),
                 params={"phone_number_id": phone_number_id},
             )
-        return WhatsappService._json_o_error(respuesta, "Error obteniendo plantillas de CimAPI")
+        return _json_o_error(respuesta, "Error obteniendo plantillas de CimAPI")
 
     @staticmethod
     def crear_plantilla(phone_number_id: int, payload: dict):
@@ -211,7 +199,7 @@ class WhatsappService:
                 params={"phone_number_id": phone_number_id},
                 json=payload,
             )
-        return WhatsappService._json_o_error(respuesta, "Error creando la plantilla en CimAPI")
+        return _json_o_error(respuesta, "Error creando la plantilla en CimAPI")
 
     @staticmethod
     def sincronizar_plantillas(phone_number_id: int):
@@ -221,7 +209,7 @@ class WhatsappService:
                 headers=WhatsappService._headers(),
                 params={"phone_number_id": phone_number_id},
             )
-        return WhatsappService._json_o_error(respuesta, "Error sincronizando plantillas con CimAPI")
+        return _json_o_error(respuesta, "Error sincronizando plantillas con CimAPI")
 
     @staticmethod
     def enviar_plantilla(
@@ -245,4 +233,4 @@ class WhatsappService:
                     "conversation_id": conversation_id,
                 },
             )
-        return WhatsappService._json_o_error(respuesta, "Error enviando la plantilla en CimAPI")
+        return _json_o_error(respuesta, "Error enviando la plantilla en CimAPI")
