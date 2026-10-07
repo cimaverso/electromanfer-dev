@@ -394,9 +394,12 @@ function MensajeBurbuja({ mensaje }) {
 }
 
 // ─── BarraRespuesta ───────────────────────────────────────────────────────────
+// Imágenes/fichas sin la marca `seleccionada` (adjuntos antiguos) se envían por defecto
+const estaSeleccionado = (adj) => adj?.seleccionada !== false
+
 function BarraRespuesta({
   onEnviar, loading, onNuevaCotizacion, onAdjuntarCotizacion,
-  adjuntoPrevio = null, onQuitarAdjunto,
+  adjuntoPrevio = null, onQuitarAdjunto, onToggleAdjunto,
   onEnviarGuia,
   textoInicial = '',
   onTextoInicialUsado,
@@ -487,6 +490,9 @@ function BarraRespuesta({
   const numFichas = adjuntoPrevio?.adjuntosPdfs?.length || 0
   const numLocales = adjuntoPrevio?.archivosLocales?.length || 0
   const totalAdjuntos = (adjuntoPrevio?.nombreArchivo ? 1 : 0) + numImagenes + numFichas + numLocales
+  const numSeleccionados = totalAdjuntos
+    - (adjuntoPrevio?.adjuntosImagenes || []).filter((a) => !estaSeleccionado(a)).length
+    - (adjuntoPrevio?.adjuntosPdfs || []).filter((a) => !estaSeleccionado(a)).length
   const hayAdjuntos = totalAdjuntos > 0
 
   return (
@@ -498,7 +504,7 @@ function BarraRespuesta({
             <span className="buzon-acordeon__icon buzon-acordeon__icon--pdf">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
             </span>
-            <span className="buzon-acordeon__label">Adjuntos <span className="buzon-acordeon__badge">{totalAdjuntos}</span></span>
+            <span className="buzon-acordeon__label">Adjuntos <span className="buzon-acordeon__badge">{numSeleccionados === totalAdjuntos ? totalAdjuntos : `${numSeleccionados}/${totalAdjuntos}`}</span></span>
             <button type="button" className="buzon-acordeon__quitar" onClick={(e) => { e.stopPropagation(); onQuitarAdjunto() }} title="Quitar todos">✕</button>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buzon-acordeon__chevron" style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}><polyline points="6 9 12 15 18 9" /></svg>
           </button>
@@ -514,10 +520,11 @@ function BarraRespuesta({
                 <div className="buzon-acordeon__grupo">
                   <span className="buzon-acordeon__grupo-label">🖼 {numImagenes} imagen{numImagenes !== 1 ? 'es' : ''}</span>
                   {adjuntoPrevio.adjuntosImagenes.map((adj, i) => (
-                    <div key={i} className="buzon-reply__ficha-item">
+                    <label key={i} className="buzon-reply__ficha-item buzon-reply__ficha-item--check">
+                      <input type="checkbox" checked={estaSeleccionado(adj)} onChange={() => onToggleAdjunto('adjuntosImagenes', i)} />
                       <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--img-sm">IMG</span>
                       <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>{resolverNombre(adj)}</span>
-                    </div>
+                    </label>
                   ))}
                 </div>
               )}
@@ -525,10 +532,11 @@ function BarraRespuesta({
                 <div className="buzon-acordeon__grupo">
                   <span className="buzon-acordeon__grupo-label">📄 {numFichas} ficha{numFichas !== 1 ? 's' : ''}</span>
                   {adjuntoPrevio.adjuntosPdfs.map((adj, i) => (
-                    <div key={i} className="buzon-reply__ficha-item">
+                    <label key={i} className="buzon-reply__ficha-item buzon-reply__ficha-item--check">
+                      <input type="checkbox" checked={estaSeleccionado(adj)} onChange={() => onToggleAdjunto('adjuntosPdfs', i)} />
                       <span className="buzon-reply__adjunto-icon buzon-reply__adjunto-icon--sm">PDF</span>
                       <span className="buzon-reply__ficha-nombre" title={resolverNombre(adj)}>{resolverNombre(adj)}</span>
-                    </div>
+                    </label>
                   ))}
                 </div>
               )}
@@ -806,9 +814,9 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
         formData.append('references', hiloActivo?.last_message_id || hiloActivo?.message_id || '')
         if (firmaSeleccionada?.url) formData.append('firma_url', firmaSeleccionada.url)
         formData.append('pdf_cotizacion', blob, `${adjuntoReply.cotizacion.consecutivo}.pdf`)
-        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter((a) => a.url)
+        const imagenesUrls = (adjuntoReply.adjuntosImagenes || []).filter(estaSeleccionado).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter((a) => a.url)
         if (imagenesUrls.length > 0) formData.append('adjuntos_imagenes_urls', JSON.stringify(imagenesUrls))
-        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter((a) => a.url)
+        const fichasUrls = (adjuntoReply.adjuntosPdfs || []).filter(estaSeleccionado).map((a) => ({ url: a.url || a, nombre: a.nombre || (a.url || a).split('/').pop() })).filter((a) => a.url)
         if (fichasUrls.length > 0) formData.append('adjuntos_pdfs_urls', JSON.stringify(fichasUrls))
         if (adjuntoReply?.archivosLocales?.length > 0) adjuntoReply.archivosLocales.forEach((adj) => formData.append('archivos_extra', adj.archivo, adj.nombreArchivo))
         await axiosClient.post(`/cotizaciones/${adjuntoReply.cotizacion.id}/enviar-email`, formData, { timeout: 120000 })
@@ -964,6 +972,10 @@ export default function BuzonPanel({ onGenerarCotizacion, hiloInicialId = null, 
               loading={enviando || loadingEnvio}
               adjuntoPrevio={adjuntoReply}
               onQuitarAdjunto={() => setAdjuntoReply(null)}
+              onToggleAdjunto={(grupo, i) => setAdjuntoReply((prev) => prev && {
+                ...prev,
+                [grupo]: prev[grupo].map((a, j) => (j === i ? { ...(typeof a === 'string' ? { url: a } : a), seleccionada: !estaSeleccionado(a) } : a)),
+              })}
               onNuevaCotizacion={() => setModalCotizacion(true)}
               onEnviarGuia={() => setModalGuia(true)}
               textoInicial={textoGuia}

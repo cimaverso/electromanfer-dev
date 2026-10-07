@@ -32,8 +32,10 @@ async function cargarImagenesParaPdf(items = []) {
   return imagenesPorCodRef
 }
 
-// ─── Helper: carga adjuntos seleccionados ─────────────────────────────────────
-async function cargarAdjuntosSeleccionados(items = []) {
+// ─── Helper: carga todos los adjuntos de los productos ────────────────────────
+// Trae todas las imágenes y fichas; `seleccionada` indica las marcadas en el
+// producto, que llegan pre-chequeadas para que el usuario elija qué enviar.
+async function cargarAdjuntosProductos(items = []) {
   const adjuntosImagenes = []
   const adjuntosPdfs = []
   const codRefs = [...new Set(items.map((i) => i.cod_ref))]
@@ -42,9 +44,9 @@ async function cargarAdjuntosSeleccionados(items = []) {
       try {
         const recursos = await getRecursos(cod)
         recursos.forEach((r) => {
-          if (!r.seleccionada) return
-          if (r.tipo === 'imagen') adjuntosImagenes.push({ url: r.url, nombre: r.nombre || r.url.split('/').pop() })
-          else if (r.tipo === 'pdf') adjuntosPdfs.push({ url: r.url, nombre: r.nombre || r.url.split('/').pop() })
+          const adj = { url: r.url, nombre: r.nombre || r.url.split('/').pop(), seleccionada: !!r.seleccionada }
+          if (r.tipo === 'imagen') adjuntosImagenes.push(adj)
+          else if (r.tipo === 'pdf') adjuntosPdfs.push(adj)
         })
       } catch { /* sin recursos */ }
     })
@@ -299,7 +301,7 @@ export default function ModalCotizacionBuzon({ hilo, onClose, onCotizacionGenera
 
       const [imagenesPorCodRef, { adjuntosImagenes, adjuntosPdfs }] = await Promise.all([
         cargarImagenesParaPdf(items),
-        cargarAdjuntosSeleccionados(items),
+        cargarAdjuntosProductos(items),
       ])
 
       const blobUrl = await generarPdfCotizacion(result.data, [], [], false, imagenesPorCodRef)

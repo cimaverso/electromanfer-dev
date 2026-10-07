@@ -247,12 +247,23 @@ function LightboxModal({ media, onClose }) {
 }
 
 // ─── Barra de envío ──────────────────────────────────────────────────────────
-function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, onPlantillas, loading, progreso }) {
+function BarraEnvio({
+  onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGuia, onPlantillas, loading, progreso,
+  adjuntos = [], onToggleAdjunto, onQuitarAdjuntos, onEnviarAdjuntos,
+}) {
   const [texto, setTexto] = useState('')
+  const [adjuntosAbierto, setAdjuntosAbierto] = useState(true)
   const fileInputRef = useRef(null)
   const audioInputRef = useRef(null)
 
+  const numSeleccionados = adjuntos.filter((a) => a.seleccionado).length
+
   const handleEnviar = () => {
+    if (numSeleccionados > 0) {
+      onEnviarAdjuntos(texto)
+      setTexto('')
+      return
+    }
     if (!texto.trim()) return
     onEnviarTexto(texto)
     setTexto('')
@@ -265,8 +276,47 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
     }
   }
 
+  const grupos = [
+    { tipo: 'imagen', etiqueta: (n) => `🖼 ${n} imagen${n !== 1 ? 'es' : ''}` },
+    { tipo: 'ficha', etiqueta: (n) => `📄 ${n} ficha${n !== 1 ? 's' : ''}` },
+  ]
+
+  const renderAdjunto = (adj) => (
+    <label key={adj.key} className="wap-adjuntos__item">
+      <input type="checkbox" checked={adj.seleccionado} onChange={() => onToggleAdjunto(adj.key)} />
+      <span className={`wap-adjuntos__tipo ${adj.tipo === 'imagen' ? 'wap-adjuntos__tipo--img' : ''}`}>{adj.tipo === 'imagen' ? 'IMG' : 'PDF'}</span>
+      <span className="wap-adjuntos__nombre" title={adj.nombre}>{adj.nombre}</span>
+    </label>
+  )
+
   return (
     <div className="wap-reply">
+      {adjuntos.length > 0 && (
+        <div className="wap-adjuntos">
+          <div className="wap-adjuntos__header" onClick={() => setAdjuntosAbierto((v) => !v)}>
+            <span className="wap-adjuntos__label">
+              Adjuntos <span className="wap-adjuntos__badge">{numSeleccionados}/{adjuntos.length}</span>
+            </span>
+            <button type="button" className="wap-adjuntos__quitar" onClick={(e) => { e.stopPropagation(); onQuitarAdjuntos() }} title="Quitar todos">✕</button>
+            <span className="wap-adjuntos__chevron" style={{ transform: adjuntosAbierto ? 'rotate(180deg)' : 'rotate(0deg)' }}><IconAbajo /></span>
+          </div>
+          {adjuntosAbierto && (
+            <div className="wap-adjuntos__body">
+              {adjuntos.filter((a) => a.tipo === 'cotizacion').map(renderAdjunto)}
+              {grupos.map(({ tipo, etiqueta }) => {
+                const lista = adjuntos.filter((a) => a.tipo === tipo)
+                if (lista.length === 0) return null
+                return (
+                  <div key={tipo} className="wap-adjuntos__grupo">
+                    <span className="wap-adjuntos__grupo-label">{etiqueta(lista.length)}</span>
+                    {lista.map(renderAdjunto)}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
       <textarea
         className="wap-reply__input"
         placeholder="Escribe un mensaje..."
@@ -317,7 +367,7 @@ function BarraEnvio({ onEnviarTexto, onAdjuntar, onGenerarCotizacion, onEnviarGu
         </div>
         <div className="wap-reply__enviar">
           <span className="wap-reply__hint">Ctrl + Enter</span>
-          <button className="wap-btn wap-btn--primary" onClick={handleEnviar} disabled={loading || !!progreso || !texto.trim()} type="button">
+          <button className="wap-btn wap-btn--primary" onClick={handleEnviar} disabled={loading || !!progreso || (!texto.trim() && numSeleccionados === 0)} type="button">
             {loading ? 'Enviando...' : 'Enviar'}
           </button>
         </div>
@@ -359,6 +409,8 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
   const [modalPlantillas, setModalPlantillas] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState(null)
   const [progresoEnvio, setProgresoEnvio] = useState(null)
+  // { chatId, cotizacion, adjuntos } — cotización generada esperando que se elija qué enviar
+  const [pendiente, setPendiente] = useState(null)
   const [vistaMovil, setVistaMovil] = useState('lista')
   const [mediaPreview, setMediaPreview] = useState(null)
   const mensajesEndRef = useRef(null)
@@ -563,8 +615,8 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
     }
   }
 
-  // ── Cotización generada desde el chat → se envía directo como adjunto ────
-  const handleCotizacionGenerada = async ({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes = [], adjuntosPdfs = [] }) => {
+  // ── Cotización generada desde el chat → queda en "Adjuntos" para elegir qué enviar ──
+  const handleCotizacionGenerada = ({ blobUrl, nombreArchivo, cotizacion, adjuntosImagenes = [], adjuntosPdfs = [] }) => {
     setModalCotizacion(false)
     if (!chatActivo) return
 
@@ -573,40 +625,55 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
       return
     }
 
+    const nombreDe = (adj) => adj.nombre || adj.url?.split('/').pop() || 'archivo'
+    setPendiente({
+      chatId: chatActivo.id,
+      cotizacion,
+      adjuntos: [
+        { key: 'cotizacion', tipo: 'cotizacion', nombre: nombreArchivo, url: blobUrl, mime: 'application/pdf', seleccionado: true },
+        ...adjuntosImagenes.map((adj, i) => ({ key: `img-${i}`, tipo: 'imagen', nombre: nombreDe(adj), url: adj.url, seleccionado: !!adj.seleccionada })),
+        ...adjuntosPdfs.map((adj, i) => ({ key: `ficha-${i}`, tipo: 'ficha', nombre: nombreDe(adj), url: adj.url, seleccionado: !!adj.seleccionada })),
+      ],
+    })
+  }
+
+  // Los adjuntos pendientes solo se muestran en el chat donde se generó la cotización
+  const adjuntosPendientes = pendiente && pendiente.chatId === chatActivo?.id ? pendiente.adjuntos : []
+  const quitarAdjuntosPendientes = () => setPendiente(null)
+
+  const handleToggleAdjunto = (key) => {
+    setPendiente((prev) => prev && {
+      ...prev,
+      adjuntos: prev.adjuntos.map((a) => (a.key === key ? { ...a, seleccionado: !a.seleccionado } : a)),
+    })
+  }
+
+  // ── Envía los adjuntos marcados; el texto escrito va como pie del primero ──
+  const handleEnviarAdjuntos = async (texto) => {
+    if (!chatActivo) return
+    const seleccionados = adjuntosPendientes.filter((a) => a.seleccionado)
+    if (seleccionados.length === 0) return
+    const consecutivo = pendiente?.cotizacion?.consecutivo || ''
+    quitarAdjuntosPendientes()
+
     const fallos = []
-    const extras = [...adjuntosImagenes, ...adjuntosPdfs]
-    const total = 1 + extras.length
-    let actual = 0
-    setProgresoEnvio({ actual, total })
-
-    try {
-      actual += 1
-      setProgresoEnvio({ actual, total })
-      const blob = await fetch(blobUrl).then((r) => r.blob())
-      const archivo = new File([blob], nombreArchivo, { type: 'application/pdf' })
-      const formData = new FormData()
-      formData.append('archivo', archivo)
-      formData.append('texto', `Cotización ${cotizacion?.consecutivo || ''}`.trim())
-      await enviarConAdjunto(chatActivo.id, formData)
-    } catch (e) {
-      console.error('Error enviando PDF de cotización por WhatsApp:', e)
-      fallos.push(nombreArchivo || 'PDF de cotización')
-    }
-
-    for (const adj of extras) {
-      const nombre = adj.nombre || adj.url?.split('/').pop() || 'archivo'
+    const total = seleccionados.length
+    for (let i = 0; i < total; i++) {
+      const adj = seleccionados[i]
+      setProgresoEnvio({ actual: i + 1, total })
+      let pie = ''
+      if (i === 0) pie = texto.trim()
+      if (!pie && adj.tipo === 'cotizacion') pie = `Cotización ${consecutivo}`.trim()
       try {
-        actual += 1
-        setProgresoEnvio({ actual, total })
         const blob = await fetch(adj.url).then((r) => r.blob())
-        const archivo = new File([blob], nombre, { type: blob.type })
+        const archivo = new File([blob], adj.nombre, { type: adj.mime || blob.type })
         const formData = new FormData()
         formData.append('archivo', archivo)
-        formData.append('texto', '')
+        formData.append('texto', pie)
         await enviarConAdjunto(chatActivo.id, formData)
       } catch (e) {
-        console.error(`Error enviando adjunto "${nombre}" por WhatsApp:`, e)
-        fallos.push(nombre)
+        console.error(`Error enviando adjunto "${adj.nombre}" por WhatsApp:`, e)
+        fallos.push(adj.nombre)
       }
     }
 
@@ -829,6 +896,10 @@ export default function ChatPanel({ chatInicialId = null, onChatMontado = null }
               onPlantillas={() => setModalPlantillas(true)}
               loading={loadingEnvio}
               progreso={progresoEnvio}
+              adjuntos={adjuntosPendientes}
+              onToggleAdjunto={handleToggleAdjunto}
+              onQuitarAdjuntos={quitarAdjuntosPendientes}
+              onEnviarAdjuntos={handleEnviarAdjuntos}
             />
           </>
         )}

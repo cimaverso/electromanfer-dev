@@ -763,6 +763,8 @@
 
 /* ─── Items adjunto en reply ──────────────────────────── */
 .buzon-reply__ficha-item { display: flex; align-items: center; gap: var(--space-2); }
+.buzon-reply__ficha-item--check { cursor: pointer; }
+.buzon-reply__ficha-item--check input { margin: 0; cursor: pointer; accent-color: var(--color-primary); }
 
 .buzon-reply__adjunto-icon {
   font-size: 10px;
