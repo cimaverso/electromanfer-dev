@@ -41,13 +41,33 @@ def clave_archivo(conversacion_id: int, whatsapp_message_id: str, mime: str | No
         ext = "." + "".join(c for c in nombre.rsplit(".", 1)[1].lower() if c.isalnum())[:10]
     elif mime:
         ext = mimetypes.guess_extension(mime.split(";")[0].strip()) or ""
+    return f"{PREFIJO}{conversacion_id}/{_id_seguro(whatsapp_message_id)}{ext}"
+
+
+def _id_seguro(whatsapp_message_id: str) -> str:
     seguro = "".join(c for c in whatsapp_message_id if c.isalnum() or c in "._-")
     while ".." in seguro:
         seguro = seguro.replace("..", ".")
     seguro = seguro.strip(".")
     if not seguro:
         raise ValueError("Id de mensaje inválido")
-    return f"{PREFIJO}{conversacion_id}/{seguro}{ext}"
+    return seguro
+
+
+def buscar_existente(conversacion_id: int, whatsapp_message_id: str) -> str | None:
+    """Clave de un archivo de este mensaje que ya está en el disco (cualquier extensión), o None.
+    Sirve para anotar en la base un archivo ya descargado sin bajarlo otra vez."""
+    try:
+        seguro = _id_seguro(whatsapp_message_id)
+    except ValueError:
+        return None
+    carpeta = _raiz() / PREFIJO.rstrip("/") / str(conversacion_id)
+    if not carpeta.is_dir():
+        return None
+    for ruta in sorted(carpeta.iterdir()):
+        if ruta.is_file() and not ruta.name.startswith(".") and (ruta.name == seguro or ruta.stem == seguro or ruta.name.startswith(seguro + ".")):
+            return f"{PREFIJO}{conversacion_id}/{ruta.name}"
+    return None
 
 
 def es_clave(valor: str | None) -> bool:

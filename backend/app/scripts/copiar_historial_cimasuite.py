@@ -9,12 +9,20 @@ Solo lee de CimaSuite y se puede repetir. Conserva el id de cada conversación.
 Sin carpeta de archivos configurada no copia archivos.
 """
 import argparse
+import importlib
 import logging
+import pkgutil
 import sys
 
+import app.models as _paquete_modelos
 from app.core.db import SessionLocal
 from app.integrations.cimasuite.client import WhatsappService
 from app.integrations.cimasuite.copiar_historial import copiar_historial
+
+# El __init__ de los modelos está vacío. Fuera de la app (como aquí) hay que importarlos todos,
+# o SQLAlchemy no resuelve las claves hacia otras tablas (p. ej. usuarios) y falla al guardar.
+for _m in pkgutil.iter_modules(_paquete_modelos.__path__):
+    importlib.import_module(f"app.models.{_m.name}")
 
 
 def main() -> int:

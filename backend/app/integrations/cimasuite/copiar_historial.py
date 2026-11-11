@@ -164,7 +164,6 @@ def copiar_historial(
     (WhatsappService, sobre la API de CimaSuite)."""
     resumen = Resumen()
     esperados: dict[int, int] = {}
-    nuevos: list[int] = []
     for c in _todas_las_conversaciones(cliente):
         if conversacion_id is not None and c["id"] != conversacion_id:
             continue
@@ -188,8 +187,6 @@ def copiar_historial(
                 nuevo = _insertar(db, local.id, m)
                 if nuevo is not None:
                     resumen.mensajes_nuevos += 1
-                    if m.get("media_id"):
-                        nuevos.append(nuevo)
             _recalcular(db, local.id, c.get("unread_count") or 0)
             db.commit()
             guardados = db.scalar(select(func.count()).select_from(WhatsAppMensaje).where(WhatsAppMensaje.conversacion_id == local.id))
@@ -203,7 +200,14 @@ def copiar_historial(
             _ajustar_secuencias(db)
             db.commit()
             if con_archivos and archivos_whatsapp.configurado():
-                for mensaje_id in nuevos:
+                # Todos los que traen archivo y aún no lo tienen copiado: los de esta corrida y
+                # los que quedaron pendientes en una anterior (descarga fallida o sin anotar).
+                pendientes = db.execute(
+                    select(WhatsAppMensaje.id).where(
+                        WhatsAppMensaje.media_id.is_not(None), WhatsAppMensaje.media_clave.is_(None)
+                    ).order_by(WhatsAppMensaje.id)
+                ).scalars().all()
+                for mensaje_id in pendientes:
                     if almacen_chat.copiar_archivo(db, mensaje_id, cliente.descargar_media):
                         resumen.archivos_copiados += 1
                     else:

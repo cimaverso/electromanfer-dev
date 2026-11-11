@@ -6,6 +6,7 @@ duplica nada: el id de WhatsApp es único. El archivo de un mensaje se copia al
 servidor de Electromanfer porque Meta lo borra a los 30 días.
 """
 import logging
+import mimetypes
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select, text, update
@@ -184,6 +185,14 @@ def copiar_archivo(db: Session, mensaje_id: int, descargar) -> bool:
         m = db.get(WhatsAppMensaje, mensaje_id)
         if m is None or not m.media_id or m.media_clave:
             return False
+        # Si el archivo ya está en el disco (una copia anterior lo bajó pero no alcanzó a
+        # anotarlo), solo se anota: no se vuelve a descargar.
+        existente = archivos_whatsapp.buscar_existente(m.conversacion_id, m.whatsapp_message_id or f"m{m.id}")
+        if existente:
+            m.media_clave = existente
+            m.media_mime = mimetypes.guess_type(existente)[0] or "application/octet-stream"
+            db.commit()
+            return True
         contenido, mime = descargar(m.media_id)
         copiado = guardar_archivo(db, mensaje_id, contenido, mime or "")
         db.commit()
