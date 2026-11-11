@@ -26,5 +26,15 @@ class Settings(BaseSettings):
     LOGO_URL: str = ""
     MEDIA_BASE: str = os.path.join(BASE_DIR, "media")
 
+    # El chat de WhatsApp en tablas propias (cimapi ya no guarda conversaciones).
+    # 1) CHAT_GUARDAR_LOCAL: guarda lo que llega por eventos, sin cambiar lo que ve
+    #    el usuario (sigue leyendo de la API). 2) CHAT_LEER_LOCAL: las pantallas y el
+    #    asistente leen de las tablas propias. Los dos apagados = como siempre.
+    CHAT_GUARDAR_LOCAL: bool = False
+    CHAT_LEER_LOCAL: bool = False
+    # Carpeta de los archivos del chat (fotos, audios, documentos), en el servidor.
+    # En produccion necesita un volumen propio en Dokploy. Vacio = no guarda archivos.
+    WHATSAPP_ARCHIVOS_DIR: str = os.path.join(BASE_DIR, "whatsapp_archivos")
+
 
 settings = Settings()

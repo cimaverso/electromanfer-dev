@@ -1,7 +1,8 @@
 """
-Cliente REST para consumir CimAPI (WhatsApp) -- proxy en vivo, sin espejo.
-Electromanfer no guarda copia de conversaciones/mensajes: todo se consulta
-en tiempo real contra CimAPI usando la api-key del tenant.
+Cliente REST para consumir CimAPI (WhatsApp) con la api-key del tenant.
+Con CHAT_LEER_LOCAL apagado, las conversaciones y mensajes se consultan en vivo
+en la API (como siempre); con el chat en tablas propias solo se usa para enviar,
+plantillas y descargar archivos (ver chat_local.py).
 """
 import httpx
 from typing import Optional
@@ -86,17 +87,17 @@ class WhatsappService:
         return _json_o_error(respuesta, "Error obteniendo mensajes de CimAPI")
 
     @staticmethod
-    def enviar_texto(to: str, message: str, conversation_id: Optional[int] = None):
+    def enviar_texto(to: str, message: str, conversation_id: Optional[int] = None, phone_number_id: Optional[int] = None):
         with httpx.Client(timeout=30) as client:
             respuesta = client.post(
                 f"{settings.CIMAPI_BASE_URL}/messages/text",
                 headers={**WhatsappService._headers(), "Content-Type": "application/json"},
-                json={"to": to, "message": message, "conversation_id": conversation_id},
+                json={"to": to, "message": message, "conversation_id": conversation_id, "phone_number_id": phone_number_id},
             )
         return _json_o_error(respuesta, "Error enviando mensaje en CimAPI")
 
     @staticmethod
-    def _enviar_archivo(endpoint: str, to: str, file: UploadFile, conversation_id: Optional[int], caption: Optional[str]):
+    def _enviar_archivo(endpoint: str, to: str, file: UploadFile, conversation_id: Optional[int], caption: Optional[str], phone_number_id: Optional[int] = None):
         with httpx.Client(timeout=60) as client:
             respuesta = client.post(
                 f"{settings.CIMAPI_BASE_URL}/messages/{endpoint}",
@@ -105,30 +106,31 @@ class WhatsappService:
                     "to": to,
                     "conversation_id": conversation_id,
                     "caption": caption,
+                    **({"phone_number_id": phone_number_id} if phone_number_id is not None else {}),
                 },
                 files={"file": (file.filename, file.file, file.content_type)},
             )
         return _json_o_error(respuesta, f"Error enviando {endpoint} en CimAPI")
 
     @staticmethod
-    def enviar_imagen(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None):
-        return WhatsappService._enviar_archivo("image", to, file, conversation_id, caption)
+    def enviar_imagen(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None, phone_number_id: Optional[int] = None):
+        return WhatsappService._enviar_archivo("image", to, file, conversation_id, caption, phone_number_id)
 
     @staticmethod
-    def enviar_documento(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None):
-        return WhatsappService._enviar_archivo("document", to, file, conversation_id, caption)
+    def enviar_documento(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None, phone_number_id: Optional[int] = None):
+        return WhatsappService._enviar_archivo("document", to, file, conversation_id, caption, phone_number_id)
 
     @staticmethod
-    def enviar_video(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None):
-        return WhatsappService._enviar_archivo("video", to, file, conversation_id, caption)
+    def enviar_video(to: str, file: UploadFile, conversation_id: Optional[int] = None, caption: Optional[str] = None, phone_number_id: Optional[int] = None):
+        return WhatsappService._enviar_archivo("video", to, file, conversation_id, caption, phone_number_id)
 
     @staticmethod
-    def enviar_audio(to: str, file: UploadFile, conversation_id: Optional[int] = None):
+    def enviar_audio(to: str, file: UploadFile, conversation_id: Optional[int] = None, phone_number_id: Optional[int] = None):
         with httpx.Client(timeout=60) as client:
             respuesta = client.post(
                 f"{settings.CIMAPI_BASE_URL}/messages/audio",
                 headers=WhatsappService._headers(),
-                data={"to": to, "conversation_id": conversation_id},
+                data={"to": to, "conversation_id": conversation_id, **({"phone_number_id": phone_number_id} if phone_number_id is not None else {})},
                 files={"file": (file.filename, file.file, file.content_type)},
             )
         return _json_o_error(respuesta, "Error enviando audio en CimAPI")
@@ -219,6 +221,7 @@ class WhatsappService:
         components: Optional[list] = None,
         preview_text: Optional[str] = None,
         conversation_id: Optional[int] = None,
+        phone_number_id: Optional[int] = None,
     ):
         with httpx.Client(timeout=30) as client:
             respuesta = client.post(
@@ -231,6 +234,7 @@ class WhatsappService:
                     "components": components,
                     "preview_text": preview_text,
                     "conversation_id": conversation_id,
+                    "phone_number_id": phone_number_id,
                 },
             )
         return _json_o_error(respuesta, "Error enviando la plantilla en CimAPI")

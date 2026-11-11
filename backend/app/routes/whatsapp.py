@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.integrations.cimasuite import almacen_chat, archivos_whatsapp, chat_local
 from app.integrations.cimasuite.client import WhatsappService
 from app.integrations.bot.config import (
     actualizar_config,
@@ -121,6 +123,43 @@ def _linea_para_plantillas(token: TokenData, db: Session, linea_id: Optional[int
     return int(phone_number_id)
 
 
+# ─── Chat en tablas propias (CHAT_LEER_LOCAL) ────────────────────────────────
+
+def _nombres_lineas() -> dict[int, str]:
+    return {l["id"]: l["nombre"] for l in LINEAS_WHATSAPP}
+
+
+def _exigir_linea_del_usuario(token: TokenData, db: Session, linea: int) -> None:
+    """Un vendedor solo trabaja con su línea; gerencia y administrador, con cualquiera."""
+    if token.role == RoleEnum.VENDEDOR.value:
+        propia = _phone_number_id_para(token, db, None)
+        if str(linea) != str(propia):
+            raise HTTPException(status_code=403, detail="Esta conversación es de otra línea")
+
+
+def _conversacion_o_404(token: TokenData, db: Session, conversation_id: int | None) -> tuple[str, int]:
+    """(teléfono, línea) de la conversación local, validando que el usuario pueda usarla."""
+    datos = chat_local.datos_de_envio(db, conversation_id) if conversation_id is not None else None
+    if datos is None:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    _exigir_linea_del_usuario(token, db, datos[1])
+    return datos
+
+
+def _enviar_local(db: Session, token: TokenData, conversation_id: int | None, enviar, archivo=None):
+    """Envía por cimapi desde la línea de la conversación y guarda lo enviado."""
+    telefono, linea = _conversacion_o_404(token, db, conversation_id)
+    resultado = enviar(telefono, linea)
+    almacen_chat.guardar_envio(db, conversation_id, resultado, token.user_id, archivo=archivo)
+    return resultado
+
+
+def _adjunto(file: UploadFile) -> tuple[bytes, str, str]:
+    contenido = file.file.read()
+    file.file.seek(0)
+    return contenido, file.content_type or "application/octet-stream", file.filename or "archivo"
+
+
 @router.post("/onboarding/connect", response_model=ConectarNumeroResponse)
 def conectar_numero(
     body: ConectarNumeroRequest,
@@ -138,7 +177,10 @@ def listar_conversaciones(
     token: TokenData = Depends(require_auth),
 ):
     phone_number_id = _phone_number_id_para(token, db, linea_id)
-    resultado = WhatsappService.listar_conversaciones(page, limit, phone_number_id)
+    if settings.CHAT_LEER_LOCAL:
+        resultado = chat_local.listar_conversaciones(db, page, limit, phone_number_id, _nombres_lineas())
+    else:
+        resultado = WhatsappService.listar_conversaciones(page, limit, phone_number_id)
 
     ids = [c["id"] for c in resultado.get("data", []) if "id" in c]
     desactivados = set()
@@ -165,6 +207,8 @@ def buscar(
 ):
     """Búsqueda híbrida (contactos + texto de mensajes) acotada a la línea del usuario."""
     phone_number_id = _phone_number_id_para(token, db, linea_id)
+    if settings.CHAT_LEER_LOCAL:
+        return chat_local.buscar(db, q, limit, phone_number_id)
     return WhatsappService.buscar(q, limit, phone_number_id)
 
 
@@ -289,9 +333,13 @@ def obtener_mensajes(
     page: int = 1,
     limit: int = 50,
     db: Session = Depends(get_db),
-    _: TokenData = Depends(require_auth),
+    token: TokenData = Depends(require_auth),
 ):
-    resultado = WhatsappService.obtener_mensajes(conversation_id, page, limit)
+    if settings.CHAT_LEER_LOCAL:
+        _conversacion_o_404(token, db, conversation_id)
+        resultado = chat_local.obtener_mensajes(db, conversation_id, page, limit)
+    else:
+        resultado = WhatsappService.obtener_mensajes(conversation_id, page, limit)
     resultado["bot_desactivado"] = db.get(BotChatDesactivado, conversation_id) is not None
     return resultado
 
@@ -299,8 +347,14 @@ def obtener_mensajes(
 @router.post("/mensajes/texto")
 def enviar_texto(
     body: EnviarTextoRequest,
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        return _enviar_local(
+            db, token, body.conversation_id,
+            lambda telefono, linea: WhatsappService.enviar_texto(telefono, body.message, None, linea),
+        )
     return WhatsappService.enviar_texto(body.to, body.message, body.conversation_id)
 
 
@@ -310,8 +364,16 @@ def enviar_imagen(
     conversation_id: Optional[int] = Form(None),
     caption: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        adjunto = _adjunto(file)
+        return _enviar_local(
+            db, token, conversation_id,
+            lambda telefono, linea: WhatsappService.enviar_imagen(telefono, file, None, caption, phone_number_id=linea),
+            archivo=adjunto,
+        )
     return WhatsappService.enviar_imagen(to, file, conversation_id, caption)
 
 
@@ -321,8 +383,16 @@ def enviar_documento(
     conversation_id: Optional[int] = Form(None),
     caption: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        adjunto = _adjunto(file)
+        return _enviar_local(
+            db, token, conversation_id,
+            lambda telefono, linea: WhatsappService.enviar_documento(telefono, file, None, caption, phone_number_id=linea),
+            archivo=adjunto,
+        )
     return WhatsappService.enviar_documento(to, file, conversation_id, caption)
 
 
@@ -332,8 +402,16 @@ def enviar_video(
     conversation_id: Optional[int] = Form(None),
     caption: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        adjunto = _adjunto(file)
+        return _enviar_local(
+            db, token, conversation_id,
+            lambda telefono, linea: WhatsappService.enviar_video(telefono, file, None, caption, phone_number_id=linea),
+            archivo=adjunto,
+        )
     return WhatsappService.enviar_video(to, file, conversation_id, caption)
 
 
@@ -342,16 +420,40 @@ def enviar_audio(
     to: str = Form(...),
     conversation_id: Optional[int] = Form(None),
     file: UploadFile = File(...),
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        adjunto = _adjunto(file)
+        return _enviar_local(
+            db, token, conversation_id,
+            lambda telefono, linea: WhatsappService.enviar_audio(telefono, file, None, phone_number_id=linea),
+            archivo=adjunto,
+        )
     return WhatsappService.enviar_audio(to, file, conversation_id)
 
 
 @router.get("/media/{media_id}")
 def obtener_media(
     media_id: str,
+    db: Session = Depends(get_db),
     _: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        mensaje = chat_local.mensaje_de_media(db, media_id)
+        if mensaje is not None and mensaje.media_clave:
+            guardado = archivos_whatsapp.leer(mensaje.media_clave)
+            if guardado is not None:
+                return Response(content=guardado[0], media_type=mensaje.media_mime or guardado[1])
+        contenido_bytes, content_type = WhatsappService.descargar_media(media_id)
+        if mensaje is not None:
+            # Aún no estaba copiado: aprovecha esta descarga para guardarlo.
+            try:
+                almacen_chat.guardar_archivo(db, mensaje.id, contenido_bytes, content_type)
+                db.commit()
+            except Exception:
+                db.rollback()
+        return Response(content=contenido_bytes, media_type=content_type)
     contenido_bytes, content_type = WhatsappService.descargar_media(media_id)
     return Response(content=contenido_bytes, media_type=content_type)
 
@@ -360,24 +462,38 @@ def obtener_media(
 def actualizar_flags(
     conversation_id: int,
     body: ActualizarFlagsRequest,
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        _conversacion_o_404(token, db, conversation_id)
+        return chat_local.actualizar_flags(db, conversation_id, body.model_dump())
     return WhatsappService.actualizar_flags(conversation_id, body.model_dump())
 
 
 @router.delete("/conversaciones/{conversation_id}/mensajes")
 def vaciar_conversacion(
     conversation_id: int,
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        _conversacion_o_404(token, db, conversation_id)
+        chat_local.vaciar(db, conversation_id)
+        return {"status": "ok"}
     return WhatsappService.vaciar_conversacion(conversation_id)
 
 
 @router.delete("/conversaciones/{conversation_id}")
 def eliminar_conversacion(
     conversation_id: int,
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        _conversacion_o_404(token, db, conversation_id)
+        chat_local.eliminar(db, conversation_id)
+        return {"status": "ok"}
     return WhatsappService.eliminar_conversacion(conversation_id)
 
 
@@ -416,6 +532,17 @@ def sincronizar_plantillas(
 @router.post("/mensajes/plantilla")
 def enviar_plantilla(
     body: EnviarPlantillaRequest,
-    _: TokenData = Depends(require_auth),
+    db: Session = Depends(get_db),
+    token: TokenData = Depends(require_auth),
 ):
+    if settings.CHAT_LEER_LOCAL:
+        datos = body.model_dump()
+        datos.pop("to", None)
+        datos.pop("conversation_id", None)
+        return _enviar_local(
+            db, token, body.conversation_id,
+            lambda telefono, linea: WhatsappService.enviar_plantilla(
+                to=telefono, conversation_id=None, phone_number_id=linea, **datos
+            ),
+        )
     return WhatsappService.enviar_plantilla(**body.model_dump())

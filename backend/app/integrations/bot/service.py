@@ -24,6 +24,8 @@ from app.core.db import SessionLocal
 from app.integrations.bot.config import bot_activo_ahora, obtener_config
 from app.integrations.bot.graph import MODELO_AGENTE, responder
 from app.integrations.bot.uso import registrar_uso
+from app.core.config import settings
+from app.integrations.cimasuite import almacen_chat, chat_local
 from app.integrations.cimasuite.client import WhatsappService
 from app.models.bot_chat_desactivado import BotChatDesactivado
 from app.models.clientes import Clientes
@@ -40,14 +42,18 @@ def _etiqueta(mensaje: dict) -> str:
     return f"[{mensaje.get('type', 'adjunto')}]"
 
 
-def _contexto_conversacion(conversation_id: int) -> dict | None:
+def _contexto_conversacion(conversation_id: int, db: Session | None = None) -> dict | None:
     """Trae el historial reciente y confirma que lo último que hay en la
     conversación es, en efecto, un mensaje del cliente sin responder
     todavía (texto o adjunto -- si lo último es un mensaje nuestro, no
     hay nada nuevo que contestar)."""
-    datos = WhatsappService.obtener_mensajes(
-        conversation_id, page=1, limit=MENSAJES_DE_CONTEXTO
-    )
+    if db is not None:
+        # Chat en tablas propias: el historial sale de la base de Electromanfer.
+        datos = chat_local.contexto_para_bot(db, conversation_id, MENSAJES_DE_CONTEXTO) or {}
+    else:
+        datos = WhatsappService.obtener_mensajes(
+            conversation_id, page=1, limit=MENSAJES_DE_CONTEXTO
+        )
     telefono = (datos.get("contact_phone") or {}).get("phone")
     mensajes = sorted(datos.get("messages", []), key=lambda m: m.get("created_at") or "")
     if not mensajes or not telefono:
@@ -133,7 +139,7 @@ def procesar_mensaje_entrante(phone_number_id, conversation_id: int | None) -> N
             return
 
         try:
-            contexto = _contexto_conversacion(conversation_id)
+            contexto = _contexto_conversacion(conversation_id, db if settings.CHAT_LEER_LOCAL else None)
         except Exception:
             logger.exception(
                 "Bot WA: error consultando la conversación | conversation_id=%s", conversation_id
@@ -171,7 +177,15 @@ def procesar_mensaje_entrante(phone_number_id, conversation_id: int | None) -> N
         if not texto_respuesta:
             return
 
-        WhatsappService.enviar_texto(contexto["telefono"], texto_respuesta, conversation_id)
+        if settings.CHAT_LEER_LOCAL:
+            # Sale por la línea de la conversación y la respuesta queda guardada como del bot,
+            # para que el siguiente mensaje la vea en el historial.
+            respuesta = WhatsappService.enviar_texto(
+                contexto["telefono"], texto_respuesta, None, int(phone_number_id)
+            )
+            almacen_chat.guardar_envio(db, conversation_id, respuesta, None, por_bot=True)
+        else:
+            WhatsappService.enviar_texto(contexto["telefono"], texto_respuesta, conversation_id)
         logger.info("Bot WA: respuesta enviada | conversation_id=%s", conversation_id)
     finally:
         db.close()

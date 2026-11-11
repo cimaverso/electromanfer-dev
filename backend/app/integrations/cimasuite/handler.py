@@ -11,7 +11,10 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.db import SessionLocal
+from app.integrations.cimasuite import almacen_chat
+from app.integrations.cimasuite.client import WhatsappService
 from app.models.usuarios import Usuarios
 from app.models.asesor_lineas import AsesorLinea
 from app.enums import RoleEnum
@@ -47,13 +50,39 @@ def _usuarios_a_notificar(phone_number_id, db: Session) -> list[int]:
     return list(set(ids))
 
 
+def _guardar_estado(data: dict) -> None:
+    db = SessionLocal()
+    try:
+        almacen_chat.actualizar_estado(db, data)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("No se pudo guardar el estado del mensaje")
+    finally:
+        db.close()
+
+
 async def handle_cimapi_event(event: str, data: dict) -> None:
+    if event == "message.status":
+        # El estado de un mensaje enviado (entregado, leído, fallido). No hay aviso al
+        # frontend: solo se guarda, y solo con el guardado local encendido.
+        if settings.CHAT_GUARDAR_LOCAL:
+            await asyncio.to_thread(_guardar_estado, data)
+        return
     if event not in EVENTOS_RELEVANTES:
         logger.debug("Evento CimAPI no manejado: %s", event)
         return
 
     phone_number_id = data.get("phone_number_id")
     conversation_id = data.get("conversation_id")
+
+    if settings.CHAT_GUARDAR_LOCAL and event == "message.received":
+        # Se guarda en las tablas propias antes de avisar. Aislado: si falla, el aviso y el
+        # bot siguen funcionando como siempre. Con CHAT_LEER_LOCAL el id de la conversación
+        # es el local, que es el que ven el frontend y el bot.
+        local_id = await asyncio.to_thread(_guardar_local, data)
+        if settings.CHAT_LEER_LOCAL and local_id is not None:
+            conversation_id = local_id
 
     # BD y bot son síncronos: en un hilo, para que el WebSocket siga leyendo
     # (y respondiendo pings) mientras tanto. Se espera a que terminen: así el
@@ -76,6 +105,28 @@ async def handle_cimapi_event(event: str, data: dict) -> None:
 
     if event == "message.received" and (data.get("message") or {}).get("direction") == "inbound":
         await asyncio.to_thread(procesar_mensaje_entrante, phone_number_id, conversation_id)
+
+
+def _guardar_local(data: dict) -> int | None:
+    """Guarda el mensaje del evento y devuelve el id local de su conversación."""
+    db = SessionLocal()
+    try:
+        resultado = almacen_chat.guardar_mensaje(db, data)
+        db.commit()
+        if resultado is None:
+            return None
+        conversacion, mensaje = resultado
+        local_id = conversacion.id
+        if mensaje is not None and mensaje.media_id:
+            # Copiar el archivo no frena el evento: si falla, queda pendiente.
+            almacen_chat.copiar_archivo(db, mensaje.id, WhatsappService.descargar_media)
+        return local_id
+    except Exception:
+        db.rollback()
+        logger.exception("No se pudo guardar el mensaje en las tablas propias")
+        return None
+    finally:
+        db.close()
 
 
 def _usuarios_a_notificar_en_sesion(phone_number_id) -> list[int]:
