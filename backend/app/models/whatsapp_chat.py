@@ -127,6 +127,7 @@ class WhatsAppMensaje(Base):
               postgresql_where=text("cimasuite_mensaje_id IS NOT NULL")),
         Index("ix_whatsapp_mensaje_conv_media", "conversacion_id", "creado_en",
               postgresql_where=text("media_id IS NOT NULL")),
-        Index("ix_whatsapp_mensaje_contenido_trgm", "contenido", postgresql_using="gin",
-              postgresql_ops={"contenido": "gin_trgm_ops"}),
+        # El índice de trigramas (búsqueda por contenido) NO se declara aquí: necesita la extensión
+        # pg_trgm y main.py hace create_all al arrancar, antes de cualquier migración. Lo crea la
+        # migración c5d8e1a4f702, junto con la extensión.
     )

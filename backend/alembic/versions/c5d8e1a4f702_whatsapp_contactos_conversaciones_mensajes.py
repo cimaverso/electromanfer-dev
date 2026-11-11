@@ -17,9 +17,52 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _tabla(nombre: str) -> bool:
+    return sa.inspect(op.get_bind()).has_table(nombre)
+
+
+def _indice(nombre: str) -> bool:
+    return bool(op.get_bind().scalar(sa.text("SELECT 1 FROM pg_indexes WHERE indexname = :n"), {"n": nombre}))
+
+
+def _restriccion(nombre: str) -> bool:
+    return bool(op.get_bind().scalar(sa.text("SELECT 1 FROM pg_constraint WHERE conname = :n"), {"n": nombre}))
+
+
+def _indice_si_falta(nombre: str, *args, **kw) -> None:
+    if not _indice(nombre):
+        op.create_index(nombre, *args, **kw)
+
+
 def upgrade() -> None:
+    # main.py hace create_all al arrancar: si el despliegue llegó antes que esta migración,
+    # las tablas ya existen (sin los índices especiales). Cada pieza se crea solo si falta.
     # La búsqueda por contenido usa índices de trigramas.
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+    if not _tabla('whatsapp_contactos'):
+        _crear_contactos()
+    if not _tabla('whatsapp_conversaciones'):
+        _crear_conversaciones()
+    _indice_si_falta('ix_whatsapp_conversacion_linea_ultimo', 'whatsapp_conversaciones',
+                     ['phone_number_id', 'ultimo_mensaje_en'])
+    if not _tabla('whatsapp_mensajes'):
+        _crear_mensajes()
+    _indice_si_falta('ix_whatsapp_mensaje_conv_creado', 'whatsapp_mensajes', ['conversacion_id', 'creado_en'])
+    _indice_si_falta('uq_whatsapp_mensaje_wamid', 'whatsapp_mensajes', ['whatsapp_message_id'], unique=True,
+                     postgresql_where=sa.text('whatsapp_message_id IS NOT NULL'))
+    _indice_si_falta('uq_whatsapp_mensaje_cimasuite', 'whatsapp_mensajes', ['cimasuite_mensaje_id'], unique=True,
+                     postgresql_where=sa.text('cimasuite_mensaje_id IS NOT NULL'))
+    _indice_si_falta('ix_whatsapp_mensaje_conv_media', 'whatsapp_mensajes', ['conversacion_id', 'creado_en'],
+                     postgresql_where=sa.text('media_id IS NOT NULL'))
+    _indice_si_falta('ix_whatsapp_mensaje_contenido_trgm', 'whatsapp_mensajes', ['contenido'],
+                     postgresql_using='gin', postgresql_ops={'contenido': 'gin_trgm_ops'})
+    # El último mensaje apunta a la tabla de mensajes, que se crea después: la clave va al final.
+    if not _restriccion('fk_whatsapp_conversacion_ultimo_mensaje'):
+        op.create_foreign_key('fk_whatsapp_conversacion_ultimo_mensaje', 'whatsapp_conversaciones',
+                              'whatsapp_mensajes', ['ultimo_mensaje_id'], ['id'], ondelete='SET NULL')
+
+
+def _crear_contactos() -> None:
     op.create_table(
         'whatsapp_contactos',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -30,6 +73,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('telefono'),
     )
+
+
+def _crear_conversaciones() -> None:
     op.create_table(
         'whatsapp_conversaciones',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -50,8 +96,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('contacto_id', 'phone_number_id', name='uq_whatsapp_conversacion_contacto_linea'),
     )
-    op.create_index('ix_whatsapp_conversacion_linea_ultimo', 'whatsapp_conversaciones',
-                    ['phone_number_id', 'ultimo_mensaje_en'])
+
+
+def _crear_mensajes() -> None:
     op.create_table(
         'whatsapp_mensajes',
         sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -78,18 +125,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['enviado_por_usuario_id'], ['usuarios.id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id'),
     )
-    op.create_index('ix_whatsapp_mensaje_conv_creado', 'whatsapp_mensajes', ['conversacion_id', 'creado_en'])
-    op.create_index('uq_whatsapp_mensaje_wamid', 'whatsapp_mensajes', ['whatsapp_message_id'], unique=True,
-                    postgresql_where=sa.text('whatsapp_message_id IS NOT NULL'))
-    op.create_index('uq_whatsapp_mensaje_cimasuite', 'whatsapp_mensajes', ['cimasuite_mensaje_id'], unique=True,
-                    postgresql_where=sa.text('cimasuite_mensaje_id IS NOT NULL'))
-    op.create_index('ix_whatsapp_mensaje_conv_media', 'whatsapp_mensajes', ['conversacion_id', 'creado_en'],
-                    postgresql_where=sa.text('media_id IS NOT NULL'))
-    op.create_index('ix_whatsapp_mensaje_contenido_trgm', 'whatsapp_mensajes', ['contenido'],
-                    postgresql_using='gin', postgresql_ops={'contenido': 'gin_trgm_ops'})
-    # El último mensaje apunta a la tabla de mensajes, que se crea después: la clave va al final.
-    op.create_foreign_key('fk_whatsapp_conversacion_ultimo_mensaje', 'whatsapp_conversaciones',
-                          'whatsapp_mensajes', ['ultimo_mensaje_id'], ['id'], ondelete='SET NULL')
 
 
 def downgrade() -> None:
