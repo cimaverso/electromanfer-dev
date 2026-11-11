@@ -7,6 +7,7 @@ qué usuarios avisar y reenvía el aviso.
 """
 import asyncio
 import logging
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,6 +25,24 @@ from app.integrations.bot.service import procesar_mensaje_entrante
 logger = logging.getLogger(__name__)
 
 EVENTOS_RELEVANTES = {"message.received", "conversation.opened"}
+
+# Al reconectar, el WebSocket entrega lo que llegó mientras estuvo caído. El bot no debe
+# contestar tarde y de golpe a mensajes viejos: pasado este tiempo, solo se guardan.
+BOT_EDAD_MAXIMA = timedelta(minutes=15)
+
+
+def _es_reciente(data: dict, ahora: datetime | None = None) -> bool:
+    """True si el mensaje del evento es de hace poco (o no trae fecha)."""
+    creado = (data.get("message") or {}).get("created_at")
+    if not creado:
+        return True
+    try:
+        fecha = datetime.fromisoformat(str(creado).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)
+    return (ahora or datetime.now(timezone.utc)) - fecha <= BOT_EDAD_MAXIMA
 
 
 def _usuarios_a_notificar(phone_number_id, db: Session) -> list[int]:
@@ -104,6 +123,9 @@ async def handle_cimapi_event(event: str, data: dict) -> None:
         )
 
     if event == "message.received" and (data.get("message") or {}).get("direction") == "inbound":
+        if not _es_reciente(data):
+            logger.info("Bot omitido: mensaje de más de %s | conversation_id=%s", BOT_EDAD_MAXIMA, conversation_id)
+            return
         await asyncio.to_thread(procesar_mensaje_entrante, phone_number_id, conversation_id)
 
 

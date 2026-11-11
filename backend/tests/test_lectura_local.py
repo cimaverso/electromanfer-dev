@@ -282,3 +282,17 @@ def test_el_asistente_solo_atiende_las_lineas_con_bot(db, asistente):
     conv, _ = _guardar(db, texto="hola", linea=9)
     bot.procesar_mensaje_entrante(9, conv.id)
     assert asistente.enviados == [] and asistente.historial is None
+
+
+def test_el_bot_ignora_mensajes_de_mas_de_15_minutos():
+    from datetime import datetime, timedelta, timezone
+
+    from app.integrations.cimasuite.handler import _es_reciente
+
+    ahora = datetime.now(timezone.utc)
+    nuevo = {"message": {"created_at": (ahora - timedelta(minutes=2)).isoformat()}}
+    viejo = {"message": {"created_at": (ahora - timedelta(hours=9)).isoformat()}}
+    assert _es_reciente(nuevo, ahora) is True
+    assert _es_reciente(viejo, ahora) is False
+    assert _es_reciente({"message": {}}, ahora) is True            # sin fecha: se comporta como siempre
+    assert _es_reciente({"message": {"created_at": "basura"}}, ahora) is True
