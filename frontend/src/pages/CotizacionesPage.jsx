@@ -53,7 +53,6 @@ export default function CotizacionesPage() {
     historial,
     crear,
     editar,
-    marcarEfectiva,
     marcarFacturada,
     cargarHistorial,
     handleEnviarEmail,
@@ -136,17 +135,6 @@ export default function CotizacionesPage() {
       setTimeout(() => { clearDraft(); cargarHistorial() }, 50)
     } else {
       showToast(result.error || 'Error al generar la cotización', 'error')
-    }
-  }
-
-  // ─── Marcar efectiva ──────────────────────────────────────────────────────
-  const handleMarcarEfectiva = async (id) => {
-    const result = await marcarEfectiva(id)
-    if (result.success) {
-      showToast('Cotización marcada como efectiva', 'success')
-      cargarHistorial()
-    } else {
-      showToast(result.error || 'Endpoint pendiente de implementación en backend', 'warning')
     }
   }
 
@@ -400,7 +388,6 @@ export default function CotizacionesPage() {
               onDescargar={(cot) => cot.pdf_url && window.open(cot.pdf_url, '_blank')}
               onReenviar={() => setTabActivo('preview')}
               onEditar={handleEditarDesdeHistorial}
-              onMarcarEfectiva={handleMarcarEfectiva}
               onMarcarFacturada={handleMarcarFacturada}
             />
           </div>

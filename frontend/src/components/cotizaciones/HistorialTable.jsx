@@ -23,23 +23,14 @@ const ESTADO_CONFIG = {
   anulada: { label: 'Anulada', cls: 'u-badge u-badge--danger' },
 }
 
-// Qué estados permiten editar y marcar efectiva
+// Qué estados permiten editar y facturar
 const PUEDE_ANULAR = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 const EDITABLES = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 const PUEDE_FACTURAR = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada', 'efectiva'])
-const PUEDE_EFECTIVA = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 
 function EstadoBadge({ estado }) {
   const cfg = ESTADO_CONFIG[estado] || { label: estado, cls: 'u-badge' }
   return <span className={cfg.cls}>{cfg.label}</span>
-}
-
-function IconoCheck() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  )
 }
 
 function IconoAnular() {
@@ -67,7 +58,6 @@ export default function HistorialTable({
   onVerDetalle,
   onDescargar,
   onEditar,
-  onMarcarEfectiva,
   onMarcarFacturada,
 }) {
   const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
@@ -173,7 +163,6 @@ export default function HistorialTable({
               <option value="enviada_email">Email enviado</option>
               <option value="enviada_whatsapp">WhatsApp</option>
               <option value="editada">Editada</option>
-              <option value="efectiva">Efectiva</option>
               <option value="facturada">Facturada</option>
               <option value="anulada">Anulada</option>
             </select>
@@ -262,17 +251,6 @@ export default function HistorialTable({
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
-
-                      {/* Marcar efectiva — generada, enviada_email, enviada_whatsapp, editada */}
-                      {onMarcarEfectiva && PUEDE_EFECTIVA.has(cot.estado) && (
-                        <button
-                          className="hist-table__accion-btn hist-table__accion-btn--efectiva"
-                          onClick={() => onMarcarEfectiva(cot.id)}
-                          title="Marcar como efectiva"
-                        >
-                          <IconoCheck />
-                        </button>
-                      )}
 
                       {/* Facturar — pide el número de factura de Siasoft */}
                       {onMarcarFacturada && PUEDE_FACTURAR.has(cot.estado) && (

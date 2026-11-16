@@ -100,22 +100,6 @@ export function useCotizaciones() {
     }
   }, [])
 
-  // ─── Marcar como efectiva ─────────────────────────────────────────────────
-  const marcarEfectiva = useCallback(async (id) => {
-    setError(null)
-    try {
-      await cambiarEstadoCotizacion(id, 'efectiva')
-      return { success: true }
-    } catch (err) {
-      const detail = err.response?.data?.detail
-      const msg = Array.isArray(detail)
-        ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
-        : detail || 'Error al cambiar el estado.'
-      setError(msg)
-      return { success: false, error: msg }
-    }
-  }, [])
-
   // ─── Anular cotización ────────────────────────────────────────────────────
   const anularCotizacion = useCallback(async (id) => {
     setError(null)
@@ -176,7 +160,6 @@ export function useCotizaciones() {
     error,
     crear,
     editar,
-    marcarEfectiva,
     marcarFacturada,
     anularCotizacion,
     cargarHistorial,
