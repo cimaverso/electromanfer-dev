@@ -3,6 +3,7 @@ import {
   crearCotizacion,
   actualizarCotizacion,
   cambiarEstadoCotizacion,
+  facturarCotizacion,
   listarCotizaciones,
   getCotizacion,
   enviarEmail,
@@ -83,6 +84,22 @@ export function useCotizaciones() {
     }
   }, [])
 
+  // ─── Marcar como facturada ────────────────────────────────────────────────
+  const marcarFacturada = useCallback(async (id, numeroFactura) => {
+    setError(null)
+    try {
+      await facturarCotizacion(id, numeroFactura)
+      return { success: true }
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((e) => `${e.loc?.join('.')} — ${e.msg}`).join(' | ')
+        : detail || 'Error al facturar la cotización.'
+      setError(msg)
+      return { success: false, error: msg }
+    }
+  }, [])
+
   // ─── Marcar como efectiva ─────────────────────────────────────────────────
   const marcarEfectiva = useCallback(async (id) => {
     setError(null)
@@ -160,6 +177,7 @@ export function useCotizaciones() {
     crear,
     editar,
     marcarEfectiva,
+    marcarFacturada,
     anularCotizacion,
     cargarHistorial,
     verCotizacion,

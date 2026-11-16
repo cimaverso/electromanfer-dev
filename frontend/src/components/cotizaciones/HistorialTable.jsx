@@ -19,12 +19,14 @@ const ESTADO_CONFIG = {
   enviada_whatsapp: { label: 'WhatsApp', cls: 'u-badge u-badge--success' },
   editada: { label: 'Editada', cls: 'u-badge u-badge--warning' },
   efectiva: { label: 'Efectiva', cls: 'u-badge u-badge--primary' },
+  facturada: { label: 'Facturada', cls: 'u-badge u-badge--success' },
   anulada: { label: 'Anulada', cls: 'u-badge u-badge--danger' },
 }
 
 // Qué estados permiten editar y marcar efectiva
 const PUEDE_ANULAR = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 const EDITABLES = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
+const PUEDE_FACTURAR = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada', 'efectiva'])
 const PUEDE_EFECTIVA = new Set(['generada', 'enviada_email', 'enviada_whatsapp', 'editada'])
 
 function EstadoBadge({ estado }) {
@@ -66,6 +68,7 @@ export default function HistorialTable({
   onDescargar,
   onEditar,
   onMarcarEfectiva,
+  onMarcarFacturada,
 }) {
   const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
 
@@ -171,6 +174,7 @@ export default function HistorialTable({
               <option value="enviada_whatsapp">WhatsApp</option>
               <option value="editada">Editada</option>
               <option value="efectiva">Efectiva</option>
+              <option value="facturada">Facturada</option>
               <option value="anulada">Anulada</option>
             </select>
           </div>
@@ -230,6 +234,7 @@ export default function HistorialTable({
                   </td>
                   <td>
                     <EstadoBadge estado={cot.estado} />
+                    {cot.numero_factura && <div style={{ fontSize: 11, opacity: 0.7 }}>#{cot.numero_factura}</div>}
                   </td>
                   <td>
                     <span className="hist-table__notas">{cot.usuario_nombre || '—'}</span>
@@ -267,6 +272,17 @@ export default function HistorialTable({
                           title="Marcar como efectiva"
                         >
                           <IconoCheck />
+                        </button>
+                      )}
+
+                      {/* Facturar — pide el número de factura de Siasoft */}
+                      {onMarcarFacturada && PUEDE_FACTURAR.has(cot.estado) && (
+                        <button
+                          className="hist-table__accion-btn hist-table__accion-btn--efectiva"
+                          onClick={() => onMarcarFacturada(cot.id)}
+                          title="Marcar como facturada"
+                        >
+                          <span style={{ fontWeight: 700, fontSize: 12 }}>$</span>
                         </button>
                       )}
 

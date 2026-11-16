@@ -204,6 +204,10 @@ class CotizacionesService:
         
         if cotizacion.estado == "efectiva":
             raise ValueError("Una cotización efectiva no puede cambiar de estado")
+        if cotizacion.estado == "facturada":
+            raise ValueError("Una cotización facturada no puede cambiar de estado")
+        if nuevo_estado == "facturada":
+            raise ValueError("Para facturar una cotización use el endpoint /facturar con el número de factura")
         
         if nuevo_estado not in estados_validos:
             raise ValueError(f"Estado inválido. Válidos: {estados_validos}")
@@ -213,6 +217,29 @@ class CotizacionesService:
         
         return CotizacionesService.obtener_por_id(db, cotizacion_id)
     
+    # Facturar
+    @staticmethod
+    def facturar(db: Session, cotizacion_id: int, numero_factura: str) -> Optional[Cotizaciones]:
+        numero = (numero_factura or "").strip()
+        if not numero:
+            raise ValueError("El número de factura es obligatorio")
+        if len(numero) > 50:
+            raise ValueError("El número de factura no puede superar 50 caracteres")
+
+        cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
+        if not cotizacion:
+            return None
+        if cotizacion.estado == "facturada":
+            raise ValueError("La cotización ya está facturada")
+        if cotizacion.estado == "anulada":
+            raise ValueError("Una cotización anulada no se puede facturar")
+
+        cotizacion.estado = "facturada"
+        cotizacion.numero_factura = numero
+        cotizacion.fecha_facturacion = datetime.now(timezone.utc)
+        db.commit()
+        return CotizacionesService.obtener_por_id(db, cotizacion_id)
+
     # Editar
     @staticmethod
     def editar(db: Session, cotizacion_id: int, data: CotizacionCreate, usuario_id: int) -> Cotizaciones:
@@ -220,8 +247,8 @@ class CotizacionesService:
         if not cotizacion:
             return None
         
-        if cotizacion.estado in ["anulada", "efectiva"]:
-            raise ValueError("No se puede editar una cotización anulada o efectiva")
+        if cotizacion.estado in ["anulada", "efectiva", "facturada"]:
+            raise ValueError("No se puede editar una cotización anulada, efectiva o facturada")
 
         # Actualizar cliente
         cliente = ClientesService.obtener_o_crear(db, data.cliente)

@@ -4,11 +4,12 @@ logging.basicConfig(level=logging.INFO)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse, FileResponse
 import app.models
 import os
 import mimetypes
-from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, google_auth, guias, transportadoras, buzon, whatsapp
+from app.routes import auth, productos, cotizaciones, multimedia, clientes, firmas, google_auth, guias, transportadoras, buzon, whatsapp, siasoft
 from app.routes import realtime
 from app.core.db import Base
 from app.core.db import engine
@@ -40,8 +41,26 @@ app = FastAPI(
     title="Electromanfer API",
     description="Sistema de cotizaciones Electromanfer Ltda.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    # /docs es público pero solo muestra la API de Siasoft (ver _openapi_solo_siasoft).
+    # Con DOCS_HABILITADAS=true (solo local) muestra todos los endpoints.
 )
+
+def _openapi_solo_siasoft():
+    if app.openapi_schema:
+        return app.openapi_schema
+    rutas = app.routes if settings.DOCS_HABILITADAS else [
+        r for r in app.routes if getattr(r, "path", "").startswith("/api/facturadas")
+    ]
+    app.openapi_schema = get_openapi(
+        title="Electromanfer API",
+        version=app.version,
+        description="API de Electromanfer Ltda." if not settings.DOCS_HABILITADAS else app.description,
+        routes=rutas,
+    )
+    return app.openapi_schema
+
+app.openapi = _openapi_solo_siasoft
 
 @app.get("/", include_in_schema=False)
 def root():
@@ -72,6 +91,7 @@ app.include_router(guias.router, prefix="/api")
 app.include_router(transportadoras.router, prefix="/api")
 app.include_router(whatsapp.router, prefix="/api")
 app.include_router(realtime.router, prefix="/api")
+app.include_router(siasoft.router, prefix="/api")
 app.include_router(google_auth.router)
 
 # Servir archivos de media (solo local — en prod lo maneja Nginx)

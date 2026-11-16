@@ -26,6 +26,11 @@ export async function cambiarEstadoCotizacion(id, estado) {
   return response.data
 }
 
+export async function facturarCotizacion(id, numeroFactura) {
+  const response = await axiosClient.patch(`/cotizaciones/${id}/facturar`, { numero_factura: numeroFactura })
+  return response.data
+}
+
 export async function enviarEmail(id, formData) {
   const response = await axiosClient.post(`/cotizaciones/${id}/enviar-email`, formData, {
     timeout: 120000,

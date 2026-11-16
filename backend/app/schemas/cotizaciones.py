@@ -45,6 +45,10 @@ class CambiarEstadoSchema(BaseModel):
     estado: str
 
 
+class FacturarSchema(BaseModel):
+    numero_factura: str
+
+
 class CotizacionResponse(BaseModel):
     id: int
     consecutivo: str
@@ -57,6 +61,8 @@ class CotizacionResponse(BaseModel):
     pdf_url: Optional[str] = None
     fecha_envio: Optional[datetime] = None
     email_thread_id: Optional[str] = None
+    numero_factura: Optional[str] = None
+    fecha_facturacion: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     cliente_id: Optional[int] = None

@@ -42,6 +42,7 @@ Control de acceso basado en roles para garantizar la seguridad de la informació
 * **Vendedor:** Operación diaria, creación y seguimiento de cotizaciones.
 
 ### 2. Sincronización con SIASOFT
+* **Cotizaciones facturadas (Siasoft consulta a Electromanfer):** `GET /api/facturadas/` y `GET /api/facturadas/{consecutivo}`. Documentación interactiva en `https://api.electromanfer.com/docs` (muestra solo esta API). Header `X-API-Key` = `SIASOFT_API_KEY` (vacía = apagado). Filtros `facturadas_desde`, `facturadas_hasta`, `actualizadas_desde`; paginación `limit` (máx. 100) y `offset`. Tope de `SIASOFT_RATE_LIMIT_POR_MINUTO` peticiones por minuto (429 con `Retry-After`). El vendedor marca la cotización como facturada desde el historial, con el número de factura (`PATCH /api/cotizaciones/{id}/facturar`).
 * Integración automática para la lectura de catálogo de productos, precios y stock desde el ERP **SIASOFT**.
 * Soporte multimedia: Visualización de imágenes de productos y fichas técnicas PDF integradas.
 

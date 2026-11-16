@@ -53,6 +53,7 @@ export default function CotizacionesPage() {
     crear,
     editar,
     marcarEfectiva,
+    marcarFacturada,
     cargarHistorial,
     handleEnviarEmail,
     limpiarCotizacionActual,
@@ -143,6 +144,23 @@ export default function CotizacionesPage() {
       cargarHistorial()
     } else {
       showToast(result.error || 'Endpoint pendiente de implementación en backend', 'warning')
+    }
+  }
+
+  // ─── Marcar facturada ─────────────────────────────────────────────────────
+  const handleMarcarFacturada = async (id) => {
+    const numero = window.prompt('Número de factura de Siasoft:')
+    if (numero === null) return
+    if (!numero.trim()) {
+      showToast('El número de factura es obligatorio', 'warning')
+      return
+    }
+    const result = await marcarFacturada(id, numero.trim())
+    if (result.success) {
+      showToast('Cotización marcada como facturada', 'success')
+      cargarHistorial()
+    } else {
+      showToast(result.error || 'No se pudo facturar la cotización', 'error')
     }
   }
 
@@ -381,6 +399,7 @@ export default function CotizacionesPage() {
               onReenviar={() => setTabActivo('preview')}
               onEditar={handleEditarDesdeHistorial}
               onMarcarEfectiva={handleMarcarEfectiva}
+              onMarcarFacturada={handleMarcarFacturada}
             />
           </div>
         </div>

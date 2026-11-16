@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     API_BASE_URL: str = ""
     LOGO_URL: str = ""
+    # /docs publica solo la API de Siasoft. Con DOCS_HABILITADAS=true (solo local) muestra todos los endpoints.
+    DOCS_HABILITADAS: bool = False
+
+    # API de solo lectura para Siasoft (cotizaciones facturadas). Vacia = endpoint apagado.
+    SIASOFT_API_KEY: str = ""
+    # Tope de peticiones por minuto de Siasoft; pasado el tope responde 429.
+    SIASOFT_RATE_LIMIT_POR_MINUTO: int = 30
+
     MEDIA_BASE: str = os.path.join(BASE_DIR, "media")
 
     # El chat de WhatsApp en tablas propias (cimapi ya no guarda conversaciones).
