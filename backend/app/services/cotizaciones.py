@@ -219,13 +219,7 @@ class CotizacionesService:
     
     # Facturar
     @staticmethod
-    def facturar(db: Session, cotizacion_id: int, numero_factura: str) -> Optional[Cotizaciones]:
-        numero = (numero_factura or "").strip()
-        if not numero:
-            raise ValueError("El número de factura es obligatorio")
-        if len(numero) > 50:
-            raise ValueError("El número de factura no puede superar 50 caracteres")
-
+    def facturar(db: Session, cotizacion_id: int) -> Optional[Cotizaciones]:
         cotizacion = CotizacionesService.obtener_por_id(db, cotizacion_id)
         if not cotizacion:
             return None
@@ -235,7 +229,6 @@ class CotizacionesService:
             raise ValueError("Una cotización anulada no se puede facturar")
 
         cotizacion.estado = "facturada"
-        cotizacion.numero_factura = numero
         cotizacion.fecha_facturacion = datetime.now(timezone.utc)
         db.commit()
         return CotizacionesService.obtener_por_id(db, cotizacion_id)

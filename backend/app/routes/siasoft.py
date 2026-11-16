@@ -83,7 +83,6 @@ class ItemFacturada(BaseModel):
 class CotizacionFacturada(BaseModel):
     consecutivo: str
     estado: str
-    numero_factura: Optional[str] = None
     fecha_facturacion: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
@@ -107,7 +106,6 @@ def _a_respuesta(c: Cotizaciones) -> CotizacionFacturada:
     return CotizacionFacturada(
         consecutivo=c.consecutivo,
         estado=c.estado,
-        numero_factura=c.numero_factura,
         fecha_facturacion=c.fecha_facturacion,
         created_at=c.created_at,
         updated_at=c.updated_at,

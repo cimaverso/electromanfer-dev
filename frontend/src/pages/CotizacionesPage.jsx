@@ -14,6 +14,7 @@ import HistorialTable from '../components/cotizaciones/HistorialTable'
 import BuzonPanel from '../components/cotizaciones/Buzon/BuzonPanel'
 import ChatPanel from '../components/whatsapp/ChatPanel'
 import Toast from '../components/common/Toast'
+import ConfirmModal from '../components/common/ConfirmModal'
 import './CotizacionesPage.css'
 
 const TABS_BASE = [
@@ -66,6 +67,8 @@ export default function CotizacionesPage() {
 
   // Cuando se vuelve al Buzón desde Preview, este id indica qué hilo abrir
   const [hiloInicialBuzon, setHiloInicialBuzon] = useState(null)
+  const [idPorFacturar, setIdPorFacturar] = useState(null)
+  const [facturando, setFacturando] = useState(false)
   // PDF pre-adjunto al volver al hilo desde Preview
   const [adjuntoPendiente, setAdjuntoPendiente] = useState(null)
 
@@ -148,19 +151,18 @@ export default function CotizacionesPage() {
   }
 
   // ─── Marcar facturada ─────────────────────────────────────────────────────
-  const handleMarcarFacturada = async (id) => {
-    const numero = window.prompt('Número de factura de Siasoft:')
-    if (numero === null) return
-    if (!numero.trim()) {
-      showToast('El número de factura es obligatorio', 'warning')
-      return
-    }
-    const result = await marcarFacturada(id, numero.trim())
+  const handleMarcarFacturada = (id) => setIdPorFacturar(id)
+
+  const confirmarFacturada = async () => {
+    setFacturando(true)
+    const result = await marcarFacturada(idPorFacturar)
+    setFacturando(false)
+    setIdPorFacturar(null)
     if (result.success) {
       showToast('Cotización marcada como facturada', 'success')
       cargarHistorial()
     } else {
-      showToast(result.error || 'No se pudo facturar la cotización', 'error')
+      showToast(result.error || 'No se pudo marcar la cotización como facturada', 'error')
     }
   }
 
@@ -423,6 +425,17 @@ export default function CotizacionesPage() {
         visible={toast.visible}
         onClose={hideToast}
       />
+
+      <ConfirmModal
+        open={idPorFacturar !== null}
+        title="Marcar como facturada"
+        confirmText="Marcar como facturada"
+        loading={facturando}
+        onConfirm={confirmarFacturada}
+        onCancel={() => setIdPorFacturar(null)}
+      >
+        Esta cotización quedará como facturada y ya no se podrá editar ni cambiar de estado.
+      </ConfirmModal>
     </div>
   )
 }

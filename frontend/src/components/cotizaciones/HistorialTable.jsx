@@ -234,7 +234,6 @@ export default function HistorialTable({
                   </td>
                   <td>
                     <EstadoBadge estado={cot.estado} />
-                    {cot.numero_factura && <div style={{ fontSize: 11, opacity: 0.7 }}>#{cot.numero_factura}</div>}
                   </td>
                   <td>
                     <span className="hist-table__notas">{cot.usuario_nombre || '—'}</span>

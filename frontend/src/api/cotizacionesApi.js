@@ -26,8 +26,8 @@ export async function cambiarEstadoCotizacion(id, estado) {
   return response.data
 }
 
-export async function facturarCotizacion(id, numeroFactura) {
-  const response = await axiosClient.patch(`/cotizaciones/${id}/facturar`, { numero_factura: numeroFactura })
+export async function facturarCotizacion(id) {
+  const response = await axiosClient.patch(`/cotizaciones/${id}/facturar`)
   return response.data
 }
 

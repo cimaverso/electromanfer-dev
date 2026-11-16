@@ -5,7 +5,7 @@ from typing import Optional
 import json
 from datetime import date
 from app.services.cotizaciones import CotizacionesService
-from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema, FacturarSchema
+from app.schemas.cotizaciones import CotizacionCreate, CotizacionResponse, CambiarEstadoSchema
 from app.services.email import enviar_email
 from app.schemas.auth import TokenData
 from app.core.security import require_auth
@@ -136,12 +136,11 @@ def cambiar_estado(
 @router.patch("/{cotizacion_id}/facturar", response_model=CotizacionResponse)
 def facturar_cotizacion(
     cotizacion_id: int,
-    data: FacturarSchema,
     db: Session = Depends(get_db),
     _: TokenData = Depends(require_auth)
 ):
     try:
-        cotizacion = CotizacionesService.facturar(db, cotizacion_id, data.numero_factura)
+        cotizacion = CotizacionesService.facturar(db, cotizacion_id)
         if not cotizacion:
             raise HTTPException(status_code=404, detail="Cotización no encontrada")
         return cotizacion

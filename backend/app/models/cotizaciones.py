@@ -78,7 +78,6 @@ class Cotizaciones(Base):
     )
 
     # Facturación (la marcan los vendedores a mano; Siasoft la consulta por API)
-    numero_factura: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     fecha_facturacion: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     email_thread_id: Mapped[Optional[str]] = mapped_column(  # agrega esto

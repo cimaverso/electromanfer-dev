@@ -85,10 +85,10 @@ export function useCotizaciones() {
   }, [])
 
   // ─── Marcar como facturada ────────────────────────────────────────────────
-  const marcarFacturada = useCallback(async (id, numeroFactura) => {
+  const marcarFacturada = useCallback(async (id) => {
     setError(null)
     try {
-      await facturarCotizacion(id, numeroFactura)
+      await facturarCotizacion(id)
       return { success: true }
     } catch (err) {
       const detail = err.response?.data?.detail
