@@ -43,3 +43,11 @@ def test_clave_mala_no_gasta_el_tope():
         with pytest.raises(HTTPException):
             siasoft.verificar_siasoft("mala")
     siasoft.verificar_siasoft("clave-de-prueba")
+
+
+def test_porcentaje_descuento():
+    assert siasoft._porcentaje_descuento(1700000, 0) == 0.0
+    assert siasoft._porcentaje_descuento(1700000, 170000) == 10.0
+    assert siasoft._porcentaje_descuento(33.33, 1) == 3.0
+    assert siasoft._porcentaje_descuento(0, 5) == 0.0
+    assert siasoft._porcentaje_descuento(None, None) == 0.0

@@ -11,7 +11,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -70,14 +70,28 @@ class ItemFacturada(BaseModel):
     cod_tip: Optional[str] = None
     nom_tip: Optional[str] = None
     cantidad: float
-    precio_unitario: float
-    descuento_unitario: float
-    por_iva: float
-    subtotal: float
-    total: float
+    precio_unitario: float = Field(description="Precio de una unidad, sin IVA")
+    descuento_unitario: float = Field(description="Descuento por unidad en pesos")
+    porcentaje_descuento: float = Field(0.0, description="Descuento como % del precio unitario (descuento_unitario / precio_unitario x 100)")
+    por_iva: float = Field(description="Porcentaje de IVA de la línea, p. ej. 19 = 19 %. El IVA lo calcula y redondea Siasoft")
+    subtotal: float = Field(description="precio_unitario x cantidad, antes de descuento e IVA")
+    total: float = Field(description="Referencia de Electromanfer: base con descuento más IVA")
 
     class Config:
         from_attributes = True
+
+
+def _porcentaje_descuento(precio_unitario, descuento_unitario) -> float:
+    precio = float(precio_unitario or 0)
+    if precio <= 0:
+        return 0.0
+    return round(float(descuento_unitario or 0) / precio * 100, 2)
+
+
+def _a_item(i) -> "ItemFacturada":
+    item = ItemFacturada.model_validate(i)
+    item.porcentaje_descuento = _porcentaje_descuento(item.precio_unitario, item.descuento_unitario)
+    return item
 
 
 class CotizacionFacturada(BaseModel):
@@ -115,7 +129,7 @@ def _a_respuesta(c: Cotizaciones) -> CotizacionFacturada:
         total=c.total,
         notas=c.notas,
         cliente=ClienteFacturada.model_validate(c.clientes) if c.clientes else None,
-        items=[ItemFacturada.model_validate(i) for i in c.cotizaciones_items],
+        items=[_a_item(i) for i in c.cotizaciones_items],
     )
 
 
